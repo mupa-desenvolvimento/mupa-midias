@@ -1,60 +1,36 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Download } from 'lucide-react';
-
-// Dynamically import PWA register only when available (production builds)
-function usePWARegister() {
-  const [needRefresh, setNeedRefresh] = useState(false);
-  const [offlineReady, setOfflineReady] = useState(false);
-  const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null);
-
-  useEffect(() => {
-    // Only available when VitePWA plugin is active (production)
-    import('virtual:pwa-register/react')
-      .then((mod) => {
-        // Module loaded - but we can't use hooks here, so we handle it differently
-        // This approach won't work with hooks. Let's use the imperative API instead.
-      })
-      .catch(() => {
-        console.log('[PWA] Service Worker registration not available in this build mode');
-      });
-  }, []);
-
-  return { needRefresh, setNeedRefresh, offlineReady, setOfflineReady, updateSW };
-}
 
 export function PWAUpdatePrompt() {
   const { toast } = useToast();
   const [needRefresh, setNeedRefresh] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
-  const updateServiceWorker = useCallback(async (reloadPage?: boolean) => {
-    // Will be set by dynamic import
-  }, []);
 
   useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
     let cancelled = false;
-    import('virtual:pwa-register')
-      .then((mod) => {
-        if (cancelled) return;
-        const updateSW = mod.registerSW({
-          onNeedRefresh() {
+
+    navigator.serviceWorker.ready.then((registration) => {
+      if (cancelled) return;
+      console.log('[PWA] Service Worker registrado:', registration);
+
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             if (!cancelled) setNeedRefresh(true);
-          },
-          onOfflineReady() {
+          } else if (newWorker.state === 'activated' && !navigator.serviceWorker.controller) {
             if (!cancelled) setOfflineReady(true);
-          },
-          onRegistered(registration: any) {
-            console.log('[PWA] Service Worker registrado:', registration);
-          },
-          onRegisterError(error: any) {
-            console.error('[PWA] Erro ao registrar Service Worker:', error);
-          },
+          }
         });
-      })
-      .catch(() => {
-        console.log('[PWA] PWA registration not available in this build mode');
       });
+    }).catch((err) => {
+      console.log('[PWA] SW not available:', err);
+    });
+
     return () => { cancelled = true; };
   }, []);
 
@@ -78,10 +54,7 @@ export function PWAUpdatePrompt() {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                onClick={() => {
-                  // Reload page to get new version
-                  window.location.reload();
-                }}
+                onClick={() => window.location.reload()}
                 className="gap-1"
               >
                 <RefreshCw className="w-3 h-3" />
