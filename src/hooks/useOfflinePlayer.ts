@@ -413,7 +413,6 @@ export const useOfflinePlayer = (deviceCode: string) => {
         playlistsData = (Array.isArray(playlistsResult) ? playlistsResult : []) as any[];
       }
 
-      // 4. Processa playlists e prepara downloads
       const mediaToDownload: { id: string; url: string; name: string }[] = [];
       const cachedPlaylists: CachedPlaylist[] = [];
 
@@ -514,7 +513,30 @@ export const useOfflinePlayer = (deviceCode: string) => {
         }
       }
 
-      // 5. Download das mídias
+      const manifest = {
+        device_code: deviceCode,
+        generated_at: Date.now(),
+        media: mediaToDownload.map(m => ({
+          id: m.id,
+          url: m.url,
+          name: m.name,
+        })),
+        override_media: overrideMedia
+          ? {
+              id: overrideMedia.id,
+              url: overrideMedia.file_url,
+              name: overrideMedia.name,
+              expires_at: overrideMedia.expires_at,
+            }
+          : null,
+      };
+
+      try {
+        localStorage.setItem(`media_manifest_${deviceCode}`, JSON.stringify(manifest));
+      } catch (e) {
+        console.error("[useOfflinePlayer] Erro ao salvar manifest de mídia:", e);
+      }
+
       setDownloadProgress({ total: mediaToDownload.length, downloaded: 0, current: null });
 
       for (let i = 0; i < mediaToDownload.length; i++) {
@@ -559,6 +581,18 @@ export const useOfflinePlayer = (deviceCode: string) => {
       }
 
       setDownloadProgress({ total: mediaToDownload.length, downloaded: mediaToDownload.length, current: null });
+
+      if (Capacitor.isNativePlatform()) {
+        const activeUrls: string[] = mediaToDownload.map(m => m.url);
+        if (overrideMedia?.file_url) {
+          activeUrls.push(overrideMedia.file_url);
+        }
+        try {
+          await MediaCacheService.cleanupOldFiles(activeUrls);
+        } catch (e) {
+          console.error("[useOfflinePlayer] Erro ao limpar arquivos antigos de mídia:", e);
+        }
+      }
 
       // 6. Atualiza estado
       const newState: DeviceState = {

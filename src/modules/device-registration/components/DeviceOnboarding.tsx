@@ -206,23 +206,27 @@ export const DeviceOnboarding: React.FC = () => {
 
       toast.success('Dispositivo configurado com sucesso!');
       
-      // Save ID and Token locally
       localStorage.setItem('mupa_device_code', deviceId);
-      const dataAny = data as any;
-      if (dataAny?.device_token) {
-        localStorage.setItem('mupa_device_token', dataAny.device_token);
+
+      if (data && typeof data === "object" && "device_token" in data) {
+        const token = (data as { device_token?: string }).device_token;
+        if (typeof token === "string") {
+          localStorage.setItem('mupa_device_token', token);
+        }
       }
 
-      // Navigate to Player
-      if (Capacitor.isNativePlatform()) {
-        navigate(`/android-player?device_id=${deviceId}`, { replace: true });
-      } else {
-        navigate(`/webview/${deviceId}`, { replace: true });
-      }
+      navigate(`/play/${deviceId}`, { replace: true });
 
     } catch (error: any) {
       console.error("Erro detalhado:", error);
       toast.error(`Erro ao salvar configuração: ${error.message || JSON.stringify(error)}`);
+
+      if (Capacitor.isNativePlatform()) {
+        const fallbackCode =
+          localStorage.getItem('mupa_device_code') || deviceId || 'UWYJKTVA';
+        localStorage.setItem('mupa_device_code', fallbackCode);
+        navigate(`/play/${fallbackCode}`, { replace: true });
+      }
     } finally {
       setIsLoading(false);
     }

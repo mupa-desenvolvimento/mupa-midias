@@ -293,6 +293,21 @@ export const ProductDisplay = ({
     </div>
   );
 
+  const isPortrait = typeof window !== "undefined" ? window.innerHeight > window.innerWidth : false;
+
+  if (isPortrait) {
+    return (
+      <div className="absolute inset-0 flex flex-col">
+        <div className="w-full h-1/2">
+          {renderImageSection()}
+        </div>
+        <div className="w-full flex-1">
+          {renderInfoSection()}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 flex">
       {imagePosition === "left" ? (

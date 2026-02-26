@@ -6,6 +6,7 @@ import { usePlaylistChannels, PlaylistChannel } from "@/hooks/usePlaylistChannel
 import { useChannels } from "@/hooks/useChannels";
 import { useDevices } from "@/hooks/useDevices";
 import { MediaItem } from "@/hooks/useMediaItems";
+import { AutoContentItem } from "@/hooks/useAutoContent";
 import { EditorSidebar } from "./EditorSidebar";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorTimeline } from "./EditorTimeline";
@@ -248,6 +249,49 @@ export const PlaylistEditor = () => {
     reorderChannels.mutate(orderedChannels);
   }, [reorderChannels]);
 
+  const handleAddAutoContent = useCallback(async (item: AutoContentItem) => {
+    const id = await ensurePlaylistExists();
+    if (!id) return;
+
+    if (!item.image_url) {
+      toast({
+        title: "Conteúdo automático sem imagem",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data: media, error } = await supabase
+      .from("media_items")
+      .insert({
+        name: item.title,
+        type: "image",
+        file_url: item.image_url,
+        status: "active",
+        metadata: {
+          auto_content_id: item.id,
+          auto_content_type: item.type,
+        } as any,
+      })
+      .select()
+      .single();
+
+    if (error || !media) {
+      toast({
+        title: "Erro ao adicionar conteúdo automático",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addItem.mutate({
+      playlist_id: id,
+      media_id: media.id,
+      position: items.length,
+      duration_override: media.duration || 10,
+    });
+  }, [ensurePlaylistExists, addItem, items.length, toast]);
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast({ title: "Nome é obrigatório", variant: "destructive" });
@@ -456,6 +500,7 @@ export const PlaylistEditor = () => {
                   onFormChange={handleFormChange}
                   onAddMedia={handleAddMedia}
                   itemsLength={items.length}
+                  onAddAutoContent={handleAddAutoContent}
                 />
               </div>
             )}

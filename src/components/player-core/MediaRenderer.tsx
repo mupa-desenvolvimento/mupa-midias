@@ -20,7 +20,8 @@ interface MediaRendererProps {
   autoPlay?: boolean;
   muted?: boolean;
   loop?: boolean;
-  nextMediaUrl?: string; // URL para pré-carregar o próximo
+  hideUntilReady?: boolean;
+  onElementRef?: (el: HTMLVideoElement | HTMLImageElement | null) => void;
 }
 
 export const MediaRenderer = ({
@@ -33,10 +34,11 @@ export const MediaRenderer = ({
   autoPlay = true,
   muted = true,
   loop = false,
-  nextMediaUrl,
+  hideUntilReady = false,
+  onElementRef,
 }: MediaRendererProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isBuffering, setIsBuffering] = useState(false);
+  const [isReady, setIsReady] = useState(!hideUntilReady);
 
   const objectFitClass = {
     fill: "object-fill",
@@ -45,78 +47,55 @@ export const MediaRenderer = ({
   }[objectFit];
 
   useEffect(() => {
-    if (media.type === "video" && videoRef.current) {
-      const video = videoRef.current;
-      video.currentTime = 0;
-      setIsBuffering(false);
+    setIsReady(!hideUntilReady);
+  }, [media.id, hideUntilReady]);
 
-      const playVideo = () => {
-        video.play().catch(() => {
-          // Autoplay bloqueado (comum em WebViews) — tenta com muted forçado
-          video.muted = true;
-          video.play().catch(console.error);
-        });
-      };
-
-      if (video.readyState >= 3) {
-        // HAVE_FUTURE_DATA ou superior — pode reproduzir sem buffering
-        playVideo();
-      } else {
-        setIsBuffering(true);
-        const onCanPlay = () => {
-          setIsBuffering(false);
-          playVideo();
-          video.removeEventListener("canplay", onCanPlay);
-        };
-        video.addEventListener("canplay", onCanPlay);
-        return () => video.removeEventListener("canplay", onCanPlay);
-      }
+  useEffect(() => {
+    if (media.type === "video" && videoRef.current && autoPlay) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(console.error);
     }
-  }, [media.id, autoPlay]);
+  }, [media, autoPlay]);
 
   if (media.type === "video") {
+    const handleVideoRef = (el: HTMLVideoElement | null) => {
+      videoRef.current = el;
+      if (onElementRef) onElementRef(el);
+    };
+
     return (
-      <>
-        <video
-          ref={videoRef}
-          key={media.id}
-          src={mediaUrl}
-          className={cn("w-full h-full", objectFitClass, transitionClass)}
-          autoPlay={autoPlay}
-          muted={muted}
-          playsInline
-          loop={loop}
-          preload="auto"
-          onEnded={onEnded}
-          onWaiting={() => setIsBuffering(true)}
-          onPlaying={() => setIsBuffering(false)}
-        />
-        {/* Pré-carrega o próximo vídeo silenciosamente em background */}
-        {nextMediaUrl && nextMediaUrl !== mediaUrl && (
-          <video
-            key={`preload-${nextMediaUrl}`}
-            src={nextMediaUrl}
-            preload="auto"
-            muted
-            playsInline
-            style={{ width: 0, height: 0, position: "absolute", opacity: 0, pointerEvents: "none" }}
-            aria-hidden="true"
-          />
+      <video
+        ref={handleVideoRef}
+        key={media.id}
+        src={mediaUrl}
+        preload="auto"
+        className={cn(
+          "w-full h-full",
+          objectFitClass,
+          transitionClass,
+          !isReady && "opacity-0"
         )}
-        {/* Spinner de buffering */}
-        {isBuffering && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
-            <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-          </div>
-        )}
-      </>
+        autoPlay={autoPlay}
+        muted={muted}
+        playsInline
+        loop={loop}
+        onEnded={onEnded}
+        onCanPlay={() => setIsReady(true)}
+        onPlaying={() => setIsReady(true)}
+      />
     );
   }
+
+  const handleImageRef = (el: HTMLImageElement | null) => {
+    if (onElementRef) onElementRef(el);
+  };
 
   return (
     <img
       key={media.id}
+      ref={handleImageRef}
       src={mediaUrl}
+      loading="eager"
       alt={media.name}
       className={cn("w-full h-full", objectFitClass, transitionClass)}
       onError={onImageError}

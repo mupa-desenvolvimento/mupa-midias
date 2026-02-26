@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Barcode, Search, X, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Capacitor } from "@capacitor/core";
 
 const RESET_CODE = "050223";
 
@@ -31,6 +32,7 @@ export const EanInput = ({
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
+  const isNative = Capacitor.isNativePlatform();
   
   // Refs para detecção de scanner e auto-submit
   const lastKeyTimeRef = useRef<number>(0);
@@ -40,19 +42,19 @@ export const EanInput = ({
 
   // Foca no input quando mídias visíveis ou alwaysListenForScanner ativo
   useEffect(() => {
-    const shouldFocus = (isVisible || alwaysListenForScanner) && !disabled && hiddenInputRef.current;
+    const shouldFocus = (isVisible || alwaysListenForScanner) && !disabled && hiddenInputRef.current && !isNative;
     if (shouldFocus) {
       // Delay para garantir que WebView está pronto
       setTimeout(() => {
         hiddenInputRef.current?.focus();
       }, 100);
     }
-  }, [isVisible, disabled, alwaysListenForScanner]);
+  }, [isVisible, disabled, alwaysListenForScanner, isNative]);
 
   // Refoca agressivamente - crítico para WebViews
   useEffect(() => {
     const shouldListen = isVisible || alwaysListenForScanner;
-    if (!shouldListen || disabled) return;
+    if (!shouldListen || disabled || isNative) return;
 
     const interval = setInterval(() => {
       if (hiddenInputRef.current && document.activeElement !== hiddenInputRef.current) {
@@ -61,7 +63,7 @@ export const EanInput = ({
     }, 200); // Mais agressivo: 200ms
 
     return () => clearInterval(interval);
-  }, [isVisible, disabled, alwaysListenForScanner]);
+  }, [isVisible, disabled, alwaysListenForScanner, isNative]);
 
   // Limpa timeout ao desmontar
   useEffect(() => {
@@ -212,6 +214,82 @@ export const EanInput = ({
     };
   }, [handleSubmit]);
 
+  useEffect(() => {
+    if (!isNative) return;
+    const shouldListen = (isVisible || alwaysListenForScanner) && !disabled;
+    if (!shouldListen) return;
+
+    const handleScannerKeyDown = (e: KeyboardEvent) => {
+      if (showResetConfirm) return;
+
+      if (e.key === "Enter" || e.keyCode === 13 || e.which === 13) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (autoSubmitTimeoutRef.current) {
+          clearTimeout(autoSubmitTimeoutRef.current);
+          autoSubmitTimeoutRef.current = null;
+        }
+
+        const currentValue = bufferRef.current.trim() || value.trim();
+        if (currentValue) {
+          handleSubmit(currentValue);
+        }
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        bufferRef.current = "";
+        setValue("");
+        setShowManualInput(false);
+        return;
+      }
+
+      if (!/^\d$/.test(e.key)) {
+        return;
+      }
+
+      const now = Date.now();
+      const timeSinceLastKey = now - lastKeyTimeRef.current;
+
+      if (timeSinceLastKey < SCANNER_CHAR_THRESHOLD && bufferRef.current.length > 0) {
+        isScannerInputRef.current = true;
+      }
+
+      lastKeyTimeRef.current = now;
+
+      const newValue = (bufferRef.current + e.key).replace(/\D/g, "");
+      bufferRef.current = newValue;
+      setValue(newValue);
+
+      if (newValue === RESET_CODE) {
+        handleSubmit(newValue);
+        return;
+      }
+
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+      }
+
+      if (/^\d+$/.test(newValue) && VALID_EAN_LENGTHS.includes(newValue.length)) {
+        const delay = isScannerInputRef.current ? AUTO_SUBMIT_DELAY : 150;
+
+        autoSubmitTimeoutRef.current = setTimeout(() => {
+          if (bufferRef.current === newValue) {
+            handleSubmit(newValue);
+          }
+        }, delay);
+      }
+    };
+
+    window.addEventListener("keydown", handleScannerKeyDown, { capture: true });
+
+    return () => {
+      window.removeEventListener("keydown", handleScannerKeyDown, { capture: true });
+    };
+  }, [isNative, isVisible, alwaysListenForScanner, disabled, handleSubmit, showResetConfirm, value]);
+
   const handleFocus = () => {
     onFocus?.();
   };
@@ -227,6 +305,22 @@ export const EanInput = ({
     hiddenInputRef.current?.focus();
   };
 
+  const handleVirtualKeyPress = useCallback((digit: string) => {
+    setValue((prev) => {
+      const next = (prev + digit).replace(/\D/g, "").slice(0, 14);
+      bufferRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const handleVirtualBackspace = useCallback(() => {
+    setValue((prev) => {
+      const next = prev.slice(0, -1);
+      bufferRef.current = next;
+      return next;
+    });
+  }, []);
+
   // Só retorna null se não estivermos ouvindo por scanner
   if (!isVisible && !alwaysListenForScanner) return null;
 
@@ -238,7 +332,7 @@ export const EanInput = ({
       <input
         ref={hiddenInputRef}
         type="text"
-        inputMode="numeric"
+        inputMode={isNative ? "none" : "numeric"}
         pattern="[0-9]*"
         value={value}
         onInput={handleInput}
@@ -266,6 +360,7 @@ export const EanInput = ({
         autoCorrect="off"
         spellCheck={false}
         enterKeyHint="go"
+        readOnly={isNative}
       />
 
       {/* Modal de confirmação de reset */}
@@ -311,51 +406,69 @@ export const EanInput = ({
             className="flex items-center gap-3 px-6 py-3 bg-black/60 backdrop-blur-sm rounded-full text-white/80 hover:text-white hover:bg-black/70 transition-colors"
           >
             <Barcode className="w-5 h-5 animate-pulse" />
-            <span className="text-sm">Leia ou digite o código de barras</span>
           </button>
         </div>
       )}
 
       {/* Input manual visível */}
       {showUI && showManualInput && !showResetConfirm && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 backdrop-blur-sm rounded-xl p-2 shadow-2xl">
-          <div className="relative">
-            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
-            <input
-              ref={inputRef}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={value}
-              onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite o EAN"
-              className="w-64 pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-primary"
-              autoFocus
-              maxLength={14}
-              enterKeyHint="go"
-            />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 bg-black/80 backdrop-blur-sm rounded-xl p-2 shadow-2xl">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+              <input
+                ref={inputRef}
+                type="text"
+                inputMode={isNative ? "none" : "numeric"}
+                pattern="[0-9]*"
+                value={value}
+                onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite o EAN"
+                className="w-64 pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-primary"
+                maxLength={14}
+                enterKeyHint="go"
+                readOnly={isNative}
+              />
+            </div>
+            
+            <button
+              onClick={() => handleSubmit(value)}
+              disabled={!value.trim()}
+              className="p-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={() => {
+                setValue("");
+                bufferRef.current = "";
+                setShowManualInput(false);
+                hiddenInputRef.current?.focus();
+              }}
+              className="p-3 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          
-          <button
-            onClick={() => handleSubmit(value)}
-            disabled={!value.trim()}
-            className="p-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Search className="w-5 h-5" />
-          </button>
-          
-          <button
-            onClick={() => {
-              setValue("");
-              bufferRef.current = "";
-              setShowManualInput(false);
-              hiddenInputRef.current?.focus();
-            }}
-            className="p-3 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            {["1","2","3","4","5","6","7","8","9","0"].map((digit) => (
+              <button
+                key={digit}
+                onClick={() => handleVirtualKeyPress(digit)}
+                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-lg font-medium"
+              >
+                {digit}
+              </button>
+            ))}
+            <button
+              onClick={handleVirtualBackspace}
+              className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors col-span-3 text-sm"
+            >
+              Apagar
+            </button>
+          </div>
         </div>
       )}
     </>

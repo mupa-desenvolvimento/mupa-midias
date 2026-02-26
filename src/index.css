@@ -167,6 +167,20 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: hsl(var(--muted-foreground) / 0.4);
   }
+
+  video::-webkit-media-controls-panel {
+    display: none !important;
+    -webkit-appearance: none;
+  }
+
+  video::-webkit-media-controls-play-button,
+  video::-webkit-media-controls-start-playback-button,
+  video::-webkit-media-controls-overlay-play-button,
+  video::-webkit-media-controls-enclosure,
+  video::-webkit-media-controls {
+    display: none !important;
+    -webkit-appearance: none;
+  }
 }
 
 @keyframes fadeIn {

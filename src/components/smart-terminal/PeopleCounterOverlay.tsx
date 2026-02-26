@@ -8,6 +8,7 @@ interface PeopleCounterOverlayProps {
   todayCount: number;
   activeFaces: ActiveFace[];
   onClose: () => void;
+  isPortrait?: boolean;
 }
 
 export const PeopleCounterOverlay = ({
@@ -16,6 +17,7 @@ export const PeopleCounterOverlay = ({
   todayCount,
   activeFaces,
   onClose,
+  isPortrait = false,
 }: PeopleCounterOverlayProps) => {
   if (!visible) return null;
 
@@ -37,7 +39,12 @@ export const PeopleCounterOverlay = ({
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 p-6">
+      <div
+        className={cn(
+          "flex-1 p-6",
+          isPortrait ? "flex flex-col gap-8 items-center" : "flex flex-col items-center justify-center gap-8"
+        )}
+      >
         {/* Main counter */}
         <div className="text-center">
           <div className="relative">

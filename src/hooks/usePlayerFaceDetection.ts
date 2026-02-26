@@ -117,14 +117,18 @@ const isFacingCamera = (landmarks: faceapi.FaceLandmarks68): boolean => {
 export const usePlayerFaceDetection = (
   deviceCode: string,
   isActive: boolean,
-  currentContent: CurrentContent | null
+  currentContent: CurrentContent | null,
+  externalVideoRef?: React.RefObject<HTMLVideoElement>
 ) => {
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFaces, setActiveFaces] = useState<DetectedFace[]>([]);
   const [totalDetectionsToday, setTotalDetectionsToday] = useState(0);
   
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const internalVideoRef = useRef<HTMLVideoElement | null>(null);
+  // Use external ref if provided, otherwise use internal
+  const videoRef = externalVideoRef || internalVideoRef;
+  
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const trackedFacesRef = useRef<Map<string, TrackedFace>>(new Map());
@@ -135,7 +139,8 @@ export const usePlayerFaceDetection = (
     const loadModels = async () => {
       try {
         setIsLoading(true);
-        const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+        // Use local models for better performance and offline support
+        const MODEL_URL = '/models';
         
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
@@ -170,20 +175,33 @@ export const usePlayerFaceDetection = (
       
       streamRef.current = stream;
       
-      if (!videoRef.current) {
-        videoRef.current = document.createElement('video');
-        videoRef.current.setAttribute('autoplay', '');
-        videoRef.current.setAttribute('muted', '');
-        videoRef.current.setAttribute('playsinline', '');
-        videoRef.current.style.display = 'none';
-        document.body.appendChild(videoRef.current);
+      // If we don't have an external ref and haven't created an internal one, create it now
+      if (!externalVideoRef && !internalVideoRef.current) {
+        const v = document.createElement('video');
+        v.setAttribute('autoplay', '');
+        v.setAttribute('muted', '');
+        v.setAttribute('playsinline', '');
+        v.style.display = 'none';
+        document.body.appendChild(v);
+        internalVideoRef.current = v;
       }
       
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
+      const videoEl = videoRef.current;
       
-      console.log('[PlayerDetection] Camera started');
-      return true;
+      if (videoEl) {
+        videoEl.srcObject = stream;
+        // Ensure properties are set for inline playback
+        videoEl.setAttribute('autoplay', '');
+        videoEl.setAttribute('muted', '');
+        videoEl.setAttribute('playsinline', '');
+        
+        await videoEl.play();
+        console.log('[PlayerDetection] Camera started');
+        return true;
+      } else {
+        console.warn('[PlayerDetection] No video element available to attach stream');
+        return false;
+      }
     } catch (error) {
       console.error('[PlayerDetection] Camera error:', error);
       return false;
@@ -196,10 +214,19 @@ export const usePlayerFaceDetection = (
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+    
+    // Clear srcObject for both internal and external refs
+    const videoEl = videoRef.current;
+    if (videoEl) {
+      videoEl.srcObject = null;
     }
-  }, []);
+    
+    // Only remove the internal video element if we created it
+    if (internalVideoRef.current && internalVideoRef.current.parentNode) {
+      internalVideoRef.current.parentNode.removeChild(internalVideoRef.current);
+      internalVideoRef.current = null;
+    }
+  }, []); // Remove dependency on videoRef since it's derived or stable ref
 
   // Send logs to server
   const sendLogsToServer = useCallback(async () => {

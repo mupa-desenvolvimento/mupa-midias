@@ -162,7 +162,8 @@ export const useFaceDetection = (
       try {
         setIsLoading(true);
         
-        const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+        // Use local models instead of fetching from GitHub
+        const MODEL_URL = '/models';
         
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL), // Better accuracy than TinyFace

@@ -8,6 +8,7 @@ interface FacialRecognitionOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   canvasRef: React.RefObject<HTMLCanvasElement>;
   onClose: () => void;
+  isPortrait?: boolean;
 }
 
 const emotionEmoji: Record<string, string> = {
@@ -32,6 +33,7 @@ export const FacialRecognitionOverlay = ({
   videoRef,
   canvasRef,
   onClose,
+  isPortrait = false,
 }: FacialRecognitionOverlayProps) => {
   if (!visible) return null;
 
@@ -52,9 +54,19 @@ export const FacialRecognitionOverlay = ({
         </button>
       </div>
 
-      <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+      <div
+        className={cn(
+          "flex-1 p-4 overflow-hidden",
+          isPortrait ? "flex flex-col gap-4" : "flex gap-4"
+        )}
+      >
         {/* Camera feed */}
-        <div className="relative flex-1 rounded-xl overflow-hidden bg-gray-900">
+        <div
+          className={cn(
+            "relative rounded-xl overflow-hidden bg-gray-900",
+            isPortrait ? "w-full h-1/2" : "flex-1"
+          )}
+        >
           <video
             ref={videoRef}
             autoPlay
@@ -77,7 +89,12 @@ export const FacialRecognitionOverlay = ({
         </div>
 
         {/* Face cards */}
-        <div className="w-80 overflow-y-auto space-y-3 custom-scrollbar">
+        <div
+          className={cn(
+            "overflow-y-auto space-y-3 custom-scrollbar",
+            isPortrait ? "w-full flex-1" : "w-80"
+          )}
+        >
           {activeFaces.length === 0 ? (
             <div className="text-white/40 text-center py-8">
               <User className="w-12 h-12 mx-auto mb-2" />

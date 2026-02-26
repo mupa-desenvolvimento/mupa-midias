@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useMediaItems, MediaItem } from "@/hooks/useMediaItems";
+import { useAutoContent, AutoContentItem } from "@/hooks/useAutoContent";
 import { Channel } from "@/hooks/useChannels";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,17 +9,18 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Search, 
-  Image, 
-  Video, 
-  FileText, 
+import {
+  Search,
+  Image,
+  Video,
+  FileText,
   Clock,
   Calendar,
   Zap,
   Monitor,
   X,
-  GripVertical
+  GripVertical,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +74,20 @@ const getMediaIcon = (type: string) => {
     case "video": return Video;
     case "image": return Image;
     default: return FileText;
+  }
+};
+
+const getAutoContentLabel = (type: string) => {
+  switch (type) {
+    case "weather": return "Clima";
+    case "news": return "Notícias";
+    case "quote": return "Frases";
+    case "curiosity": return "Curiosidades";
+    case "birthday": return "Aniversários";
+    case "nutrition": return "Nutrição";
+    case "instagram": return "Instagram";
+    case "qr_campaign": return "Campanhas QR";
+    default: return type;
   }
 };
 
@@ -201,6 +217,115 @@ const MediaLibraryPanel = ({ onAddMedia, itemsLength }: {
           Arraste para adicionar à timeline
         </p>
       </div>
+    </div>
+  );
+};
+
+const AutoContentPanel = ({
+  onAddAutoContent,
+}: {
+  onAddAutoContent: (item: AutoContentItem) => void;
+}) => {
+  const { items, isLoadingItems } = useAutoContent();
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesStatus = item.status === "active";
+      const matchesSearch =
+        item.title.toLowerCase().includes(search.toLowerCase()) ||
+        (item.description || "").toLowerCase().includes(search.toLowerCase());
+      const matchesType = typeFilter === "all" || item.type === typeFilter;
+      return matchesStatus && matchesSearch && matchesType;
+    });
+  }, [items, search, typeFilter]);
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="p-3 space-y-2 border-b border-border">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar conteúdo automático..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
+        </div>
+        <div className="flex gap-1">
+          {[
+            { value: "all", label: "Todos" },
+            { value: "weather", label: "Clima" },
+            { value: "news", label: "Notícias" },
+            { value: "quote", label: "Frases" },
+            { value: "curiosity", label: "Curiosidades" },
+            { value: "birthday", label: "Aniversários" },
+            { value: "nutrition", label: "Nutrição" },
+            { value: "instagram", label: "Instagram" },
+            { value: "qr_campaign", label: "QR Code" },
+          ].map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setTypeFilter(filter.value)}
+              className={cn(
+                "flex-1 h-7 text-[10px] rounded transition-colors",
+                typeFilter === filter.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 min-h-0" showScrollbar="always">
+        {isLoadingItems ? (
+          <div className="p-4 text-center text-muted-foreground text-sm">
+            Carregando...
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground text-sm">
+            Nenhum conteúdo automático
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 p-3">
+            {filteredItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-start gap-3 p-2 rounded-lg border border-border bg-muted/60"
+              >
+                <div className="w-12 h-12 rounded-md bg-background flex items-center justify-center text-primary flex-shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium truncate">{item.title}</p>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      {getAutoContentLabel(item.type)}
+                    </span>
+                  </div>
+                  {item.description && (
+                    <p className="text-[10px] text-muted-foreground line-clamp-2">
+                      {item.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-end pt-1">
+                    <button
+                      onClick={() => onAddAutoContent(item)}
+                      className="inline-flex items-center justify-center h-7 px-2 rounded-md text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      Adicionar na playlist
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
     </div>
   );
 };
@@ -409,20 +534,56 @@ export const EditorPropertiesPanel = ({
   onFormChange,
   onAddMedia,
   itemsLength,
-}: EditorPropertiesPanelProps) => {
+  onAddAutoContent,
+}: EditorPropertiesPanelProps & {
+  onAddAutoContent: (item: AutoContentItem) => void;
+}) => {
+  const [mediaTab, setMediaTab] = useState<"library" | "auto">("library");
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Panel Header */}
       <div className="h-10 flex items-center justify-between px-4 border-b border-border shrink-0">
-        <span className="text-xs font-medium text-muted-foreground">
-          {activePanel === "media" ? "Biblioteca de Mídias" : "Configurações"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            {activePanel === "media" ? "Conteúdos" : "Configurações"}
+          </span>
+          {activePanel === "media" && (
+            <div className="flex gap-1">
+              <button
+                onClick={() => setMediaTab("library")}
+                className={cn(
+                  "h-7 px-2 rounded text-[10px] font-medium transition-colors",
+                  mediaTab === "library"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Mídias
+              </button>
+              <button
+                onClick={() => setMediaTab("auto")}
+                className={cn(
+                  "h-7 px-2 rounded text-[10px] font-medium transition-colors inline-flex items-center gap-1",
+                  mediaTab === "auto"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Sparkles className="w-3 h-3" />
+                Automático
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Panel Content - Scrollable */}
       <div className="flex-1 overflow-hidden min-h-0">
         {activePanel === "media" ? (
-          <MediaLibraryPanel onAddMedia={onAddMedia} itemsLength={itemsLength} />
+          mediaTab === "library" ? (
+            <MediaLibraryPanel onAddMedia={onAddMedia} itemsLength={itemsLength} />
+          ) : (
+            <AutoContentPanel onAddAutoContent={onAddAutoContent} />
+          )
         ) : (
           <SettingsPanel
             formData={formData}

@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'
+        classpath 'com.android.tools.build:gradle:8.10.1'
         classpath 'com.google.gms:google-services:4.4.4'
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -21,6 +21,28 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+subprojects { proj ->
+    afterEvaluate {
+        if (proj.hasProperty('android')) {
+            proj.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        } else {
+            tasks.withType(JavaCompile).configureEach {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+        }
+        def kotlinExt = proj.extensions.findByName("kotlin")
+        if (kotlinExt && kotlinExt.metaClass.respondsTo(kotlinExt, "jvmToolchain", Integer)) {
+            kotlinExt.jvmToolchain(17)
+        }
     }
 }
 

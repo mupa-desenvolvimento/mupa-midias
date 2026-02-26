@@ -241,7 +241,250 @@ Deno.serve(async (req: Request) => {
         )
     }
 
-    // 4. Heartbeat
+    // 4. Manifest: retorna toda a programação do dispositivo em um único payload
+    if (path === 'manifest' && req.method === 'GET') {
+      const authHeader = req.headers.get('Authorization')
+      const token = authHeader?.replace('Bearer ', '')
+
+      if (!token) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // Busca device pelo token
+      const { data: device, error: deviceError } = await supabase
+        .from('devices')
+        .select(`
+          id, device_code, name, store_id, company_id, current_playlist_id,
+          is_blocked, blocked_message, camera_enabled,
+          override_media_id, override_media_expires_at,
+          last_sync_requested_at, store_code,
+          companies(id, slug),
+          override_media:media_items!devices_override_media_id_fkey(id, name, type, file_url, duration)
+        `)
+        .eq('device_token', token)
+        .maybeSingle()
+
+      if (deviceError || !device) {
+        return new Response(
+          JSON.stringify({ error: 'Device not found' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // Override media (mídia avulsa/promocional)
+      let overrideMedia: any = null
+      const overrideMediaData: any = device.override_media
+
+      if (overrideMediaData && device.override_media_expires_at) {
+        const expiresAt = new Date(device.override_media_expires_at as string)
+        if (expiresAt > new Date()) {
+          overrideMedia = {
+            id: overrideMediaData.id,
+            name: overrideMediaData.name,
+            type: overrideMediaData.type,
+            file_url: overrideMediaData.file_url,
+            duration: overrideMediaData.duration ?? 10,
+            expires_at: device.override_media_expires_at,
+          }
+        }
+      }
+
+      // Playlists relevantes (diretas + canais/grupos)
+      let relevantPlaylistIds: string[] = []
+      let relevantChannelIds: string[] = []
+
+      if (device.current_playlist_id) {
+        relevantPlaylistIds.push(device.current_playlist_id)
+      }
+
+      const { data: groupMembers, error: groupError } = await supabase
+        .from('device_group_members')
+        .select('group_id')
+        .eq('device_id', device.id)
+
+      if (groupError) throw groupError
+
+      if (groupMembers && groupMembers.length > 0) {
+        const groupIds = groupMembers.map((g: any) => g.group_id)
+        const { data: groupChannels, error: channelsError } = await supabase
+          .from('device_group_channels')
+          .select('distribution_channel_id')
+          .in('group_id', groupIds)
+
+        if (channelsError) throw channelsError
+
+        if (groupChannels) {
+          relevantChannelIds = groupChannels.map((c: any) => c.distribution_channel_id)
+        }
+      }
+
+      // Busca playlists + itens + mídias via RPC (bypass RLS) ou fallback select
+      let playlistsData: any[] = []
+
+      if (relevantPlaylistIds.length > 0 || relevantChannelIds.length > 0) {
+        const { data: rpcData, error: rpcError } = await supabase.rpc(
+          'get_public_playlists_data',
+          {
+            p_playlist_ids: relevantPlaylistIds.length > 0 ? relevantPlaylistIds : null,
+            p_channel_ids: relevantChannelIds.length > 0 ? relevantChannelIds : null,
+          },
+        )
+
+        if (!rpcError) {
+          playlistsData = Array.isArray(rpcData) ? (rpcData as any[]) : []
+        } else {
+          const orConditions: string[] = []
+
+          if (relevantPlaylistIds.length > 0) {
+            orConditions.push(`id.in.(${relevantPlaylistIds.join(',')})`)
+          }
+
+          if (relevantChannelIds.length > 0) {
+            orConditions.push(`channel_id.in.(${relevantChannelIds.join(',')})`)
+          }
+
+          if (orConditions.length > 0) {
+            const { data, error: playlistError } = await supabase
+              .from('playlists')
+              .select(`
+                id, name, description, is_active, has_channels, channel_id,
+                start_date, end_date, days_of_week, start_time, end_time, priority, content_scale,
+                playlist_items(
+                  id, media_id, position, duration_override,
+                  start_date, end_date, start_time, end_time, days_of_week,
+                  media:media_items(id, name, type, file_url, duration)
+                ),
+                playlist_channels(
+                  id, name, is_active, is_fallback, position,
+                  start_date, end_date, start_time, end_time, days_of_week,
+                  playlist_channel_items(
+                    id, media_id, position, duration_override,
+                    start_date, end_date, start_time, end_time, days_of_week,
+                    media:media_items(id, name, type, file_url, duration)
+                  )
+                )
+              `)
+              .eq('is_active', true)
+              .or(orConditions.join(','))
+
+            if (playlistError) throw playlistError
+            playlistsData = data || []
+          }
+        }
+      }
+
+      // Monta manifest enxuto (sem download de arquivos)
+      const playlists = playlistsData.map((playlist: any) => {
+        const items =
+          (playlist.playlist_items || []).map((item: any) => ({
+            id: item.id,
+            media_id: item.media_id,
+            position: item.position,
+            duration_override: item.duration_override,
+            start_date: item.start_date,
+            end_date: item.end_date,
+            start_time: item.start_time,
+            end_time: item.end_time,
+            days_of_week: item.days_of_week,
+            media: item.media
+              ? {
+                  id: item.media.id,
+                  name: item.media.name,
+                  type: item.media.type,
+                  file_url: item.media.file_url,
+                  duration: item.media.duration,
+                }
+              : null,
+          })) || []
+
+        const channels =
+          (playlist.playlist_channels || []).map((channel: any) => {
+            const channelItems =
+              (channel.playlist_channel_items || []).map((item: any) => ({
+                id: item.id,
+                media_id: item.media_id,
+                position: item.position,
+                duration_override: item.duration_override,
+                start_date: item.start_date,
+                end_date: item.end_date,
+                start_time: item.start_time,
+                end_time: item.end_time,
+                days_of_week: item.days_of_week,
+                media: item.media
+                  ? {
+                      id: item.media.id,
+                      name: item.media.name,
+                      type: item.media.type,
+                      file_url: item.media.file_url,
+                      duration: item.media.duration,
+                    }
+                  : null,
+              })) || []
+
+            return {
+              id: channel.id,
+              name: channel.name,
+              is_active: channel.is_active,
+              is_fallback: channel.is_fallback,
+              position: channel.position,
+              start_date: channel.start_date,
+              end_date: channel.end_date,
+              start_time: channel.start_time,
+              end_time: channel.end_time,
+              days_of_week: channel.days_of_week,
+              items: channelItems,
+            }
+          }) || []
+
+        return {
+          id: playlist.id,
+          name: playlist.name,
+          description: playlist.description,
+          is_active: playlist.is_active,
+          has_channels: playlist.has_channels,
+          channel_id: playlist.channel_id,
+          start_date: playlist.start_date,
+          end_date: playlist.end_date,
+          days_of_week: playlist.days_of_week,
+          start_time: playlist.start_time,
+          end_time: playlist.end_time,
+          priority: playlist.priority,
+          content_scale: playlist.content_scale,
+          items,
+          channels,
+        }
+      })
+
+      const manifest = {
+        version: 1,
+        generated_at: new Date().toISOString(),
+        device: {
+          id: device.id,
+          device_code: device.device_code,
+          name: device.name,
+          store_id: device.store_id,
+          company_id: device.company_id,
+          company_slug: device.companies?.slug ?? null,
+          store_code: device.store_code,
+          camera_enabled: device.camera_enabled ?? false,
+          is_blocked: device.is_blocked ?? false,
+          blocked_message: device.blocked_message,
+          last_sync_requested_at: device.last_sync_requested_at,
+        },
+        override_media: overrideMedia,
+        playlists,
+      }
+
+      return new Response(
+        JSON.stringify(manifest),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // 5. Heartbeat
     if (path === 'heartbeat' && req.method === 'POST') {
         const authHeader = req.headers.get('Authorization')
         const token = authHeader?.replace('Bearer ', '')
@@ -264,7 +507,7 @@ Deno.serve(async (req: Request) => {
         )
     }
 
-    // 5. Proof of Play
+    // 6. Proof of Play
     if (path === 'proof' && req.method === 'POST') {
         const authHeader = req.headers.get('Authorization')
         const token = authHeader?.replace('Bearer ', '')
