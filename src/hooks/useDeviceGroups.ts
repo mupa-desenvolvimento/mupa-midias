@@ -101,8 +101,23 @@ export const useDeviceGroups = () => {
 
   const deleteDeviceGroup = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("device_groups").delete().eq("id", id);
-      if (error) throw error;
+      const { error: channelsError } = await supabase
+        .from("device_group_channels")
+        .delete()
+        .eq("group_id", id);
+      if (channelsError) throw channelsError;
+
+      const { error: membersError } = await supabase
+        .from("device_group_members")
+        .delete()
+        .eq("group_id", id);
+      if (membersError) throw membersError;
+
+      const { error: groupError } = await supabase
+        .from("device_groups")
+        .delete()
+        .eq("id", id);
+      if (groupError) throw groupError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["device-groups"] });

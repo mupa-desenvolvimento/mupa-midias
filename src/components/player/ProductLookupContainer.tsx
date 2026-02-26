@@ -24,6 +24,7 @@ interface ProductLookupContainerProps {
   timeout?: number;
   inputRef?: React.RefObject<HTMLInputElement>;
   displaySettings?: Partial<ProductDisplaySettings>;
+  isPortrait?: boolean;
 }
 
 const defaultColors: ExtractedColors = {
@@ -40,7 +41,8 @@ export const ProductLookupContainer = ({
   onDismiss,
   timeout = 15,
   inputRef,
-  displaySettings
+  displaySettings,
+  isPortrait = false
 }: ProductLookupContainerProps) => {
   const [countdown, setCountdown] = useState(timeout);
   const [colors, setColors] = useState<ExtractedColors>(defaultColors);
@@ -110,23 +112,25 @@ export const ProductLookupContainer = ({
   // Estado de erro
   if (error) {
     return (
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-red-950/20 to-slate-900 flex items-center justify-center p-8">
-        <div className="text-center max-w-2xl">
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-red-950/20 to-slate-900 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center max-w-2xl">
           <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="w-14 h-14 text-red-400" />
           </div>
           <h2 className="text-4xl font-bold text-white mb-4">Produto Não Encontrado</h2>
           <p className="text-white/70 text-xl mb-8">{error}</p>
           
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-white/40 text-sm">
-              Retornando automaticamente em {countdown}s
-            </p>
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-white/40 text-sm">
+                Retornando automaticamente em {countdown}s
+              </p>
+            </div>
           </div>
         </div>
         
         {/* Barra de progresso */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+        <div className="h-1 bg-white/10">
           <div
             className="h-full bg-red-500 transition-all duration-1000 ease-linear"
             style={{ width: `${(countdown / timeout) * 100}%` }}

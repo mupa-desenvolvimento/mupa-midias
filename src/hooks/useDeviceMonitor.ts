@@ -1,46 +1,18 @@
-import { useRef, useEffect, useState } from 'react';
-import { useFaceDetection, ActiveFace } from './useFaceDetection';
+import { useRef, useEffect, useState, type RefObject } from 'react';
+import type { ActiveFace } from './useFaceDetection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export const useDeviceMonitor = (deviceCode: string) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+type SourceElement = HTMLVideoElement | HTMLImageElement;
+
+export const useDeviceMonitor = (
+  deviceCode: string,
+  sourceRef?: RefObject<SourceElement | null>,
+  faces?: ActiveFace[],
+) => {
   const [isMonitoring, setIsMonitoring] = useState(false);
-  
-  // Always run detection if camera is available
-  const { activeFaces } = useFaceDetection(videoRef, canvasRef, true);
-  
-  const lastKnownFacesRef = useRef<Map<string, ActiveFace>>(new Map());
   const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Initialize Camera
-  useEffect(() => {
-    const startCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { width: 640, height: 480, facingMode: 'user' } 
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          // Ensure video plays (sometimes needed for autoplay policies)
-          videoRef.current.play().catch(e => console.log("Autoplay blocked/handled", e));
-        }
-      } catch (err) {
-        console.warn("Camera access denied or not available:", err);
-      }
-    };
-    
-    startCamera();
-    
-    return () => {
-      // Optional: Stop tracks if we want to release camera on unmount
-      // const stream = videoRef.current?.srcObject as MediaStream;
-      // stream?.getTracks().forEach(track => track.stop());
-    };
-  }, []);
-
-  // 2. Realtime Listener for Monitoring Request
   useEffect(() => {
     if (!deviceCode) return;
 
@@ -60,80 +32,72 @@ export const useDeviceMonitor = (deviceCode: string) => {
     };
   }, [deviceCode]);
 
-  // 3. Send Stream Frames
   useEffect(() => {
-    if (isMonitoring) {
+    if (!deviceCode) return;
+
+    if (isMonitoring && sourceRef?.current) {
       monitoringIntervalRef.current = setInterval(() => {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        
-        if (video && canvas && video.readyState === 4) {
-            const context = canvas.getContext('2d');
-            if (context) {
-                // Downscale for bandwidth
-                canvas.width = 320; 
-                canvas.height = 240;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                const imageData = canvas.toDataURL('image/jpeg', 0.6);
-                
-                supabase.channel(`device_monitor:${deviceCode}`).send({
-                    type: 'broadcast',
-                    event: 'frame',
-                    payload: {
-                        image: imageData,
-                        stats: activeFaces,
-                        timestamp: new Date().toISOString(),
-                        meta: { width: video.videoWidth, height: video.videoHeight }
-                    }
-                });
-            }
+        const element = sourceRef.current;
+        if (!element) return;
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        let sourceWidth = 0;
+        let sourceHeight = 0;
+
+        if (element instanceof HTMLVideoElement) {
+          if (element.readyState < 2) return;
+          sourceWidth = element.videoWidth || element.clientWidth;
+          sourceHeight = element.videoHeight || element.clientHeight;
+        } else if (element instanceof HTMLImageElement) {
+          if (!element.complete) return;
+          sourceWidth = element.naturalWidth || element.width;
+          sourceHeight = element.naturalHeight || element.height;
         }
-      }, 500); // 2 FPS
+
+        if (!sourceWidth || !sourceHeight) return;
+
+        const targetWidth = 320;
+        const aspectRatio = sourceWidth / sourceHeight;
+        const targetHeight = Math.round(targetWidth / aspectRatio);
+
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        try {
+          context.drawImage(element, 0, 0, canvas.width, canvas.height);
+          const imageData = canvas.toDataURL('image/jpeg', 0.6);
+
+          supabase.channel(`device_monitor:${deviceCode}`).send({
+            type: 'broadcast',
+            event: 'frame',
+            payload: {
+              image: imageData,
+              stats: faces || [],
+              timestamp: new Date().toISOString(),
+              meta: { width: sourceWidth, height: sourceHeight },
+            },
+          });
+        } catch (error) {
+          console.error('Erro ao capturar frame de tela:', error);
+        }
+      }, 500);
     } else {
       if (monitoringIntervalRef.current) {
         clearInterval(monitoringIntervalRef.current);
+        monitoringIntervalRef.current = null;
       }
     }
 
     return () => {
       if (monitoringIntervalRef.current) {
         clearInterval(monitoringIntervalRef.current);
+        monitoringIntervalRef.current = null;
       }
     };
-  }, [isMonitoring, activeFaces, deviceCode]);
+  }, [isMonitoring, deviceCode, sourceRef, faces]);
 
-  // 4. Log Detection Logic (Persistence)
-  useEffect(() => {
-    const currentFaceIds = new Set(activeFaces.map(f => f.trackId));
-    const lastKnown = lastKnownFacesRef.current;
-
-    // Detect faces that left
-    lastKnown.forEach((face, trackId) => {
-      if (!currentFaceIds.has(trackId)) {
-        // Log to Supabase
-        if (face.lookingDuration >= 1) {
-            supabase.from('device_detection_logs').insert({
-                device_serial: deviceCode,
-                age_group: face.ageGroup,
-                gender: face.gender,
-                emotion: face.emotion.emotion,
-                attention_duration: face.lookingDuration,
-                detected_at: new Date().toISOString()
-            }).then(({ error }) => {
-                if (error) console.error("Error logging detection:", error);
-            });
-        }
-        lastKnown.delete(trackId);
-      }
-    });
-
-    // Update current faces
-    activeFaces.forEach(face => {
-      lastKnown.set(face.trackId, face);
-    });
-
-  }, [activeFaces, deviceCode]);
-
-  return { videoRef, canvasRef, isMonitoring };
+  return { isMonitoring };
 };

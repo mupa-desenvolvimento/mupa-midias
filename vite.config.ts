@@ -10,10 +10,14 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  build: {
+    target: "es2017",
+  },
   plugins: [
     react(),
-    mode === 'development' && componentTagger(),
-    VitePWA({
+    mode === "development" && componentTagger(),
+    mode === "pwa" &&
+      VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'placeholder.svg'],
       manifest: {
@@ -106,6 +110,10 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "virtual:pwa-register/react": path.resolve(
+        __dirname,
+        "./src/pwa/register-sw-react-stub.ts",
+      ),
     },
   },
 }));

@@ -25,8 +25,15 @@ const DevicePlayer = () => {
 
   const { currentIndex, goToNext, progressPercent } = useMediaRotation({
     itemsLength: mediaItems.length,
-    currentDuration: mediaItems[0]?.duration || 10,
-    isVideo: false,
+    getDuration: (idx) => {
+      const m = mediaItems[idx];
+      if (!m) return 10;
+      if (m.type === "video") {
+        return 0;
+      }
+      return m.duration || 10;
+    },
+    getIsVideo: (idx) => mediaItems[idx]?.type === "video",
     enabled: mediaItems.length > 0,
   });
 

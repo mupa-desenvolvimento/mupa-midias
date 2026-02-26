@@ -176,7 +176,9 @@ Deno.serve(async (req) => {
       .select('code')
       .eq('tenant_id', tenantId)
 
-    const existingStoreCodes = new Set(existingStores?.map(s => s.code.toLowerCase()) || [])
+    const existingStoreCodes = new Set(
+      existingStores?.map((s: { code: string }) => s.code.toLowerCase()) || []
+    )
 
     let successCount = 0
     let errorCount = 0
@@ -236,7 +238,7 @@ Deno.serve(async (req) => {
 
           // Find or create state
           const stateKey = `${stateCode.toLowerCase()}-${region.id}`
-          let state = existingStates?.find(s => 
+          let state = existingStates?.find((s: { code: string; name: string; region_id: string }) => 
             (s.code.toLowerCase() === stateCode.toLowerCase() || s.name.toLowerCase() === stateName.toLowerCase()) &&
             s.region_id === region.id
           ) || createdStates[stateKey]
@@ -264,7 +266,7 @@ Deno.serve(async (req) => {
 
           // Find or create city
           const cityKey = `${row.cidade.toLowerCase()}-${state.id}`
-          let city = existingCities?.find(c => 
+          let city = existingCities?.find((c: { name: string; state_id: string }) => 
             c.name.toLowerCase() === row.cidade.toLowerCase() &&
             c.state_id === state.id
           ) || createdCities[cityKey]

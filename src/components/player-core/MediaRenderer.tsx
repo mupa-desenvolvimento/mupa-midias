@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface MediaItem {
@@ -20,6 +20,8 @@ interface MediaRendererProps {
   autoPlay?: boolean;
   muted?: boolean;
   loop?: boolean;
+  hideUntilReady?: boolean;
+  onElementRef?: (el: HTMLVideoElement | HTMLImageElement | null) => void;
 }
 
 export const MediaRenderer = ({
@@ -32,14 +34,21 @@ export const MediaRenderer = ({
   autoPlay = true,
   muted = true,
   loop = false,
+  hideUntilReady = false,
+  onElementRef,
 }: MediaRendererProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isReady, setIsReady] = useState(!hideUntilReady);
 
   const objectFitClass = {
     fill: "object-fill",
     cover: "object-cover",
     contain: "object-contain",
   }[objectFit];
+
+  useEffect(() => {
+    setIsReady(!hideUntilReady);
+  }, [media.id, hideUntilReady]);
 
   useEffect(() => {
     if (media.type === "video" && videoRef.current && autoPlay) {
@@ -49,25 +58,44 @@ export const MediaRenderer = ({
   }, [media, autoPlay]);
 
   if (media.type === "video") {
+    const handleVideoRef = (el: HTMLVideoElement | null) => {
+      videoRef.current = el;
+      if (onElementRef) onElementRef(el);
+    };
+
     return (
       <video
-        ref={videoRef}
+        ref={handleVideoRef}
         key={media.id}
         src={mediaUrl}
-        className={cn("w-full h-full", objectFitClass, transitionClass)}
+        preload="auto"
+        className={cn(
+          "w-full h-full",
+          objectFitClass,
+          transitionClass,
+          !isReady && "opacity-0"
+        )}
         autoPlay={autoPlay}
         muted={muted}
         playsInline
         loop={loop}
         onEnded={onEnded}
+        onCanPlay={() => setIsReady(true)}
+        onPlaying={() => setIsReady(true)}
       />
     );
   }
 
+  const handleImageRef = (el: HTMLImageElement | null) => {
+    if (onElementRef) onElementRef(el);
+  };
+
   return (
     <img
       key={media.id}
+      ref={handleImageRef}
       src={mediaUrl}
+      loading="eager"
       alt={media.name}
       className={cn("w-full h-full", objectFitClass, transitionClass)}
       onError={onImageError}

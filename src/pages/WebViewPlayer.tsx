@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { db } from "@/services/firebase";
 import { ref, onValue } from "firebase/database";
@@ -7,14 +7,7 @@ import { setupKioskMode } from "@/utils/nativeBridge";
 import { Capacitor } from "@capacitor/core";
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
 import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useMediaRotation, useClock } from "@/hooks/player";
-import {
-  MediaRenderer,
-  PlayerProgressBar,
-  PlayerControls,
-  LoadingScreen,
-  EmptyContentScreen,
-  DownloadScreen,
-} from "@/components/player-core";
+import { PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen } from "@/components/player-core";
 import {
   Bell,
   Camera,
@@ -23,6 +16,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { storageService } from "@/modules/offline-storage/StorageService";
+import { useDeviceMonitor } from "@/hooks/useDeviceMonitor";
 
 const WebViewPlayer = () => {
   const { deviceCode: paramDeviceCode } = useParams<{ deviceCode: string }>();
@@ -44,33 +39,29 @@ const WebViewPlayer = () => {
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const { formattedTime } = useClock();
 
-  const [transitionState, setTransitionState] = useState<"visible" | "fading">("visible");
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   const [updateMessage, setUpdateMessage] = useState("");
+
+  const cameraPreviewRef = useRef<HTMLVideoElement>(null);
+  const [showCameraPreview, setShowCameraPreview] = useState(false);
+
+  const mediaElementRef = useRef<HTMLVideoElement | HTMLImageElement | null>(null);
+
+  const videoARef = useRef<HTMLVideoElement | null>(null);
+  const videoBRef = useRef<HTMLVideoElement | null>(null);
+  const imgARef = useRef<HTMLImageElement | null>(null);
+  const imgBRef = useRef<HTMLImageElement | null>(null);
+  const [activePlayer, setActivePlayer] = useState<"A" | "B">("A");
 
   const items = getActiveItems();
   const activePlaylist = getActivePlaylist();
   const isOnline = deviceState?.is_online ?? navigator.onLine;
 
-  // Media rotation
-  const firstItem = items[0];
-  const firstMedia = firstItem?.media;
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [nextReadySlot, setNextReadySlot] = useState<"A" | "B" | null>(null);
 
-  const { currentIndex, goToNext, goToPrev, progressPercent, timeRemaining } = useMediaRotation({
-    itemsLength: items.length,
-    currentDuration: firstItem?.duration_override || firstMedia?.duration || 10,
-    isVideo: firstMedia?.type === "video",
-    enabled: items.length > 0,
-    onFadeStart: () => setTransitionState("fading"),
-    fadeBeforeMs: 500,
-  });
-
-  // Reset transition on index change
-  useEffect(() => {
-    setTransitionState("visible");
-  }, [currentIndex]);
-
-  // Derive active media from current index
   const activeItem = items[currentIndex] || null;
   const activeMedia = activeItem?.media;
 
@@ -87,8 +78,31 @@ const WebViewPlayer = () => {
   const { activeFaces, isModelsLoaded: faceModelsLoaded } = usePlayerFaceDetection(
     deviceCode || "",
     !!deviceState?.camera_enabled,
-    currentContentInfo
+    currentContentInfo,
+    cameraPreviewRef
   );
+
+  useDeviceMonitor(deviceCode || "", mediaElementRef);
+
+  const getDurationForIndex = useCallback((idx: number) => {
+    const it = items[idx];
+    const media = it?.media;
+    if (!media) return 10;
+    if (media.type === "video") {
+      return it?.duration_override ? it.duration_override : 0;
+    }
+    return it?.duration_override || media.duration || 10;
+  }, [items]);
+
+  const goToNext = useCallback(() => {
+    if (items.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % items.length);
+  }, [items.length]);
+
+  const goToPrev = useCallback(() => {
+    if (items.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
+  }, [items.length]);
 
   useKeyboardShortcuts({
     onFullscreen: toggleFullscreen,
@@ -97,6 +111,52 @@ const WebViewPlayer = () => {
     onPrev: goToPrev,
     itemsLength: items.length,
   });
+
+  const preloadIntoSlot = useCallback((slot: "A" | "B", index: number) => {
+    if (items.length === 0) return;
+    const item = items[index];
+    const media = item?.media;
+    if (!media) return;
+    const url = media.blob_url || media.file_url;
+    if (!url) return;
+
+    if (media.type === "image") {
+      const img = slot === "A" ? imgARef.current : imgBRef.current;
+      if (!img) return;
+      img.src = url;
+      img.style.display = "block";
+      const video = slot === "A" ? videoARef.current : videoBRef.current;
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+        video.style.display = "none";
+      }
+    } else {
+      const video = slot === "A" ? videoARef.current : videoBRef.current;
+      if (!video) return;
+      video.preload = "auto";
+      video.muted = true;
+      video.src = url;
+      video.load();
+      video.oncanplay = () => {
+        setNextReadySlot(slot);
+      };
+      video.play().then(() => {
+        video.pause();
+        video.currentTime = 0;
+      }).catch(() => {
+        video.pause();
+        video.currentTime = 0;
+      });
+      video.style.display = "block";
+      const img = slot === "A" ? imgARef.current : imgBRef.current;
+      if (img) {
+        img.style.display = "none";
+        img.removeAttribute("src");
+      }
+    }
+  }, [items]);
 
   // Firebase listener
   useEffect(() => {
@@ -119,6 +179,119 @@ const WebViewPlayer = () => {
     if (Capacitor.isNativePlatform()) setupKioskMode();
   }, []);
 
+  useEffect(() => {
+    if (items.length === 0) return;
+    const duration = getDurationForIndex(currentIndex);
+    const isVideo = items[currentIndex]?.media?.type === "video";
+
+    if (isVideo) {
+      const activeVideo = activePlayer === "A" ? videoARef.current : videoBRef.current;
+      if (!activeVideo) return;
+      const onTimeUpdate = () => {
+        if (!activeVideo.duration || isNaN(activeVideo.duration)) return;
+        const remaining = Math.max(activeVideo.duration - activeVideo.currentTime, 0);
+        setTimeRemaining(remaining * 1000);
+        const pct = ((activeVideo.currentTime) / activeVideo.duration) * 100;
+        setProgressPercent(isFinite(pct) ? pct : 0);
+        if (remaining <= 3) {
+          const nextIndex = (currentIndex + 1) % items.length;
+          const preloadSlot = activePlayer === "A" ? "B" : "A";
+          preloadIntoSlot(preloadSlot, nextIndex);
+        }
+        if (remaining <= 0.05) {
+          const nextIndex = (currentIndex + 1) % items.length;
+          const nextSlot = activePlayer === "A" ? "B" : "A";
+          if (nextReadySlot && nextReadySlot !== nextSlot) {
+            return;
+          }
+          const nextVideo = nextSlot === "A" ? videoARef.current : videoBRef.current;
+          const nextImg = nextSlot === "A" ? imgARef.current : imgBRef.current;
+          if (nextVideo && nextVideo.src) {
+            nextVideo.currentTime = 0;
+            nextVideo.play().catch(() => {});
+            const prevVideo = activePlayer === "A" ? videoARef.current : videoBRef.current;
+            if (prevVideo) prevVideo.pause();
+          } else if (nextImg && nextImg.src) {
+            const currentVideo = activePlayer === "A" ? videoARef.current : videoBRef.current;
+            if (currentVideo) currentVideo.pause();
+          }
+          setActivePlayer(nextSlot);
+          setCurrentIndex(nextIndex);
+          setNextReadySlot(null);
+        }
+      };
+      activeVideo.addEventListener("timeupdate", onTimeUpdate);
+      return () => {
+        activeVideo.removeEventListener("timeupdate", onTimeUpdate);
+      };
+    } else {
+      const effectiveDuration = duration > 0 ? duration : 10;
+      setTimeRemaining(effectiveDuration * 1000);
+      setProgressPercent(0);
+      const preloadTimeout = window.setTimeout(() => {
+        const nextIndex = (currentIndex + 1) % items.length;
+        const preloadSlot = activePlayer === "A" ? "B" : "A";
+        preloadIntoSlot(preloadSlot, nextIndex);
+      }, Math.max(effectiveDuration * 1000 - 3000, 0));
+      const switchTimeout = window.setTimeout(() => {
+        const nextIndex = (currentIndex + 1) % items.length;
+        const nextSlot = activePlayer === "A" ? "B" : "A";
+        setActivePlayer(nextSlot);
+        setCurrentIndex(nextIndex);
+      }, Math.max(effectiveDuration * 1000 - 50, 0));
+      const progressInterval = window.setInterval(() => {
+        setTimeRemaining((prev) => {
+          const next = Math.max(prev - 100, 0);
+          const pct = ((effectiveDuration * 1000 - next) / (effectiveDuration * 1000)) * 100;
+          setProgressPercent(isFinite(pct) ? pct : 0);
+          return next;
+        });
+      }, 100);
+      return () => {
+        window.clearTimeout(preloadTimeout);
+        window.clearTimeout(switchTimeout);
+        window.clearInterval(progressInterval);
+      };
+    }
+  }, [items, currentIndex, activePlayer, preloadIntoSlot, getDurationForIndex, nextReadySlot]);
+
+  useEffect(() => {
+    if (items.length === 0 || !activeMedia) return;
+    const url = activeMedia.blob_url || activeMedia.file_url;
+    if (!url) return;
+    const slot = activePlayer;
+    if (activeMedia.type === "video") {
+      const video = slot === "A" ? videoARef.current : videoBRef.current;
+      if (video) {
+        video.preload = "auto";
+        video.muted = false;
+        video.src = url;
+        video.load();
+        video.play().catch(() => {});
+        const img = slot === "A" ? imgARef.current : imgBRef.current;
+        if (img) {
+          img.style.display = "none";
+          img.removeAttribute("src");
+        }
+        mediaElementRef.current = video;
+      }
+    } else {
+      const img = slot === "A" ? imgARef.current : imgBRef.current;
+      if (img) {
+        img.src = url;
+        img.style.display = "block";
+        const video = slot === "A" ? videoARef.current : videoBRef.current;
+        if (video) {
+          video.pause();
+          video.removeAttribute("src");
+          video.load();
+          video.style.display = "none";
+        }
+        mediaElementRef.current = img;
+      }
+    }
+  }, [items, activeMedia, activePlayer]);
+
   // State screens
   if (isLoading && !deviceState) {
     return <LoadingScreen subMessage={`Dispositivo: ${deviceCode}`} />;
@@ -134,20 +307,53 @@ const WebViewPlayer = () => {
     );
   }
 
-  if (!activePlaylist || items.length === 0) {
+  if (!activePlaylist || items.length === 0 || !activeMedia) {
     return (
       <EmptyContentScreen
         deviceName={deviceState?.device_name || deviceCode || undefined}
-        syncError={syncError}
+        syncError={syncError || (!activePlaylist || items.length === 0 ? undefined : "Nenhuma mídia ativa para exibir no momento")}
         onSync={syncWithServer}
         isSyncing={isSyncing}
       />
     );
   }
 
-  if (!activeMedia) return null;
+  const [resolvedMediaUrl, setResolvedMediaUrl] = useState<string>("");
 
-  const mediaUrl = activeMedia.blob_url || activeMedia.file_url;
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveUrl = async () => {
+      if (!activeMedia || !activeMedia.file_url) {
+        setResolvedMediaUrl("");
+        return;
+      }
+
+      if (activeMedia.blob_url) {
+        setResolvedMediaUrl(activeMedia.blob_url);
+        return;
+      }
+
+      try {
+        const localUrl = await storageService.cacheMedia(activeMedia.file_url, activeMedia.id);
+        if (!cancelled) {
+          setResolvedMediaUrl(localUrl);
+        }
+      } catch (e) {
+        console.error("Failed to cache media locally:", e);
+        if (!cancelled) {
+          setResolvedMediaUrl(activeMedia.file_url);
+        }
+      }
+    };
+
+    resolveUrl();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMedia?.id, activeMedia?.file_url, activeMedia?.blob_url]);
+
   const getObjectFit = (): "cover" | "contain" | "fill" => {
     switch (activePlaylist?.content_scale) {
       case "contain": return "contain";
@@ -158,6 +364,11 @@ const WebViewPlayer = () => {
 
   return (
     <div className="relative min-h-screen bg-black overflow-hidden select-none">
+      {Capacitor.isNativePlatform() && (
+        <div className="absolute top-2 left-2 z-50 px-2 py-1 rounded bg-black/70 text-[10px] text-white/70">
+          <span>WebViewPlayer • rota: {deviceCode ? `/webview/${deviceCode}` : "/android-player"}</span>
+        </div>
+      )}
       {/* Update notification */}
       <div className={cn(
         "absolute top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-500",
@@ -171,21 +382,54 @@ const WebViewPlayer = () => {
 
       {/* Media */}
       <div className="relative w-full h-screen">
-        <MediaRenderer
-          media={activeMedia}
-          mediaUrl={mediaUrl || ""}
-          objectFit={getObjectFit()}
-          transitionClass={cn(
-            "transition-opacity duration-500",
-            transitionState === "fading" ? "opacity-0" : "opacity-100"
-          )}
-          onEnded={goToNext}
-          onImageError={(e) => {
-            if ((e.target as HTMLImageElement).src !== activeMedia.file_url) {
-              (e.target as HTMLImageElement).src = activeMedia.file_url;
-            }
-          }}
-        />
+        <div className="absolute inset-0">
+          <video
+            ref={videoARef}
+            className={cn(
+              "w-full h-full object-cover transition-opacity duration-[0ms]",
+              getObjectFit() === "contain" && "object-contain",
+              getObjectFit() === "fill" && "object-fill",
+              activePlayer === "A" ? "opacity-100" : "opacity-0"
+            )}
+            style={{ willChange: "opacity", transform: "translateZ(0)" }}
+            playsInline
+          />
+          <img
+            ref={imgARef}
+            className={cn(
+              "w-full h-full object-cover transition-opacity duration-[0ms]",
+              getObjectFit() === "contain" && "object-contain",
+              getObjectFit() === "fill" && "object-fill",
+              activePlayer === "A" ? "opacity-100" : "opacity-0"
+            )}
+            style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
+            alt=""
+          />
+        </div>
+        <div className="absolute inset-0">
+          <video
+            ref={videoBRef}
+            className={cn(
+              "w-full h-full object-cover transition-opacity duration-[0ms]",
+              getObjectFit() === "contain" && "object-contain",
+              getObjectFit() === "fill" && "object-fill",
+              activePlayer === "B" ? "opacity-100" : "opacity-0"
+            )}
+            style={{ willChange: "opacity", transform: "translateZ(0)" }}
+            playsInline
+          />
+          <img
+            ref={imgBRef}
+            className={cn(
+              "w-full h-full object-cover transition-opacity duration-[0ms]",
+              getObjectFit() === "contain" && "object-contain",
+              getObjectFit() === "fill" && "object-fill",
+              activePlayer === "B" ? "opacity-100" : "opacity-0"
+            )}
+            style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
+            alt=""
+          />
+        </div>
       </div>
 
       <PlayerProgressBar progressPercent={progressPercent} />
@@ -228,9 +472,22 @@ const WebViewPlayer = () => {
         </div>
       )}
 
+      {/* Camera Preview */}
+      <video
+        ref={cameraPreviewRef}
+        className={cn(
+          "absolute bottom-24 right-6 w-48 h-36 bg-black border-2 border-white/20 rounded-lg object-cover z-50 transition-all duration-300 origin-bottom-right shadow-2xl",
+          showCameraPreview && showControls ? "scale-100 opacity-100" : "scale-0 opacity-0 pointer-events-none"
+        )}
+        muted
+        playsInline
+      />
+
       {/* Face detection indicator */}
-      <div className={cn(
-        "absolute bottom-6 right-6 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-3 transition-opacity duration-300",
+      <div 
+        onClick={() => setShowCameraPreview(!showCameraPreview)}
+        className={cn(
+        "absolute bottom-6 right-6 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-3 transition-opacity duration-300 cursor-pointer hover:bg-black/80 active:scale-95",
         showControls ? "opacity-100" : "opacity-0"
       )}>
         <Camera className={cn(

@@ -8,6 +8,7 @@ interface LoyaltyOverlayProps {
   visible: boolean;
   activeFaces: ActiveFace[];
   onClose: () => void;
+  isPortrait?: boolean;
 }
 
 interface LoyaltyOffer {
@@ -32,6 +33,7 @@ export const LoyaltyOverlay = ({
   visible,
   activeFaces,
   onClose,
+  isPortrait = false,
 }: LoyaltyOverlayProps) => {
   const [cpfInput, setCpfInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<ActiveFace | null>(null);
@@ -61,7 +63,12 @@ export const LoyaltyOverlay = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto p-6",
+          isPortrait ? "pb-10" : ""
+        )}
+      >
         {/* Recognized face banner */}
         {recognizedFace && (
           <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-4 mb-6 flex items-center gap-4">

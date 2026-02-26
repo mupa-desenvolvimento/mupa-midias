@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/hooks/useTheme";
 import AppLayout from "./components/layout/AppLayout";
@@ -29,6 +29,7 @@ import Stores from "./pages/admin/Stores";
 import StoresMap from "./pages/admin/StoresMap";
 import Regions from "./pages/admin/Regions";
 import Channels from "./pages/admin/Channels";
+import RetailMedia from "./pages/RetailMedia";
 import Playlists from "./pages/admin/Playlists";
 import PlaylistEditorPage from "./pages/admin/PlaylistEditor";
 import DeviceGroups from "./pages/admin/DeviceGroups";
@@ -47,6 +48,7 @@ import AssaiPresentation from "./pages/AssaiPresentation";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { PWAUpdatePrompt, InstallPrompt } from "./components/PWAPrompts";
 import { useSyncManager } from "./hooks/useSyncManager";
+import { Capacitor } from "@capacitor/core";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,6 +64,30 @@ const queryClient = new QueryClient({
   },
 });
 
+const NativeRouteHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const path = location.pathname;
+    const storedCode = localStorage.getItem("mupa_device_code");
+    const fallbackCode = storedCode || "UWYJKTVA";
+
+    if (path.startsWith("/play/") || path.startsWith("/setup/")) return;
+
+    if (!storedCode) {
+      navigate("/setup/new", { replace: true });
+      return;
+    }
+
+    navigate(`/play/${fallbackCode}`, { replace: true });
+  }, [navigate, location.pathname]);
+
+  return null;
+};
+
 function AppContent() {
   // Initialize sync manager at app level
   useSyncManager();
@@ -74,6 +100,7 @@ function AppContent() {
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <NativeRouteHandler />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/install" element={<Install />} />
@@ -81,6 +108,7 @@ function AppContent() {
           <Route path="/device/:deviceId" element={<DevicePlayer />} />
           <Route path="/setup/:deviceId" element={<DeviceSetup />} />
           <Route path="/detect/:deviceCode" element={<DeviceDetector />} />
+          <Route path="/retail-media" element={<RetailMedia />} />
           <Route path="/play/:deviceCode" element={<OfflinePlayer />} />
           <Route path="/webview/:deviceCode" element={<WebViewPlayer />} />
           {/* Rota específica para Android/Kodular usando query param ?device_id=XYZ */}

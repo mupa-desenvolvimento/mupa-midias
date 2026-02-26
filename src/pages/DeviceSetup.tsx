@@ -337,8 +337,10 @@ export default function DeviceSetup() {
   };
 
   const handleStartPlayer = () => {
-    // Usa o player otimizado para WebView (Kodular/Android)
-    navigate(`/webview/${deviceId}`);
+    if (deviceId) {
+      localStorage.setItem('mupa_device_code', deviceId);
+      navigate(`/play/${deviceId}`);
+    }
   };
 
   const selectedStore = stores.find(s => s.id === selectedStoreId);

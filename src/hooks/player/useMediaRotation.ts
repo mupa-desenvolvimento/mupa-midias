@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 interface MediaRotationOptions {
   itemsLength: number;
-  currentDuration: number; // in seconds
-  isVideo: boolean;
+  getDuration: (index: number) => number; // in seconds; return 0 for videos to rely on onEnded
+  getIsVideo: (index: number) => boolean;
   enabled: boolean;
   onFadeStart?: () => void;
   fadeBeforeMs?: number;
@@ -11,8 +11,8 @@ interface MediaRotationOptions {
 
 export const useMediaRotation = ({
   itemsLength,
-  currentDuration,
-  isVideo,
+  getDuration,
+  getIsVideo,
   enabled,
   onFadeStart,
   fadeBeforeMs = 0,
@@ -22,6 +22,9 @@ export const useMediaRotation = ({
   const mediaTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const fadeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const currentDuration = useMemo(() => getDuration(currentIndex), [currentIndex, getDuration]);
+  const isVideo = useMemo(() => getIsVideo(currentIndex), [currentIndex, getIsVideo]);
 
   const goToNext = useCallback(() => {
     if (itemsLength === 0) return;
