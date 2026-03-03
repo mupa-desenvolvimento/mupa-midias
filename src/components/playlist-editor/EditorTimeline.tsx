@@ -4,10 +4,10 @@ import { MediaItem } from "@/hooks/useMediaItems";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ItemSettingsDialog } from "./ItemSettingsDialog";
-import { 
-  Plus, 
-  Clock, 
-  Trash2, 
+import {
+  Plus,
+  Clock,
+  Trash2,
   Copy,
   GripVertical,
   Image,
@@ -19,7 +19,7 @@ import {
   Settings,
   Calendar,
   ArrowUpDown,
-  Type
+  Type,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,15 +41,18 @@ interface EditorTimelineProps {
   onRemoveItem: (id: string) => void;
   onDuplicateItem: (item: PlaylistItem) => void;
   onUpdateDuration: (id: string, duration: number) => void;
-  onUpdateItemSettings: (id: string, updates: {
-    duration_override: number;
-    is_schedule_override: boolean;
-    start_date: string | null;
-    end_date: string | null;
-    start_time: string | null;
-    end_time: string | null;
-    days_of_week: number[] | null;
-  }) => void;
+  onUpdateItemSettings: (
+    id: string,
+    updates: {
+      duration_override: number;
+      is_schedule_override: boolean;
+      start_date: string | null;
+      end_date: string | null;
+      start_time: string | null;
+      end_time: string | null;
+      days_of_week: number[] | null;
+    },
+  ) => void;
   onReorderItems: (items: { id: string; position: number }[]) => void;
   totalDuration: number;
   isPlaying: boolean;
@@ -66,9 +69,12 @@ const formatDuration = (seconds: number) => {
 
 const getMediaIcon = (type: string) => {
   switch (type) {
-    case "video": return Video;
-    case "image": return Image;
-    default: return FileText;
+    case "video":
+      return Video;
+    case "image":
+      return Image;
+    default:
+      return FileText;
   }
 };
 
@@ -107,27 +113,30 @@ export const EditorTimeline = ({
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    setDropTargetIndex(null);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      setDropTargetIndex(null);
 
-    const mediaData = e.dataTransfer.getData("application/json");
-    if (mediaData) {
-      try {
-        const media = JSON.parse(mediaData) as MediaItem;
-        onAddMedia(media, items.length);
-      } catch {
-        // Not valid JSON
+      const mediaData = e.dataTransfer.getData("application/json");
+      if (mediaData) {
+        try {
+          const media = JSON.parse(mediaData) as MediaItem;
+          onAddMedia(media, items.length);
+        } catch {
+          // Not valid JSON
+        }
       }
-    }
-  }, [items.length, onAddMedia]);
+    },
+    [items.length, onAddMedia],
+  );
 
   const handleItemDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData("text/plain", index.toString());
     e.dataTransfer.effectAllowed = "move";
     setDraggedIndex(index);
-    
+
     // Create custom drag image
     const dragElement = e.currentTarget as HTMLElement;
     const rect = dragElement.getBoundingClientRect();
@@ -144,20 +153,23 @@ export const EditorTimeline = ({
     ghost.style.borderRadius = "8px";
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, rect.width / 2, rect.height / 2);
-    
+
     // Cleanup ghost after drag starts
     requestAnimationFrame(() => {
       document.body.removeChild(ghost);
     });
   }, []);
 
-  const handleItemDragOver = useCallback((e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (draggedIndex !== null && draggedIndex !== index) {
-      setDropTargetIndex(index);
-    }
-  }, [draggedIndex]);
+  const handleItemDragOver = useCallback(
+    (e: React.DragEvent, index: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (draggedIndex !== null && draggedIndex !== index) {
+        setDropTargetIndex(index);
+      }
+    },
+    [draggedIndex],
+  );
 
   const handleItemDragLeave = useCallback((e: React.DragEvent) => {
     e.stopPropagation();
@@ -167,56 +179,59 @@ export const EditorTimeline = ({
     }
   }, []);
 
-  const handleItemDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDropTargetIndex(null);
-    
-    const dragIndexStr = e.dataTransfer.getData("text/plain");
-    if (dragIndexStr && draggedIndex !== null) {
-      const dragIndex = parseInt(dragIndexStr);
-      if (dragIndex !== dropIndex) {
-        const newItems = [...items];
-        const [draggedItem] = newItems.splice(dragIndex, 1);
-        newItems.splice(dropIndex, 0, draggedItem);
-        
-        const reordered = newItems.map((item, idx) => ({
-          id: item.id,
-          position: idx,
-        }));
-        onReorderItems(reordered);
+  const handleItemDrop = useCallback(
+    (e: React.DragEvent, dropIndex: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDropTargetIndex(null);
+
+      const dragIndexStr = e.dataTransfer.getData("text/plain");
+      if (dragIndexStr && draggedIndex !== null) {
+        const dragIndex = parseInt(dragIndexStr);
+        if (dragIndex !== dropIndex) {
+          const newItems = [...items];
+          const [draggedItem] = newItems.splice(dragIndex, 1);
+          newItems.splice(dropIndex, 0, draggedItem);
+
+          const reordered = newItems.map((item, idx) => ({
+            id: item.id,
+            position: idx,
+          }));
+          onReorderItems(reordered);
+        }
+        setDraggedIndex(null);
+        return;
+      }
+
+      const mediaData = e.dataTransfer.getData("application/json");
+      if (mediaData) {
+        try {
+          const media = JSON.parse(mediaData) as MediaItem;
+          onAddMedia(media, dropIndex);
+        } catch {
+          // Ignore
+        }
       }
       setDraggedIndex(null);
-      return;
-    }
-
-    const mediaData = e.dataTransfer.getData("application/json");
-    if (mediaData) {
-      try {
-        const media = JSON.parse(mediaData) as MediaItem;
-        onAddMedia(media, dropIndex);
-      } catch {
-        // Ignore
-      }
-    }
-    setDraggedIndex(null);
-  }, [items, draggedIndex, onAddMedia, onReorderItems]);
+    },
+    [items, draggedIndex, onAddMedia, onReorderItems],
+  );
 
   const handleDragEnd = useCallback(() => {
     setDraggedIndex(null);
     setDropTargetIndex(null);
   }, []);
 
-  const handleSort = (type: 'name' | 'duration' | 'date') => {
+  const handleSort = (type: "name" | "duration" | "date") => {
     const sorted = [...items].sort((a, b) => {
       switch (type) {
-        case 'name':
-          return (a.media?.name || '').localeCompare(b.media?.name || '');
-        case 'duration':
+        case "name":
+          return (a.media?.name || "").localeCompare(b.media?.name || "");
+        case "duration":
           const durA = a.duration_override || a.media?.duration || 0;
           const durB = b.duration_override || b.media?.duration || 0;
           return durA - durB;
-        case 'date':
+        case "date":
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         default:
           return 0;
@@ -225,9 +240,9 @@ export const EditorTimeline = ({
 
     const reordered = sorted.map((item, index) => ({
       id: item.id,
-      position: index
+      position: index,
     }));
-    
+
     onReorderItems(reordered);
   };
 
@@ -240,10 +255,10 @@ export const EditorTimeline = ({
   }, []);
 
   return (
-    <div 
+    <div
       className={cn(
         "flex flex-col bg-muted/50 border-t border-border transition-all flex-shrink-0",
-        isExpanded ? "h-40" : "h-10"
+        isExpanded ? "h-40" : "h-10",
       )}
     >
       {/* Timeline Header */}
@@ -256,14 +271,16 @@ export const EditorTimeline = ({
             {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
             <span className="text-xs font-medium">Timeline</span>
           </button>
-          
+
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {formatDuration(totalDuration)}
             </span>
             <span className="opacity-50">•</span>
-            <span>{items.length} {items.length === 1 ? "item" : "itens"}</span>
+            <span>
+              {items.length} {items.length === 1 ? "item" : "itens"}
+            </span>
           </div>
 
           <div className="h-4 w-px bg-border mx-2" />
@@ -276,15 +293,15 @@ export const EditorTimeline = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => handleSort('name')}>
+              <DropdownMenuItem onClick={() => handleSort("name")}>
                 <Type className="w-4 h-4 mr-2" />
                 Nome
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('duration')}>
+              <DropdownMenuItem onClick={() => handleSort("duration")}>
                 <Clock className="w-4 h-4 mr-2" />
                 Duração
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('date')}>
+              <DropdownMenuItem onClick={() => handleSort("date")}>
                 <Calendar className="w-4 h-4 mr-2" />
                 Data de inclusão
               </DropdownMenuItem>
@@ -295,11 +312,11 @@ export const EditorTimeline = ({
 
       {/* Timeline Content */}
       {isExpanded && (
-        <div 
+        <div
           className={cn(
             "flex-1 relative transition-colors duration-200",
             isDragOver ? "bg-primary/5" : "",
-            draggedIndex !== null ? "bg-accent/30" : ""
+            draggedIndex !== null ? "bg-accent/30" : "",
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -307,10 +324,10 @@ export const EditorTimeline = ({
         >
           {items.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div 
+              <div
                 className={cn(
                   "flex flex-col items-center gap-2 px-8 py-4 rounded-xl border-2 border-dashed transition-all duration-200",
-                  isDragOver ? "border-primary bg-primary/10 scale-105" : "border-border"
+                  isDragOver ? "border-primary bg-primary/10 scale-105" : "border-border",
                 )}
               >
                 <Plus className="w-8 h-8 text-muted-foreground" />
@@ -328,7 +345,7 @@ export const EditorTimeline = ({
                   const isDropTarget = dropTargetIndex === index;
                   const hasScheduleOverride = item.is_schedule_override;
                   const Icon = getMediaIcon(item.media?.type || "image");
-                  
+
                   // Calculate width based on duration (min 100px, 10px per second)
                   const width = Math.max(100, duration * 10);
 
@@ -341,7 +358,7 @@ export const EditorTimeline = ({
                             {isDropTarget && draggedIndex !== null && draggedIndex > index && (
                               <div className="absolute -left-1.5 top-0 bottom-0 w-1 bg-primary rounded-full z-20 animate-pulse" />
                             )}
-                            
+
                             <div
                               draggable
                               onDragStart={(e) => handleItemDragStart(e, index)}
@@ -356,21 +373,25 @@ export const EditorTimeline = ({
                               className={cn(
                                 "group relative flex-shrink-0 rounded-lg overflow-hidden cursor-pointer h-full",
                                 "border-2 transition-all duration-200",
-                                isSelected ? "border-primary ring-2 ring-primary/30" : isCurrent ? "border-foreground/30" : "border-transparent hover:border-muted-foreground/50",
+                                isSelected
+                                  ? "border-primary ring-2 ring-primary/30"
+                                  : isCurrent
+                                    ? "border-foreground/30"
+                                    : "border-transparent hover:border-muted-foreground/50",
                                 isDragging ? "opacity-40 scale-95 rotate-1" : "opacity-100",
-                                isDropTarget ? "scale-[0.98] border-primary/50" : ""
+                                isDropTarget ? "scale-[0.98] border-primary/50" : "",
                               )}
-                              style={{ width: `${width}px` }}
+                              style={{ width: `${width}px`, height: 80 }}
                             >
                               {/* Thumbnail */}
                               <div className="absolute inset-0 bg-muted">
-                                {item.media?.file_url && (
-                                  item.media.type === "video" ? (
+                                {item.media?.file_url &&
+                                  (item.media.type === "video" ? (
                                     <video
                                       src={item.media.file_url}
                                       className={cn(
                                         "w-full h-full object-cover transition-opacity duration-200",
-                                        isDragging ? "opacity-50" : "opacity-80"
+                                        isDragging ? "opacity-50" : "opacity-80",
                                       )}
                                       muted
                                     />
@@ -380,11 +401,10 @@ export const EditorTimeline = ({
                                       alt=""
                                       className={cn(
                                         "w-full h-full object-cover transition-opacity duration-200",
-                                        isDragging ? "opacity-50" : "opacity-80"
+                                        isDragging ? "opacity-50" : "opacity-80",
                                       )}
                                     />
-                                  )
-                                )}
+                                  ))}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                               </div>
 
@@ -392,15 +412,17 @@ export const EditorTimeline = ({
                               <div className="absolute inset-0 flex flex-col justify-between p-2">
                                 {/* Top Row */}
                                 <div className="flex items-start justify-between">
-                                  <div className={cn(
-                                    "flex items-center gap-1 transition-opacity duration-200",
-                                    isDragging ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                                  )}>
+                                  <div
+                                    className={cn(
+                                      "flex items-center gap-1 transition-opacity duration-200",
+                                      isDragging ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                                    )}
+                                  >
                                     <div className="p-1 bg-black/50 rounded cursor-grab active:cursor-grabbing hover:bg-black/70 transition-colors">
                                       <GripVertical className="w-3 h-3 text-white/70" />
                                     </div>
                                   </div>
-                                  
+
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button
@@ -413,7 +435,7 @@ export const EditorTimeline = ({
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      <DropdownMenuItem 
+                                      <DropdownMenuItem
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setSettingsItem(item);
@@ -422,7 +444,7 @@ export const EditorTimeline = ({
                                         <Settings className="w-4 h-4 mr-2" />
                                         Configurações
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem 
+                                      <DropdownMenuItem
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onDuplicateItem(item);
@@ -432,7 +454,7 @@ export const EditorTimeline = ({
                                         Duplicar
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem 
+                                      <DropdownMenuItem
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onRemoveItem(item.id);
@@ -474,9 +496,7 @@ export const EditorTimeline = ({
                               )}
 
                               {/* Drag overlay */}
-                              {isDragging && (
-                                <div className="absolute inset-0 bg-primary/20 rounded-lg" />
-                              )}
+                              {isDragging && <div className="absolute inset-0 bg-primary/20 rounded-lg" />}
                             </div>
 
                             {/* Drop Indicator - Right side */}
@@ -509,9 +529,9 @@ export const EditorTimeline = ({
                 <div
                   className={cn(
                     "flex-shrink-0 w-16 rounded-lg border-2 border-dashed flex items-center justify-center transition-all duration-200",
-                    isDragOver || dropTargetIndex === items.length 
-                      ? "border-primary bg-primary/10 scale-105" 
-                      : "border-border hover:border-muted-foreground hover:bg-accent/50"
+                    isDragOver || dropTargetIndex === items.length
+                      ? "border-primary bg-primary/10 scale-105"
+                      : "border-border hover:border-muted-foreground hover:bg-accent/50",
                   )}
                   onDragOver={(e) => {
                     e.preventDefault();
