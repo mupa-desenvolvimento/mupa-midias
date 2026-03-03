@@ -165,7 +165,8 @@ const MediaLibraryPanel = ({ onAddMedia, itemsLength }: {
                   key={media.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, media)}
-                  className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-primary/50 transition-all"
+                  className="group relative rounded-lg overflow-hidden bg-muted cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-primary/50 transition-all"
+                  style={{ width: '100%', height: 100 }}
                 >
                   {media.file_url ? (
                     media.type === "video" ? (
