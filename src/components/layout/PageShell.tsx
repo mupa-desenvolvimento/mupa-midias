@@ -17,7 +17,7 @@ export const PageShell = ({
   className,
 }: PageShellProps) => {
   return (
-    <div className={cn("h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col", className)}>
+    <div className={cn("h-full max-h-full overflow-hidden flex flex-col", className)}>
       <div className="shrink-0">
         {header}
       </div>
