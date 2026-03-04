@@ -42,7 +42,7 @@ export function usePriceCheckIntegrations() {
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["price-check-integrations"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("price_check_integrations")
         .select(`
           *,
@@ -63,7 +63,7 @@ export function usePriceCheckIntegrations() {
 
   const createIntegration = useMutation({
     mutationFn: async (newIntegration: Partial<PriceCheckIntegration>) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("price_check_integrations")
         .insert({
           name: newIntegration.name,
@@ -89,7 +89,7 @@ export function usePriceCheckIntegrations() {
       queryClient.invalidateQueries({ queryKey: ["price-check-integrations"] });
       toast.success("Integração criada com sucesso");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error(error);
       toast.error("Erro ao criar integração");
     },
@@ -97,7 +97,7 @@ export function usePriceCheckIntegrations() {
 
   const updateIntegration = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<PriceCheckIntegration> & { id: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("price_check_integrations")
         .update({
           name: updates.name,
@@ -125,7 +125,7 @@ export function usePriceCheckIntegrations() {
       queryClient.invalidateQueries({ queryKey: ["price-check-integrations"] });
       toast.success("Integração atualizada com sucesso");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error(error);
       toast.error("Erro ao atualizar integração");
     },
@@ -133,7 +133,7 @@ export function usePriceCheckIntegrations() {
 
   const deleteIntegration = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("price_check_integrations")
         .delete()
         .eq("id", id);
@@ -144,7 +144,7 @@ export function usePriceCheckIntegrations() {
       queryClient.invalidateQueries({ queryKey: ["price-check-integrations"] });
       toast.success("Integração removida com sucesso");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error(error);
       toast.error("Erro ao remover integração");
     },
@@ -164,7 +164,7 @@ export function usePriceCheckLogs(integrationId?: string) {
   return useQuery({
     queryKey: ["price-check-logs", integrationId],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("price_check_logs")
         .select("*")
         .order("created_at", { ascending: false })

@@ -14,240 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      weather_locations: {
-        Row: {
-          id: string
-          tenant_id: string | null
-          state: string
-          city: string
-          latitude: number | null
-          longitude: number | null
-          openweather_city_id: string | null
-          is_active: boolean
-          is_default: boolean
-          last_updated_at: string | null
-          current_temp: number | null
-          weather_description: string | null
-          weather_icon: string | null
-          humidity: number | null
-          wind_speed: number | null
-          raw_data: Json | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          tenant_id?: string | null
-          state: string
-          city: string
-          latitude?: number | null
-          longitude?: number | null
-          openweather_city_id?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          last_updated_at?: string | null
-          current_temp?: number | null
-          weather_description?: string | null
-          weather_icon?: string | null
-          humidity?: number | null
-          wind_speed?: number | null
-          raw_data?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          tenant_id?: string | null
-          state?: string
-          city?: string
-          latitude?: number | null
-          longitude?: number | null
-          openweather_city_id?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          last_updated_at?: string | null
-          current_temp?: number | null
-          weather_description?: string | null
-          weather_icon?: string | null
-          humidity?: number | null
-          wind_speed?: number | null
-          raw_data?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "weather_locations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          }
-        ]
-      },
-      news_feeds: {
-        Row: {
-          id: string
-          tenant_id: string | null
-          name: string
-          rss_url: string
-          category: string
-          active: boolean
-          priority: number
-          last_fetched_at: string | null
-          error_count: number
-          last_error: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          tenant_id?: string | null
-          name: string
-          rss_url: string
-          category?: string
-          active?: boolean
-          priority?: number
-          last_fetched_at?: string | null
-          error_count?: number
-          last_error?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          tenant_id?: string | null
-          name?: string
-          rss_url?: string
-          category?: string
-          active?: boolean
-          priority?: number
-          last_fetched_at?: string | null
-          error_count?: number
-          last_error?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "news_feeds_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          }
-        ]
-      },
-      news_articles: {
-         Row: {
-           id: string
-           feed_id: string | null
-           title: string
-          description: string | null
-          content: string | null
-          image_url: string | null
-          link: string
-          source: string
-          category: string | null
-          published_at: string
-          created_at: string
-          active: boolean
-          hash: string
-        }
-        Insert: {
-            id?: string
-            feed_id?: string | null
-            title: string
-          description?: string | null
-          content?: string | null
-          image_url?: string | null
-          link: string
-          source: string
-          category?: string | null
-          published_at: string
-          created_at?: string
-          active?: boolean
-          hash: string
-        }
-        Update: {
-            id?: string
-            feed_id?: string | null
-            title?: string
-          description?: string | null
-          content?: string | null
-          image_url?: string | null
-          link?: string
-          source?: string
-          category?: string | null
-          published_at?: string
-          created_at?: string
-          active?: boolean
-          hash?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "news_articles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "news_articles_feed_id_fkey"
-            columns: ["feed_id"]
-            isOneToOne: false
-            referencedRelation: "news_feeds"
-            referencedColumns: ["id"]
-          }
-        ]
-      },
-      news_settings: {
-        Row: {
-          id: string
-          tenant_id: string | null
-          active_categories: string[]
-          max_items: number
-          display_time: number
-          layout_type: string
-          theme_mode: string
-          type_view: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          tenant_id?: string | null
-          active_categories?: string[]
-          max_items?: number
-          display_time?: number
-          layout_type?: string
-          theme_mode?: string
-          type_view?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          tenant_id?: string | null
-          active_categories?: string[]
-          max_items?: number
-          display_time?: number
-          layout_type?: string
-          theme_mode?: string
-          type_view?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "news_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          }
-        ]
-      },
       api_integrations: {
         Row: {
           auth_type: string
@@ -289,6 +55,112 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      auto_content_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          payload_json: Json | null
+          source: string
+          status: string
+          tenant_id: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          payload_json?: Json | null
+          source?: string
+          status?: string
+          tenant_id: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          payload_json?: Json | null
+          source?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_content_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auto_content_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          last_fetch_at: string | null
+          module_type: string
+          refresh_interval_minutes: number
+          tenant_id: string
+          updated_at: string
+          weather_city: string | null
+          weather_country: string | null
+          weather_state: string | null
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_fetch_at?: string | null
+          module_type: string
+          refresh_interval_minutes?: number
+          tenant_id: string
+          updated_at?: string
+          weather_city?: string | null
+          weather_country?: string | null
+          weather_state?: string | null
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_fetch_at?: string | null
+          module_type?: string
+          refresh_interval_minutes?: number
+          tenant_id?: string
+          updated_at?: string
+          weather_city?: string | null
+          weather_country?: string | null
+          weather_state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_content_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       canva_auth_states: {
         Row: {
@@ -767,7 +639,6 @@ export type Database = {
           name: string
           override_media_expires_at: string | null
           override_media_id: string | null
-          price_integration_id: string | null
           region_id: string | null
           resolution: string | null
           status: string
@@ -795,7 +666,6 @@ export type Database = {
           name: string
           override_media_expires_at?: string | null
           override_media_id?: string | null
-          price_integration_id?: string | null
           region_id?: string | null
           resolution?: string | null
           status?: string
@@ -823,7 +693,6 @@ export type Database = {
           name?: string
           override_media_expires_at?: string | null
           override_media_id?: string | null
-          price_integration_id?: string | null
           region_id?: string | null
           resolution?: string | null
           status?: string
@@ -1232,6 +1101,153 @@ export type Database = {
           },
         ]
       }
+      news_articles: {
+        Row: {
+          active: boolean | null
+          category: string | null
+          content: string | null
+          description: string | null
+          feed_id: string | null
+          id: string
+          image_url: string | null
+          imported_at: string
+          link: string | null
+          published_at: string | null
+          slug: string | null
+          source: string | null
+          title: string
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string | null
+          content?: string | null
+          description?: string | null
+          feed_id?: string | null
+          id?: string
+          image_url?: string | null
+          imported_at?: string
+          link?: string | null
+          published_at?: string | null
+          slug?: string | null
+          source?: string | null
+          title: string
+        }
+        Update: {
+          active?: boolean | null
+          category?: string | null
+          content?: string | null
+          description?: string | null
+          feed_id?: string | null
+          id?: string
+          image_url?: string | null
+          imported_at?: string
+          link?: string | null
+          published_at?: string | null
+          slug?: string | null
+          source?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_articles_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "news_feeds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_feeds: {
+        Row: {
+          active: boolean | null
+          category: string | null
+          created_at: string
+          id: string
+          name: string
+          priority: number | null
+          rss_url: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          priority?: number | null
+          rss_url: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          priority?: number | null
+          rss_url?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_feeds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_settings: {
+        Row: {
+          active_categories: Json | null
+          created_at: string
+          display_time: number | null
+          id: string
+          layout_type: string | null
+          max_items: number | null
+          tenant_id: string | null
+          theme_mode: string | null
+          type_view: string | null
+          updated_at: string
+        }
+        Insert: {
+          active_categories?: Json | null
+          created_at?: string
+          display_time?: number | null
+          id?: string
+          layout_type?: string | null
+          max_items?: number | null
+          tenant_id?: string | null
+          theme_mode?: string | null
+          type_view?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active_categories?: Json | null
+          created_at?: string
+          display_time?: number | null
+          id?: string
+          layout_type?: string | null
+          max_items?: number | null
+          tenant_id?: string | null
+          theme_mode?: string | null
+          type_view?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_channel_items: {
         Row: {
           channel_id: string
@@ -1490,125 +1506,6 @@ export type Database = {
             referencedRelation: "media_items"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      price_check_integrations: {
-        Row: {
-          auth_config: Json | null
-          auth_type: string
-          barcode_param_name: string | null
-          barcode_param_type: string
-          company_id: string | null
-          created_at: string
-          endpoint_url: string
-          environment: string
-          headers: Json | null
-          id: string
-          mapping_config: Json | null
-          method: string
-          name: string
-          status: string
-          token_cache: Json | null
-          updated_at: string
-        }
-        Insert: {
-          auth_config?: Json | null
-          auth_type: string
-          barcode_param_name?: string | null
-          barcode_param_type: string
-          company_id?: string | null
-          created_at?: string
-          endpoint_url: string
-          environment?: string
-          headers?: Json | null
-          id?: string
-          mapping_config?: Json | null
-          method: string
-          name: string
-          status?: string
-          token_cache?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          auth_config?: Json | null
-          auth_type?: string
-          barcode_param_name?: string | null
-          barcode_param_type?: string
-          company_id?: string | null
-          created_at?: string
-          endpoint_url?: string
-          environment?: string
-          headers?: Json | null
-          id?: string
-          mapping_config?: Json | null
-          method?: string
-          name?: string
-          status?: string
-          token_cache?: Json | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "price_check_integrations_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      price_check_logs: {
-        Row: {
-          barcode: string | null
-          created_at: string
-          device_id: string | null
-          error_message: string | null
-          id: string
-          integration_id: string | null
-          request_payload: Json | null
-          response_payload: Json | null
-          response_time_ms: number | null
-          status_code: number | null
-        }
-        Insert: {
-          barcode?: string | null
-          created_at?: string
-          device_id?: string | null
-          error_message?: string | null
-          id?: string
-          integration_id?: string | null
-          request_payload?: Json | null
-          response_payload?: Json | null
-          response_time_ms?: number | null
-          status_code?: number | null
-        }
-        Update: {
-          barcode?: string | null
-          created_at?: string
-          device_id?: string | null
-          error_message?: string | null
-          id?: string
-          integration_id?: string | null
-          request_payload?: Json | null
-          response_payload?: Json | null
-          response_time_ms?: number | null
-          status_code?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "price_check_logs_device_id_fkey"
-            columns: ["device_id"]
-            isOneToOne: false
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "price_check_logs_integration_id_fkey"
-            columns: ["integration_id"]
-            isOneToOne: false
-            referencedRelation: "price_check_integrations"
-            referencedColumns: ["id"]
-          }
         ]
       }
       product_cache: {
@@ -2263,6 +2160,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_tenant_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weather_locations: {
+        Row: {
+          city: string
+          created_at: string
+          current_temp: number | null
+          humidity: number | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          last_updated_at: string | null
+          latitude: number | null
+          longitude: number | null
+          openweather_city_id: string | null
+          raw_data: Json | null
+          state: string
+          tenant_id: string | null
+          updated_at: string
+          weather_description: string | null
+          weather_icon: string | null
+          wind_speed: number | null
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          current_temp?: number | null
+          humidity?: number | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last_updated_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          openweather_city_id?: string | null
+          raw_data?: Json | null
+          state: string
+          tenant_id?: string | null
+          updated_at?: string
+          weather_description?: string | null
+          weather_icon?: string | null
+          wind_speed?: number | null
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          current_temp?: number | null
+          humidity?: number | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last_updated_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          openweather_city_id?: string | null
+          raw_data?: Json | null
+          state?: string
+          tenant_id?: string | null
+          updated_at?: string
+          weather_description?: string | null
+          weather_icon?: string | null
+          wind_speed?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weather_locations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

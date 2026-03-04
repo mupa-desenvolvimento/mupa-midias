@@ -467,7 +467,7 @@ Deno.serve(async (req: Request) => {
           name: device.name,
           store_id: device.store_id,
           company_id: device.company_id,
-          company_slug: device.companies?.slug ?? null,
+          company_slug: Array.isArray(device.companies) ? device.companies[0]?.slug ?? null : (device.companies as any)?.slug ?? null,
           store_code: device.store_code,
           camera_enabled: device.camera_enabled ?? false,
           is_blocked: device.is_blocked ?? false,
