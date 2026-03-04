@@ -2172,6 +2172,8 @@ export type Database = {
           city: string
           created_at: string
           current_temp: number | null
+          daily_forecast: Json | null
+          hourly_forecast: Json | null
           humidity: number | null
           id: string
           is_active: boolean
@@ -2192,6 +2194,8 @@ export type Database = {
           city: string
           created_at?: string
           current_temp?: number | null
+          daily_forecast?: Json | null
+          hourly_forecast?: Json | null
           humidity?: number | null
           id?: string
           is_active?: boolean
@@ -2212,6 +2216,8 @@ export type Database = {
           city?: string
           created_at?: string
           current_temp?: number | null
+          daily_forecast?: Json | null
+          hourly_forecast?: Json | null
           humidity?: number | null
           id?: string
           is_active?: boolean
