@@ -187,7 +187,6 @@ export function useWeather() {
         hourly_forecast: weatherData.hourly_forecast
       };
 
-      // Try update with all fields (including new hourly_forecast)
       const { error: updateError } = await supabase
         .from("weather_locations")
         .update({
@@ -200,29 +199,10 @@ export function useWeather() {
           daily_forecast: weatherData.daily_forecast,
           hourly_forecast: weatherData.hourly_forecast,
           last_updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq("id", id);
 
-      // If update fails (likely due to missing column), try fallback without hourly_forecast
-      if (updateError) {
-        console.warn("Update with hourly_forecast failed, retrying without it:", updateError);
-        
-        const { error: fallbackError } = await supabase
-          .from("weather_locations")
-          .update({
-            current_temp: weatherData.current_temp,
-            weather_description: weatherData.weather_description,
-            weather_icon: weatherData.weather_icon,
-            humidity: weatherData.humidity,
-            wind_speed: weatherData.wind_speed,
-            raw_data: enrichedRawData,
-            daily_forecast: weatherData.daily_forecast,
-            last_updated_at: new Date().toISOString()
-          })
-          .eq("id", id);
-
-        if (fallbackError) throw fallbackError;
-      }
+      if (updateError) throw updateError;
       
       return weatherData;
     },
