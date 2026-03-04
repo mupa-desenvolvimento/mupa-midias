@@ -53,17 +53,11 @@ interface ToggleModulePayload {
   moduleType: AutoContentType;
   enabled: boolean;
   refreshIntervalMinutes?: number;
-  weatherState?: string;
-  weatherCity?: string;
-  weatherCountry?: string;
 }
 
 interface GenerateNowPayload {
   moduleType: AutoContentType;
   refreshIntervalMinutes?: number;
-  weatherState?: string;
-  weatherCity?: string;
-  weatherCountry?: string;
 }
 
 interface UploadBirthdaysPayload {
@@ -129,9 +123,6 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
       moduleType,
       enabled,
       refreshIntervalMinutes,
-      weatherState,
-      weatherCity,
-      weatherCountry,
     }: ToggleModulePayload) => {
       const {
         data: { session },
@@ -153,9 +144,6 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
             module_type: moduleType,
             enabled,
             refresh_interval_minutes: refreshIntervalMinutes,
-            weather_state: weatherState,
-            weather_city: weatherCity,
-            weather_country: weatherCountry,
           }),
         },
       );
@@ -185,9 +173,6 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
     mutationFn: async ({
       moduleType,
       refreshIntervalMinutes,
-      weatherState,
-      weatherCity,
-      weatherCountry,
     }: GenerateNowPayload) => {
       const {
         data: { session },
@@ -208,9 +193,6 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
           body: JSON.stringify({
             module_type: moduleType,
             refresh_interval_minutes: refreshIntervalMinutes,
-            weather_state: weatherState,
-            weather_city: weatherCity,
-            weather_country: weatherCountry,
           }),
         },
       );

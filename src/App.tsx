@@ -27,6 +27,7 @@ import MobileDemo from "./pages/MobileDemo";
 import Auth from "./pages/Auth";
 import CanvaCallback from "./pages/admin/CanvaCallback";
 import Stores from "./pages/admin/Stores";
+import { NewsModule } from "./pages/admin/news/NewsModule";
 import StoresMap from "./pages/admin/StoresMap";
 import Regions from "./pages/admin/Regions";
 import Channels from "./pages/admin/Channels";
@@ -41,6 +42,9 @@ import ProductAnalytics from "./pages/admin/ProductAnalytics";
 import CanvaIntegration from "./pages/admin/CanvaIntegration";
 import CanvaEditor from "./pages/admin/CanvaEditor";
 import InkyIntelligence from "./pages/admin/InkyIntelligence";
+import PriceCheckIntegrationsList from "./pages/admin/integrations/PriceCheckIntegrationsList";
+import PriceCheckIntegrationForm from "./pages/admin/integrations/PriceCheckIntegrationForm";
+import PriceCheckIntegrationLogs from "./pages/admin/integrations/PriceCheckIntegrationLogs";
 import ExampleListPage from "./pages/ExampleListPage";
 import AutoContentModulePage from "./pages/admin/AutoContentModulePage";
 import Install from "./pages/Install";
@@ -153,6 +157,7 @@ function AppContent() {
                         <Route path="media" element={<Media />} />
                         <Route path="analytics" element={<Analytics />} />
                         <Route path="settings" element={<Settings />} />
+                        <Route path="auto-content/news" element={<NewsModule />} />
                         <Route path="auto-content/:moduleType" element={<AutoContentModulePage />} />
                         <Route path="camera" element={<Camera />} />
                         <Route path="monitoring" element={<LiveMonitoring />} />
@@ -162,6 +167,10 @@ function AppContent() {
                         <Route path="product-analytics" element={<ProductAnalytics />} />
                         <Route path="canva" element={<CanvaIntegration />} />
                         <Route path="integrations/canva/editor" element={<CanvaEditor />} />
+                        <Route path="integrations" element={<PriceCheckIntegrationsList />} />
+                        <Route path="integrations/new" element={<PriceCheckIntegrationForm />} />
+                        <Route path="integrations/:id/edit" element={<PriceCheckIntegrationForm />} />
+                        <Route path="integrations/:id/logs" element={<PriceCheckIntegrationLogs />} />
                         <Route path="inky" element={<InkyIntelligence />} />
                         <Route path="list-example" element={<ExampleListPage />} />
                       </Routes>

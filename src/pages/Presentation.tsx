@@ -37,6 +37,7 @@ import logoHorizontal from "@/assets/logo_horizontal.svg";
 import { Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
 import { usePresentationConfig } from "@/hooks/usePresentationConfig";
+import { useTheme } from "@/hooks/useTheme";
 import { INITIAL_SLIDES } from "@/data/presentation-slides";
 
 // --- THEME SYSTEM ---
@@ -144,6 +145,7 @@ const themes: Record<string, Theme> = {
 // Configuração dos slides removida daqui e movida para src/data/presentation-slides.ts
 
 export default function Presentation() {
+  const { resolvedTheme } = useTheme();
   const { config } = usePresentationConfig();
 
   const filterSlides = (cfg: typeof config) => {
@@ -197,10 +199,11 @@ export default function Presentation() {
 
   const currentThemeId = themeParam && (themes[themeParam] || themeMap[themeParam]) 
     ? (themeMap[themeParam] || themeParam) 
-    : "default";
+    : (resolvedTheme === 'light' ? 'light' : 'default');
   
   const slide = slides[currentSlide];
   const theme = themes[currentThemeId];
+  const logoSrc = currentThemeId === "light" ? "/logo_background_branco.png" : logoHorizontal;
 
   const handleUpdateSlide = (updatedSlide: Slide) => {
     const newSlides = [...slides];
@@ -336,7 +339,7 @@ export default function Presentation() {
         >
           {/* Header Comum */}
           <div className="flex justify-between items-center mb-6 shrink-0">
-            <img src={logoHorizontal} alt="MUPA" className={`h-8 md:h-10 ${theme.logoClass} opacity-80`} />
+            <img src={logoSrc} alt="MUPA" className={`h-8 md:h-10 ${theme.logoClass} opacity-80`} />
             <div className={`flex items-center gap-2 ${theme.textSecondary} text-sm font-medium`}>
               {slide.icon && <slide.icon className="w-4 h-4" />}
               <span className="hidden md:inline">Apresentação Comercial</span>

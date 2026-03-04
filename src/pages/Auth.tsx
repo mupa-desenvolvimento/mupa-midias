@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useTheme } from '@/hooks/useTheme';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import logoHorizontal from '@/assets/logo_horizontal.svg';
@@ -21,6 +22,7 @@ export default function Auth() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -81,7 +83,11 @@ export default function Auth() {
         <Card className="w-full max-w-md animate-fade-in glass-effect border-white/10 bg-black/40">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
-              <img src={logoHorizontal} alt="MupaMídias" className="h-12" />
+              <img 
+                src={resolvedTheme === 'light' ? "/logo_background_branco.png" : logoHorizontal} 
+                alt="MupaMídias" 
+                className="h-12" 
+              />
             </div>
             <CardDescription>Entre com suas credenciais para acessar o sistema</CardDescription>
           </CardHeader>

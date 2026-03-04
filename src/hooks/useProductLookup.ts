@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { analyticsService } from "@/modules/analytics-engine";
 
 interface ProductData {
   ean: string;
@@ -29,6 +30,7 @@ interface Demographics {
 
 interface UseProductLookupOptions {
   deviceCode: string;
+  deviceId?: string;
   onLookupStart?: () => void;
   onLookupEnd?: () => void;
 }
@@ -37,7 +39,7 @@ interface UseProductLookupOptions {
 const localCache = new Map<string, { product: ProductData; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
-export const useProductLookup = ({ deviceCode, onLookupStart, onLookupEnd }: UseProductLookupOptions) => {
+export const useProductLookup = ({ deviceCode, deviceId, onLookupStart, onLookupEnd }: UseProductLookupOptions) => {
   const [state, setState] = useState<ProductLookupState>({
     product: null,
     isLoading: false,
@@ -73,6 +75,19 @@ export const useProductLookup = ({ deviceCode, onLookupStart, onLookupEnd }: Use
     const cached = localCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       console.log("[useProductLookup] Cache hit:", trimmedEan);
+      
+      // Log cache hit if deviceId is available
+      if (deviceId) {
+        analyticsService.logPriceCheck({
+          device_id: deviceId,
+          barcode: trimmedEan,
+          status_code: 200,
+          response_time_ms: 0,
+          request_payload: { source: 'local_cache' },
+          created_at: new Date().toISOString()
+        });
+      }
+
       setState({ product: cached.product, isLoading: false, error: null });
       onLookupStart?.();
       // Delay mínimo para UX
@@ -112,6 +127,19 @@ export const useProductLookup = ({ deviceCode, onLookupStart, onLookupEnd }: Use
 
       if (error) {
         console.error("[useProductLookup] Erro na chamada:", error);
+        
+        // Log error
+        if (deviceId) {
+          analyticsService.logPriceCheck({
+            device_id: deviceId,
+            barcode: trimmedEan,
+            status_code: 500,
+            response_time_ms: elapsed,
+            error_message: error.message || "Erro desconhecido",
+            created_at: new Date().toISOString()
+          });
+        }
+
         setState({ 
           product: null, 
           isLoading: false, 
@@ -123,6 +151,12 @@ export const useProductLookup = ({ deviceCode, onLookupStart, onLookupEnd }: Use
 
       if (!data.success) {
         console.log("[useProductLookup] Produto não encontrado:", data.error);
+        
+        // Log not found (logic logic might be handled by server, but good to have client record if server fails)
+        // Actually server logs "not_found", so maybe skip here to avoid duplicates?
+        // But if network fails, we want client log.
+        // Here we have data, so server was reached. Server logged it.
+        
         setState({ 
           product: null, 
           isLoading: false, 
@@ -140,6 +174,8 @@ export const useProductLookup = ({ deviceCode, onLookupStart, onLookupEnd }: Use
         timestamp: Date.now() 
       });
       
+      // Server logs success, so we don't need to duplicate log here for successful fetch.
+      
       setState({ 
         product: data.product, 
         isLoading: false, 
@@ -153,6 +189,19 @@ export const useProductLookup = ({ deviceCode, onLookupStart, onLookupEnd }: Use
       }
       
       console.error("[useProductLookup] Erro inesperado:", err);
+      
+      // Log client-side error (network, etc)
+      if (deviceId) {
+        analyticsService.logPriceCheck({
+          device_id: deviceId,
+          barcode: trimmedEan,
+          status_code: 0, // 0 for network/client error
+          response_time_ms: Math.round(performance.now() - startTime),
+          error_message: err instanceof Error ? err.message : "Erro desconhecido",
+          created_at: new Date().toISOString()
+        });
+      }
+
       pendingLookupRef.current = null;
       setState({ 
         product: null, 

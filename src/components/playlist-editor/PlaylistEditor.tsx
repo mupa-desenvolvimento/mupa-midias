@@ -253,7 +253,7 @@ export const PlaylistEditor = () => {
     const id = await ensurePlaylistExists();
     if (!id) return;
 
-    if (!item.image_url) {
+    if (!item.image_url && item.type !== 'news') {
       toast({
         title: "Conteúdo automático sem imagem",
         variant: "destructive",
@@ -261,12 +261,15 @@ export const PlaylistEditor = () => {
       return;
     }
 
+    const mediaType = item.type === 'news' ? 'news' : 'image';
+    const fileUrl = item.image_url || (item.type === 'news' ? 'https://placehold.co/1920x1080/2563eb/ffffff?text=Noticias' : null);
+
     const { data: media, error } = await supabase
       .from("media_items")
       .insert({
         name: item.title,
-        type: "image",
-        file_url: item.image_url,
+        type: mediaType,
+        file_url: fileUrl,
         status: "active",
         metadata: {
           auto_content_id: item.id,

@@ -4,6 +4,7 @@ import { motion, useScroll, useTransform, useInView, AnimatePresence } from "fra
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "@/hooks/useTheme";
 import { PlansSection } from "@/components/landing/PlansSection";
 import { InkySection } from "@/components/landing/InkySection";
 import { LeadFormModal, LeadFormType } from "@/components/landing/LeadFormModal";
@@ -87,6 +88,7 @@ const Navbar = () => {
   const backgroundOpacity = useTransform(scrollY, [0, 100], [0, 0.9]);
   const backdropBlur = useTransform(scrollY, [0, 100], ["0px", "10px"]);
   const borderOpacity = useTransform(scrollY, [0, 100], [0, 0.1]);
+  const { resolvedTheme } = useTheme();
 
   return (
     <motion.header
@@ -107,7 +109,7 @@ const Navbar = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            src={logoHorizontal}
+            src={resolvedTheme === 'light' ? "/logo_background_branco.png" : logoHorizontal}
             alt="MupaMídias"
             className="h-10 transition-transform group-hover:scale-105"
           />

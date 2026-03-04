@@ -1,0 +1,243 @@
+export interface DefaultFeed {
+  categoria: string;
+  fonte: string;
+  url: string;
+}
+
+export const DEFAULT_FEEDS: DefaultFeed[] = [
+  {
+    "categoria": "geral",
+    "fonte": "G1",
+    "url": "https://g1.globo.com/rss/g1/"
+  },
+  {
+    "categoria": "geral",
+    "fonte": "UOL Noticias",
+    "url": "https://rss.uol.com.br/feed/noticias.xml"
+  },
+  {
+    "categoria": "geral",
+    "fonte": "R7 Noticias",
+    "url": "https://feeds.r7.com/r7/noticias"
+  },
+  {
+    "categoria": "geral",
+    "fonte": "Terra Noticias",
+    "url": "https://www.terra.com.br/rss/noticias.xml"
+  },
+  {
+    "categoria": "economia",
+    "fonte": "G1 Economia",
+    "url": "https://g1.globo.com/rss/g1/economia/"
+  },
+  {
+    "categoria": "economia",
+    "fonte": "UOL Economia",
+    "url": "https://rss.uol.com.br/feed/economia.xml"
+  },
+  {
+    "categoria": "economia",
+    "fonte": "InfoMoney",
+    "url": "https://www.infomoney.com.br/feed/"
+  },
+  {
+    "categoria": "economia",
+    "fonte": "Valor Economico",
+    "url": "https://valor.globo.com/rss/"
+  },
+  {
+    "categoria": "economia",
+    "fonte": "Money Times",
+    "url": "https://www.moneytimes.com.br/feed/"
+  },
+  {
+    "categoria": "negocios",
+    "fonte": "Exame",
+    "url": "https://exame.com/feed/"
+  },
+  {
+    "categoria": "negocios",
+    "fonte": "PEGN",
+    "url": "https://revistapegn.globo.com/rss/"
+  },
+  {
+    "categoria": "negocios",
+    "fonte": "StartSe",
+    "url": "https://www.startse.com/feed/"
+  },
+  {
+    "categoria": "varejo",
+    "fonte": "Mercado e Consumo",
+    "url": "https://mercadoeconsumo.com.br/feed/"
+  },
+  {
+    "categoria": "varejo",
+    "fonte": "Consumidor Moderno",
+    "url": "https://www.consumidormoderno.com.br/feed/"
+  },
+  {
+    "categoria": "varejo",
+    "fonte": "SBVC",
+    "url": "https://sbvc.com.br/feed/"
+  },
+  {
+    "categoria": "supermercados",
+    "fonte": "SuperVarejo",
+    "url": "https://www.supervarejo.com.br/feed/"
+  },
+  {
+    "categoria": "supermercados",
+    "fonte": "Giro News",
+    "url": "https://gironews.com/feed/"
+  },
+  {
+    "categoria": "supermercados",
+    "fonte": "ABRAS",
+    "url": "https://www.abras.com.br/feed/"
+  },
+  {
+    "categoria": "tecnologia",
+    "fonte": "Tecnoblog",
+    "url": "https://tecnoblog.net/feed/"
+  },
+  {
+    "categoria": "tecnologia",
+    "fonte": "Canaltech",
+    "url": "https://canaltech.com.br/rss/"
+  },
+  {
+    "categoria": "tecnologia",
+    "fonte": "Olhar Digital",
+    "url": "https://olhardigital.com.br/feed/"
+  },
+  {
+    "categoria": "tecnologia",
+    "fonte": "Gizmodo Brasil",
+    "url": "https://gizmodo.uol.com.br/feed/"
+  },
+  {
+    "categoria": "tecnologia",
+    "fonte": "TecMundo",
+    "url": "https://www.tecmundo.com.br/rss"
+  },
+  {
+    "categoria": "esportes",
+    "fonte": "Globo Esporte",
+    "url": "https://globoesporte.globo.com/rss/ge/"
+  },
+  {
+    "categoria": "esportes",
+    "fonte": "UOL Esporte",
+    "url": "https://rss.uol.com.br/feed/esporte.xml"
+  },
+  {
+    "categoria": "esportes",
+    "fonte": "ESPN Brasil",
+    "url": "https://www.espn.com.br/rss"
+  },
+  {
+    "categoria": "entretenimento",
+    "fonte": "G1 Pop e Arte",
+    "url": "https://g1.globo.com/rss/g1/pop-arte/"
+  },
+  {
+    "categoria": "entretenimento",
+    "fonte": "UOL Splash",
+    "url": "https://rss.uol.com.br/feed/splash.xml"
+  },
+  {
+    "categoria": "ciencia",
+    "fonte": "Superinteressante",
+    "url": "https://super.abril.com.br/feed/"
+  },
+  {
+    "categoria": "ciencia",
+    "fonte": "Revista Galileu",
+    "url": "https://revistagalileu.globo.com/rss/"
+  },
+  {
+    "categoria": "saude",
+    "fonte": "Ministerio da Saude",
+    "url": "https://www.gov.br/saude/pt-br/assuntos/noticias/rss"
+  },
+  {
+    "categoria": "saude",
+    "fonte": "UOL VivaBem",
+    "url": "https://rss.uol.com.br/feed/vivabem.xml"
+  },
+  {
+    "categoria": "alimentacao",
+    "fonte": "Panelinha",
+    "url": "https://www.panelinha.com.br/rss"
+  },
+  {
+    "categoria": "pets",
+    "fonte": "Petz Blog",
+    "url": "https://www.petz.com.br/blog/feed/"
+  },
+  {
+    "categoria": "automoveis",
+    "fonte": "UOL Carros",
+    "url": "https://rss.uol.com.br/feed/carros.xml"
+  },
+  {
+    "categoria": "games",
+    "fonte": "IGN Brasil",
+    "url": "https://br.ign.com/rss"
+  },
+  {
+    "categoria": "games",
+    "fonte": "The Enemy",
+    "url": "https://www.theenemy.com.br/feed"
+  },
+  {
+    "categoria": "politica",
+    "fonte": "G1 Politica",
+    "url": "https://g1.globo.com/rss/g1/politica/"
+  },
+  {
+    "categoria": "politica",
+    "fonte": "UOL Politica",
+    "url": "https://rss.uol.com.br/feed/politica.xml"
+  },
+  {
+    "categoria": "politica",
+    "fonte": "Poder360",
+    "url": "https://www.poder360.com.br/feed/"
+  },
+  {
+    "categoria": "mundo",
+    "fonte": "G1 Mundo",
+    "url": "https://g1.globo.com/rss/g1/mundo/"
+  },
+  {
+    "categoria": "mundo",
+    "fonte": "BBC Brasil",
+    "url": "https://www.bbc.com/portuguese/index.xml"
+  },
+  {
+    "categoria": "mundo",
+    "fonte": "CNN Brasil",
+    "url": "https://www.cnnbrasil.com.br/feed/"
+  },
+  {
+    "categoria": "sustentabilidade",
+    "fonte": "CicloVivo",
+    "url": "https://ciclovivo.com.br/feed/"
+  },
+  {
+    "categoria": "marketing",
+    "fonte": "Mundo do Marketing",
+    "url": "https://www.mundodomarketing.com.br/feed/"
+  },
+  {
+    "categoria": "ecommerce",
+    "fonte": "Ecommerce Brasil",
+    "url": "https://www.ecommercebrasil.com.br/feed/"
+  },
+  {
+    "categoria": "franquias",
+    "fonte": "Portal do Franchising",
+    "url": "https://www.portaldofranchising.com.br/feed/"
+  }
+];

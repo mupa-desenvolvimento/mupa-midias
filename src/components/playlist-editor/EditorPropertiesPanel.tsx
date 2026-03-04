@@ -235,7 +235,29 @@ const AutoContentPanel = ({
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    // Clone items to avoid mutating source
+    const currentItems = [...items];
+    
+    // Inject default News item if missing
+    if (!currentItems.some(i => i.type === 'news')) {
+      currentItems.push({
+        id: 'default-news',
+        tenant_id: 'default',
+        type: 'news',
+        title: 'Notícias Recentes',
+        description: 'Exibe as últimas notícias configuradas no painel de Notícias.',
+        status: 'active',
+        source: 'mock',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        category: null,
+        image_url: null,
+        payload_json: null,
+        expires_at: null
+      });
+    }
+
+    return currentItems.filter((item) => {
       const matchesStatus = item.status === "active";
       const matchesSearch =
         item.title.toLowerCase().includes(search.toLowerCase()) ||

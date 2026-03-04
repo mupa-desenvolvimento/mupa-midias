@@ -11,10 +11,37 @@ import { usePresentationConfig } from "@/hooks/usePresentationConfig";
 import { SlideSortableList } from "@/components/presentation/SlideSortableList";
 import { Copy, Smartphone } from "lucide-react";
 import { toast } from "sonner";
+import { usePriceCheckIntegrations } from "@/hooks/usePriceCheckIntegrations";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useTheme } from "@/hooks/useTheme";
 
 const Settings = () => {
   const { company } = useUserCompany();
   const { config, toggleOption, updateConfig } = usePresentationConfig();
+  const { integrations, updateIntegration } = usePriceCheckIntegrations();
+  const { theme, setTheme } = useTheme();
+
+  const handleIntegrationChange = (id: string) => {
+    // Set all others to inactive and this one to active
+    if (!integrations) return;
+    
+    // Deactivate current active integration(s)
+    integrations.forEach(i => {
+      if (i.id !== id && i.status === 'active') {
+        updateIntegration.mutate({ id: i.id, status: 'inactive' });
+      }
+    });
+    
+    // Activate the selected one
+    updateIntegration.mutate({ id, status: 'active' });
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -33,6 +60,7 @@ const Settings = () => {
           <TabsTrigger value="ai">IA & Câmera</TabsTrigger>
           <TabsTrigger value="notifications">Notificações</TabsTrigger>
           <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="integrations">Integrações</TabsTrigger>
           <TabsTrigger value="presentation">Apresentação</TabsTrigger>
         </TabsList>
 
@@ -57,10 +85,19 @@ const Settings = () => {
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Modo Escuro</Label>
-                  <p className="text-sm text-muted-foreground">Ativar tema escuro automaticamente</p>
+                  <Label>Tema</Label>
+                  <p className="text-sm text-muted-foreground">Escolha a aparência do sistema</p>
                 </div>
-                <Switch defaultChecked />
+                <Select value={theme} onValueChange={(val) => setTheme(val as "light" | "dark" | "system")}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Selecione o tema" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Claro</SelectItem>
+                    <SelectItem value="dark">Escuro</SelectItem>
+                    <SelectItem value="system">Sistema</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="flex items-center justify-between">
@@ -215,6 +252,55 @@ const Settings = () => {
                 <p className="text-sm text-muted-foreground">
                   Esta funcionalidade será implementada na próxima versão.
                 </p></div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Integração de Preços</CardTitle>
+              <CardDescription>
+                Selecione a integração padrão para consulta de preços da empresa.
+                Esta integração será usada por dispositivos que não possuem uma configuração específica.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {integrations && integrations.length > 0 ? (
+                <RadioGroup 
+                  value={integrations.find(i => i.status === 'active')?.id || ''}
+                  onValueChange={handleIntegrationChange}
+                  className="space-y-4"
+                >
+                  {integrations.map((integration) => (
+                    <div key={integration.id} className="flex items-center space-x-4 border p-4 rounded-lg hover:bg-muted/50 transition-colors">
+                      <RadioGroupItem value={integration.id} id={integration.id} />
+                      <div className="flex-1 cursor-pointer" onClick={() => handleIntegrationChange(integration.id)}>
+                        <Label htmlFor={integration.id} className="font-medium text-base cursor-pointer">
+                          {integration.name}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {integration.endpoint_url}
+                        </p>
+                      </div>
+                      {integration.status === 'active' && (
+                        <span className="text-xs bg-green-100 text-green-800 px-2.5 py-0.5 rounded-full font-medium">
+                          Ativa
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </RadioGroup>
+              ) : (
+                <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                  <p className="text-muted-foreground mb-4">
+                    Nenhuma integração encontrada.
+                  </p>
+                  <Button variant="outline" onClick={() => window.location.href='/admin/integrations'}>
+                    Configurar Integrações
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

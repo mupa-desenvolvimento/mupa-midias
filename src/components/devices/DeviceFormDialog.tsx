@@ -31,6 +31,7 @@ import {
 import { Loader2, RefreshCw } from "lucide-react";
 import { useStores } from "@/hooks/useStores";
 import { usePlaylists } from "@/hooks/usePlaylists";
+import { usePriceCheckIntegrations } from "@/hooks/usePriceCheckIntegrations";
 import { DeviceInsert, DeviceWithRelations, DeviceUpdate } from "@/hooks/useDevices";
 
 const formSchema = z.object({
@@ -38,6 +39,7 @@ const formSchema = z.object({
   device_code: z.string().min(4, "Código deve ter pelo menos 4 caracteres"),
   store_id: z.string().optional(),
   current_playlist_id: z.string().optional(),
+  price_integration_id: z.string().optional(),
   resolution: z.string().optional(),
   camera_enabled: z.boolean().default(false),
   store_code: z.string().optional(),
@@ -71,6 +73,7 @@ export function DeviceFormDialog({
 }: DeviceFormDialogProps) {
   const { stores, isLoading: storesLoading } = useStores();
   const { playlists, isLoading: playlistsLoading } = usePlaylists();
+  const { integrations, isLoading: integrationsLoading } = usePriceCheckIntegrations();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormData>({
@@ -80,6 +83,7 @@ export function DeviceFormDialog({
       device_code: device?.device_code || generateDeviceCode(),
       store_id: device?.store_id || undefined,
       current_playlist_id: device?.current_playlist_id || undefined,
+      price_integration_id: device?.price_integration_id || undefined,
       resolution: device?.resolution || "1920x1080",
       camera_enabled: device?.camera_enabled || false,
       store_code: (device as any)?.store_code || "",
@@ -93,6 +97,7 @@ export function DeviceFormDialog({
         device_code: device?.device_code || generateDeviceCode(),
         store_id: device?.store_id || undefined,
         current_playlist_id: device?.current_playlist_id || undefined,
+        price_integration_id: device?.price_integration_id || undefined,
         resolution: device?.resolution || "1920x1080",
         camera_enabled: device?.camera_enabled || false,
         store_code: (device as any)?.store_code || "",
@@ -109,6 +114,7 @@ export function DeviceFormDialog({
           name: data.name,
           store_id: data.store_id || null,
           current_playlist_id: data.current_playlist_id || null,
+          price_integration_id: data.price_integration_id || null,
           resolution: data.resolution || null,
           camera_enabled: data.camera_enabled,
           store_code: data.store_code || null,
@@ -119,6 +125,7 @@ export function DeviceFormDialog({
           name: data.name,
           store_id: data.store_id || null,
           current_playlist_id: data.current_playlist_id || null,
+          price_integration_id: data.price_integration_id || null,
           resolution: data.resolution || null,
           camera_enabled: data.camera_enabled,
           store_code: data.store_code || null,
@@ -291,6 +298,40 @@ export function DeviceFormDialog({
                       <SelectItem value="3840x2160">3840x2160 (4K)</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="price_integration_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Integração de Preço</FormLabel>
+                  <Select
+                    value={field.value || "none"}
+                    onValueChange={(value) =>
+                      field.onChange(value === "none" ? undefined : value)
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma integração" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      {integrations?.map((integration) => (
+                        <SelectItem key={integration.id} value={integration.id}>
+                          {integration.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Integração usada para consulta de preços neste dispositivo
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

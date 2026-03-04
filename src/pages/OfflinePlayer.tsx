@@ -447,6 +447,7 @@ const OfflinePlayer = () => {
     clearProduct,
   } = useProductLookup({
     deviceCode: deviceCode || "",
+    deviceId: deviceState?.device_id || undefined,
     onLookupStart: () => {
       setTerminalMode("product");
       trackEvent({ type: "product_lookup" });

@@ -11,6 +11,7 @@ export interface Device {
   company_id: string | null;
   display_profile_id: string | null;
   current_playlist_id: string | null;
+  price_integration_id: string | null;
   status: string;
   last_seen_at: string | null;
   resolution: string | null;
@@ -31,6 +32,7 @@ export interface DeviceWithRelations extends Device {
   company?: { id: string; name: string; slug: string } | null;
   display_profile?: { id: string; name: string; resolution: string } | null;
   current_playlist?: { id: string; name: string } | null;
+  price_check_integration?: { id: string; name: string } | null;
 }
 
 export interface DeviceInsert {
@@ -40,6 +42,7 @@ export interface DeviceInsert {
   company_id?: string | null;
   display_profile_id?: string | null;
   current_playlist_id?: string | null;
+  price_integration_id?: string | null;
   status?: string;
   resolution?: string | null;
   camera_enabled?: boolean;
@@ -52,6 +55,7 @@ export interface DeviceUpdate {
   company_id?: string | null;
   display_profile_id?: string | null;
   current_playlist_id?: string | null;
+  price_integration_id?: string | null;
   status?: string;
   resolution?: string | null;
   camera_enabled?: boolean;
@@ -73,12 +77,23 @@ export const useDevices = () => {
           store:stores(id, name, code),
           company:companies(id, name, slug),
           display_profile:display_profiles(id, name, resolution),
-          current_playlist:playlists(id, name)
+          current_playlist:playlists(id, name),
+          price_check_integration:price_check_integrations(id, name)
         `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as DeviceWithRelations[];
+      
+      // Transform relations that might be arrays into single objects if needed
+      // Supabase JS sometimes returns arrays for relations depending on how it's inferred
+      const transformedData = (data || []).map((device: any) => ({
+        ...device,
+        price_check_integration: Array.isArray(device.price_check_integration) 
+          ? device.price_check_integration[0] 
+          : device.price_check_integration
+      }));
+
+      return transformedData as DeviceWithRelations[];
     },
   });
 

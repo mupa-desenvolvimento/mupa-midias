@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAutoContent, AutoContentType } from "@/hooks/useAutoContent";
+import { useAutoContent, AutoContentType, AutoContentItem } from "@/hooks/useAutoContent";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -89,6 +89,12 @@ const isValidModuleType = (value: string | undefined): value is AutoContentType 
   return AUTO_CONTENT_TYPES.includes(value as AutoContentType);
 };
 
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { List, LayoutGrid } from "lucide-react";
+import { WeatherSettings } from "./weather/WeatherSettings";
+import { NewsModule } from "./news/NewsModule";
+import { useWeather } from "@/hooks/useWeather";
+
 const AutoContentModulePage = () => {
   const params = useParams<{ moduleType: string }>();
 
@@ -98,8 +104,30 @@ const AutoContentModulePage = () => {
 
   const config = MODULE_CONFIG[moduleType];
 
+  const { locations: weatherLocations, isLoading: isLoadingWeather } = useWeather();
+
+  const weatherItems = useMemo(() => {
+    if (moduleType !== "weather" || !weatherLocations) return [];
+
+    return weatherLocations.map((loc) => ({
+      id: loc.id,
+      tenant_id: "", // Not strictly needed for display
+      type: "weather",
+      category: loc.city,
+      title: `${loc.current_temp ? Math.round(loc.current_temp) + "°C" : "--"} - ${loc.weather_description || "Sem dados"}`,
+      description: `Umidade: ${loc.humidity || "--"}% • Vento: ${loc.wind_speed || "--"} km/h`,
+      image_url: null,
+      payload_json: loc.raw_data,
+      source: "api",
+      status: loc.is_active ? "active" : "inactive",
+      created_at: loc.created_at || new Date().toISOString(),
+      updated_at: loc.last_updated_at || new Date().toISOString(),
+      expires_at: null,
+    } as AutoContentItem));
+  }, [weatherLocations, moduleType]);
+
   const {
-    items,
+    items: fetchedItems,
     isLoadingItems,
     itemsError,
     settings,
@@ -113,6 +141,9 @@ const AutoContentModulePage = () => {
     limit: 200,
   });
 
+  const items = moduleType === "weather" ? weatherItems : fetchedItems;
+
+
   const { state, setView, setPage, setPageSize, setSearch, setFilters, reset } =
     useListState<AutoContentFilters>({
       initialFilters: {
@@ -123,16 +154,6 @@ const AutoContentModulePage = () => {
     });
 
   const currentSetting = settings.find((setting) => setting.module_type === moduleType);
-
-  const [weatherCity, setWeatherCity] = useState("");
-  const [weatherState, setWeatherState] = useState("");
-
-  useEffect(() => {
-    if (moduleType === "weather" && currentSetting) {
-      setWeatherCity(currentSetting.weather_city ?? "");
-      setWeatherState(currentSetting.weather_state ?? "");
-    }
-  }, [moduleType, currentSetting]);
 
   const filteredItems = useMemo(() => {
     const searchLower = state.search.toLowerCase();
@@ -181,8 +202,6 @@ const AutoContentModulePage = () => {
       moduleType,
       enabled,
       refreshIntervalMinutes: refreshInterval,
-      weatherCity: moduleType === "weather" ? weatherCity : undefined,
-      weatherState: moduleType === "weather" ? weatherState : undefined,
     });
   };
 
@@ -193,8 +212,6 @@ const AutoContentModulePage = () => {
       moduleType,
       enabled: currentSetting.enabled,
       refreshIntervalMinutes: minutes,
-      weatherCity: moduleType === "weather" ? weatherCity : undefined,
-      weatherState: moduleType === "weather" ? weatherState : undefined,
     });
   };
 
@@ -202,8 +219,6 @@ const AutoContentModulePage = () => {
     generateNow.mutate({
       moduleType,
       refreshIntervalMinutes: currentSetting?.refresh_interval_minutes,
-      weatherCity: moduleType === "weather" ? weatherCity : undefined,
-      weatherState: moduleType === "weather" ? weatherState : undefined,
     });
   };
 
@@ -221,14 +236,50 @@ const AutoContentModulePage = () => {
     event.target.value = "";
   };
 
-  const header = (
+  const header = (moduleType === "weather" || moduleType === "news") ? null : (
     <div className="px-4 pt-3 pb-2">
       <h2 className="text-lg font-semibold">{config.title}</h2>
       <p className="text-muted-foreground text-sm mt-1">{config.description}</p>
     </div>
   );
 
-  const controls = (
+  const controls = moduleType === "weather" ? (
+    <div className="px-4 pb-2 space-y-6">
+      <div className="flex justify-end items-center gap-3">
+        <div className="flex items-center gap-3">
+          <Switch
+            checked={currentSetting?.enabled ?? false}
+            onCheckedChange={handleToggleModule}
+            disabled={isLoadingSettings || toggleModule.isPending}
+          />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">
+              {currentSetting?.enabled ? "Módulo ativado" : "Módulo desativado"}
+            </span>
+          </div>
+        </div>
+      </div>
+      <WeatherSettings />
+    </div>
+  ) : moduleType === "news" ? (
+    <div className="px-4 pb-2 space-y-6">
+      <div className="flex justify-end items-center gap-3">
+        <div className="flex items-center gap-3">
+          <Switch
+            checked={currentSetting?.enabled ?? false}
+            onCheckedChange={handleToggleModule}
+            disabled={isLoadingSettings || toggleModule.isPending}
+          />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">
+              {currentSetting?.enabled ? "Módulo ativado" : "Módulo desativado"}
+            </span>
+          </div>
+        </div>
+      </div>
+      <NewsModule />
+    </div>
+  ) : (
     <div className="px-4 pb-2 space-y-3">
       <ListControls
         state={state}
@@ -305,29 +356,6 @@ const AutoContentModulePage = () => {
         </div>
       </div>
 
-      {moduleType === "weather" && (
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Cidade</span>
-            <input
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              value={weatherCity}
-              onChange={(event) => setWeatherCity(event.target.value)}
-              placeholder="Ex.: São Paulo"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Estado</span>
-            <input
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              value={weatherState}
-              onChange={(event) => setWeatherState(event.target.value)}
-              placeholder="Ex.: SP"
-            />
-          </div>
-        </div>
-      )}
-
       {moduleType === "birthday" && (
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col">
@@ -347,7 +375,7 @@ const AutoContentModulePage = () => {
     </div>
   );
 
-  const footer = (
+  const footer = (moduleType === "weather" || moduleType === "news") ? null : (
     <UniversalPagination
       page={state.page}
       pageSize={state.pageSize}
@@ -357,12 +385,16 @@ const AutoContentModulePage = () => {
     />
   );
 
-  const isLoading = isLoadingItems;
+  const isLoading = moduleType === "weather" ? isLoadingWeather : isLoadingItems;
   const hasError = Boolean(itemsError || settingsError);
 
   let content: JSX.Element;
 
-  if (isLoading) {
+  if (moduleType === "weather") {
+    content = <></>; // Content is handled by WeatherSettings in controls
+  } else if (moduleType === "news") {
+    content = <></>; // Content is handled by NewsModule in controls
+  } else if (isLoading) {
     content = (
       <div className="flex h-full items-center justify-center text-muted-foreground">
         Carregando conteúdo automático...

@@ -210,6 +210,12 @@ export const ProductDisplay = ({
             >
               ,{currentPrice.centavos}
             </span>
+            <span 
+              className={`${textMuted} font-medium ml-2`}
+              style={{ fontSize: `${priceSize * 0.25}px` }}
+            >
+              / {product.unit || 'UN'}
+            </span>
           </div>
         </div>
       </div>

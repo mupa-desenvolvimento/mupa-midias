@@ -209,9 +209,64 @@ function generateMockWeather(): AutoContentItemInsert[] {
   ]
 }
 
-async function generateWeatherFromOpenWeather(
+async function generateWeather(
+  adminClient: SupabaseClient,
   setting: AutoContentSettingsRow,
 ): Promise<AutoContentItemInsert[] | null> {
+  // 1. Try to fetch from weather_locations (New System)
+  const { data: locations } = await adminClient
+    .from("weather_locations")
+    .select("*")
+    .eq("tenant_id", setting.tenant_id)
+    .eq("is_active", true)
+
+  if (locations && locations.length > 0) {
+    const items: AutoContentItemInsert[] = []
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+
+    for (const loc of locations) {
+      // Skip if no temperature data (not updated yet)
+      if (loc.current_temp === null || loc.current_temp === undefined) continue
+
+      const temp = Math.round(Number(loc.current_temp))
+      const desc = loc.weather_description || "Normal"
+      const locationName = loc.city
+      
+      const title = `Agora em ${locationName}: ${temp}°C`
+      
+      const details: string[] = []
+      if (loc.humidity) details.push(`Umidade: ${loc.humidity}%`)
+      if (loc.wind_speed) details.push(`Vento: ${loc.wind_speed}km/h`)
+      
+      const fullDesc = `${desc.charAt(0).toUpperCase() + desc.slice(1)}. ${details.join(". ")}.`
+
+      items.push({
+        type: "weather",
+        category: "Hoje",
+        title,
+        description: fullDesc,
+        source: "api",
+        status: "active",
+        payload_json: {
+          temp: loc.current_temp,
+          condition: loc.weather_description,
+          location: locationName,
+          city: loc.city,
+          state: loc.state,
+          humidity: loc.humidity,
+          wind_speed: loc.wind_speed,
+          provider: "weather-proxy",
+          raw: loc.raw_data
+        },
+        expires_at: expiresAt,
+      })
+    }
+    
+    if (items.length > 0) return items
+  }
+
+  // 2. Fallback to Legacy System (OpenWeather Direct)
   const apiKey = Deno.env.get("OPENWEATHER_API_KEY")
 
   if (!apiKey) {
@@ -224,7 +279,7 @@ async function generateWeatherFromOpenWeather(
   const country = setting.weather_country || "BR"
 
   if (!city) {
-    console.warn("[AutoContentEngine] Weather city not configured for tenant, using mock weather")
+    // If no city configured and no locations found, return null (mock will be used by caller)
     return null
   }
 
@@ -577,7 +632,7 @@ async function generateForModule(
   switch (moduleType) {
     case "weather":
       if (setting) {
-        const apiItems = await generateWeatherFromOpenWeather(setting)
+        const apiItems = await generateWeather(adminClient, setting)
         if (apiItems && apiItems.length > 0) {
           items = apiItems
           break

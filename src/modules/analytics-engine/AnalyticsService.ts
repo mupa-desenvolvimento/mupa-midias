@@ -11,12 +11,15 @@ export interface PlayLog {
 }
 
 export interface PriceCheckLog {
+  integration_id?: string;
   device_id: string;
-  gtin: string;
-  scanned_at: string;
-  found: boolean;
-  product_name?: string;
-  price?: number;
+  barcode: string;
+  request_payload?: any;
+  response_payload?: any;
+  status_code?: number;
+  response_time_ms?: number;
+  error_message?: string;
+  created_at?: string;
 }
 
 export class AnalyticsService {

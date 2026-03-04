@@ -19,10 +19,12 @@ import {
   Brush,
   Brain,
   QrCode,
+  Link,
 } from "lucide-react";
 import logoHorizontal from "@/assets/logo_horizontal.svg";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUserCompany } from "@/hooks/useUserCompany";
 import { Button } from "@/components/ui/button";
@@ -71,12 +73,14 @@ const autoContentItems = [
 const superAdminItems = [
   { title: "Clientes", url: "/admin/tenants", icon: Building2 },
   { title: "Empresas", url: "/admin/companies", icon: Plug2 },
+  { title: "Integrações", url: "/admin/integrations", icon: Link },
 ];
 
 const AppSidebar = () => {
   const { user, signOut } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const { company } = useUserCompany();
+  const { resolvedTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -85,10 +89,14 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar className="border-r border-white/10 bg-black/40 backdrop-blur-md" collapsible="icon">
+    <Sidebar className="border-r border-sidebar-border bg-sidebar/95 backdrop-blur-md" collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center justify-center">
-          <img src={logoHorizontal} alt="MupaMídias" className="h-10" />
+          <img 
+            src={resolvedTheme === 'light' ? "/logo_background_branco.png" : logoHorizontal} 
+            alt="MupaMídias" 
+            className="h-10" 
+          />
         </div>
       </SidebarHeader>
 

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { NewsPlayerSlide } from "./NewsPlayerSlide";
 
 export interface MediaItem {
   id: string;
@@ -84,6 +85,10 @@ export const MediaRenderer = ({
         onPlaying={() => setIsReady(true)}
       />
     );
+  }
+
+  if (media.type === "news") {
+    return <NewsPlayerSlide onEnded={onEnded} />;
   }
 
   const handleImageRef = (el: HTMLImageElement | null) => {
