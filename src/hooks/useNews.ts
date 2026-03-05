@@ -226,7 +226,7 @@ export function useNews() {
   const triggerCollection = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('rss-collector', {
-        body: { maxFeeds: 1, maxItems: 8, batchSize: 10 }
+        body: { maxFeeds: 5, maxItems: 5, batchSize: 5 }
       });
       if (error) throw error;
       return data;
