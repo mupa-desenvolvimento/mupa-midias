@@ -8,8 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_RUNTIME_MS = 6000;
-const DEFAULT_BATCH = 5;
+const MAX_RUNTIME_MS = 50000;
+const DEFAULT_BATCH = 20;
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -42,7 +42,7 @@ serve(async (req: Request) => {
       if (raw) payload = JSON.parse(raw);
     } catch { payload = {}; }
 
-    const batchSize = Math.max(1, Math.min(Number(payload.batch) || DEFAULT_BATCH, 10));
+    const batchSize = Math.max(1, Math.min(Number(payload.batch) || DEFAULT_BATCH, 50));
 
     // Fetch articles with external images that haven't been cached yet
     const { data: articles, error: fetchError } = await supabaseClient

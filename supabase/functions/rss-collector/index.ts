@@ -8,14 +8,56 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DEFAULT_MAX_FEEDS_PER_RUN = 5;
-const DEFAULT_MAX_ITEMS_PER_FEED = 5;
-const DEFAULT_BATCH_SIZE = 5;
-const MAX_RUNTIME_MS = 6000;
+const DEFAULT_MAX_FEEDS_PER_RUN = 10;
+const DEFAULT_MAX_ITEMS_PER_FEED = 20;
+const DEFAULT_BATCH_SIZE = 20;
+const MAX_RUNTIME_MS = 50000;
 
 function stripHtml(html: string) {
   if (!html) return "";
   return html.replace(/<[^>]*>?/gm, "").trim();
+}
+
+function extractImage(item: any, description: string): string | null {
+  // 1. Media Content / Enclosure
+  if (item["media:content"]) {
+    if (Array.isArray(item["media:content"])) {
+      const img = item["media:content"].find((m: any) => m["@medium"] === "image" || m["@type"]?.startsWith("image/"));
+      if (img && img["@url"]) return img["@url"];
+    } else if (item["media:content"]["@url"]) {
+      return item["media:content"]["@url"];
+    }
+  }
+  
+  if (item["media:thumbnail"]) {
+    if (Array.isArray(item["media:thumbnail"])) {
+       if (item["media:thumbnail"][0]?.["@url"]) return item["media:thumbnail"][0]["@url"];
+    } else if (item["media:thumbnail"]["@url"]) {
+       return item["media:thumbnail"]["@url"];
+    }
+  }
+
+  if (item.enclosure) {
+    if (Array.isArray(item.enclosure)) {
+      const img = item.enclosure.find((e: any) => e["@type"]?.startsWith("image/"));
+      if (img && img["@url"]) return img["@url"];
+    } else if (item.enclosure["@url"]) {
+      return item.enclosure["@url"];
+    }
+  }
+
+  // 2. Regex in Description/Content
+  const imgRegex = /<img[^>]+src=["']([^"']+)["']/;
+  const match = description.match(imgRegex);
+  if (match) return match[1];
+
+  // 3. Try content:encoded
+  if (item["content:encoded"]) {
+    const contentMatch = item["content:encoded"].toString().match(imgRegex);
+    if (contentMatch) return contentMatch[1];
+  }
+
+  return null;
 }
 
 function createSlug(title: string) {
@@ -60,10 +102,11 @@ serve(async (req: Request) => {
       payload = {};
     }
 
-    const maxFeeds = Math.max(1, Math.min(Number(payload.maxFeeds) || DEFAULT_MAX_FEEDS_PER_RUN, 10));
-    const maxItems = Math.max(1, Math.min(Number(payload.maxItems) || DEFAULT_MAX_ITEMS_PER_FEED, 10));
-    const batchSize = Math.max(1, Math.min(Number(payload.batchSize) || DEFAULT_BATCH_SIZE, 20));
+    const maxFeeds = Math.max(1, Math.min(Number(payload.maxFeeds) || DEFAULT_MAX_FEEDS_PER_RUN, payload.force ? 50 : 20));
+    const maxItems = Math.max(1, Math.min(Number(payload.maxItems) || DEFAULT_MAX_ITEMS_PER_FEED, 50));
+    const batchSize = Math.max(1, Math.min(Number(payload.batchSize) || DEFAULT_BATCH_SIZE, 50));
     const shouldCleanup = payload.cleanup === true;
+    const force = payload.force === true;
 
     const { count: totalFeeds, error: countError } = await supabaseClient
       .from("news_feeds")
@@ -82,7 +125,7 @@ serve(async (req: Request) => {
 
     const providedOffset = Number.isFinite(Number(payload.offset)) ? Number(payload.offset) : null;
     const rotationSeed = Math.floor(Date.now() / 3600000); // rotates each hour
-    const offset = providedOffset ?? ((rotationSeed * maxFeeds) % total);
+    const offset = providedOffset ?? (force ? 0 : ((rotationSeed * maxFeeds) % total));
 
     const { data: feeds, error: feedsError } = await supabaseClient
       .from("news_feeds")
@@ -149,15 +192,7 @@ serve(async (req: Request) => {
             pubDate = new Date().toISOString();
           }
 
-          let imageUrl = null;
-          if (item.enclosure?.["@url"]) {
-            imageUrl = item.enclosure["@url"];
-          } else if (item["media:content"]?.["@url"]) {
-            imageUrl = item["media:content"]["@url"];
-          } else {
-            const imgMatch = descriptionRaw.match(/<img[^>]+src="([^">]+)"/);
-            if (imgMatch) imageUrl = imgMatch[1];
-          }
+          const imageUrl = extractImage(item, descriptionRaw);
 
           return {
             feed_id: feed.id,
