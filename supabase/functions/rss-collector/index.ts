@@ -8,219 +8,192 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Limpa HTML da descrição
 function stripHtml(html: string) {
   if (!html) return "";
   return html.replace(/<[^>]*>?/gm, "").trim();
 }
 
-// Cria slug a partir do título
 function createSlug(title: string) {
   return title
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
+    .replace(/(^-|-$)+/g, "")
+    .substring(0, 120);
 }
 
+const MAX_FEEDS_PER_RUN = 8;
+const MAX_ITEMS_PER_FEED = 15;
+const BATCH_SIZE = 50;
+
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     console.log("Iniciando coleta RSS...");
-    
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error("Variáveis de ambiente SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não definidas.");
       return new Response(
-        JSON.stringify({ error: "Configuração de servidor incompleta (chaves ausentes)." }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        }
+        JSON.stringify({ error: "Configuração incompleta." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Buscar feeds ativos
+    // Parse optional offset for rotating through feeds
+    let offset = 0;
+    try {
+      const body = await req.json();
+      offset = body?.offset || 0;
+    } catch { /* no body */ }
+
+    // Fetch active feeds with pagination
     const { data: feeds, error: feedsError } = await supabaseClient
       .from("news_feeds")
       .select("*")
-      .eq("active", true);
+      .eq("active", true)
+      .order("priority", { ascending: false })
+      .range(offset, offset + MAX_FEEDS_PER_RUN - 1);
 
-    if (feedsError) {
-      console.error("Erro ao buscar feeds:", feedsError);
-      throw feedsError;
-    }
+    if (feedsError) throw feedsError;
 
     if (!feeds || feeds.length === 0) {
-      console.log("Nenhum feed ativo encontrado.");
       return new Response(
-        JSON.stringify({ message: "Nenhum feed ativo encontrado." }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
+        JSON.stringify({ message: "Nenhum feed para processar neste lote." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
-    const results = [];
+    console.log(`Processando ${feeds.length} feeds (offset=${offset})`);
 
-    // 2. Processar cada feed
+    const results = [];
+    const allArticles = [];
+
+    // Process feeds sequentially but collect articles for batch insert
     for (const feed of feeds) {
       try {
-        console.log(`Processando feed: ${feed.name} (${feed.rss_url})`);
-        
-        // Fetch RSS XML
-        const response = await fetch(feed.rss_url);
+        console.log(`Feed: ${feed.name}`);
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(feed.rss_url, { signal: controller.signal });
+        clearTimeout(timeout);
+
         if (!response.ok) {
-          throw new Error(`Falha ao buscar RSS: ${response.statusText}`);
+          throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const xmlText = await response.text();
         let xmlData: any;
         try {
           xmlData = parse(xmlText);
         } catch (e) {
-          throw new Error(`Erro ao fazer parse do XML: ${e.message}`);
+          throw new Error(`XML parse error`);
         }
-        
-        // Navegar até os items (pode variar dependendo da estrutura do RSS/Atom)
+
         let items = [];
         if (xmlData?.rss?.channel?.item) {
-          items = Array.isArray(xmlData.rss.channel.item) 
-            ? xmlData.rss.channel.item 
+          items = Array.isArray(xmlData.rss.channel.item)
+            ? xmlData.rss.channel.item
             : [xmlData.rss.channel.item];
         } else if (xmlData?.feed?.entry) {
-          // Atom support
-          items = Array.isArray(xmlData.feed.entry) 
-            ? xmlData.feed.entry 
+          items = Array.isArray(xmlData.feed.entry)
+            ? xmlData.feed.entry
             : [xmlData.feed.entry];
-        } else {
-           console.log(`Estrutura XML desconhecida para o feed ${feed.name}`, Object.keys(xmlData || {}));
         }
 
-        console.log(`Encontrados ${items.length} itens no feed ${feed.name}`);
+        // Limit items per feed
+        items = items.slice(0, MAX_ITEMS_PER_FEED);
+        console.log(`${items.length} itens de ${feed.name}`);
 
-        let newArticlesCount = 0;
-
-        // 3. Processar itens
         for (const item of items) {
-          const title = item.title || "Sem título";
-          const link = item.link || ""; // Atom uses link object usually
-          
-          // Tentar pegar descrição de vários campos comuns
+          const title = (item.title || "Sem título").substring(0, 255);
+          const link = item.link || "";
           const descriptionRaw = item.description || item.summary || item.content || "";
-          const description = stripHtml(descriptionRaw).substring(0, 300); // Limite 300 chars
-          
-          // Data de publicação
+          const description = stripHtml(descriptionRaw).substring(0, 300);
+
           let pubDate = item.pubDate || item.published || item.updated || new Date().toISOString();
           try {
-            const parsedDate = new Date(pubDate);
-            if (isNaN(parsedDate.getTime())) {
-                pubDate = new Date().toISOString();
-            } else {
-                pubDate = parsedDate.toISOString();
-            }
-          } catch (e) {
-            pubDate = new Date().toISOString();
-          }
+            const d = new Date(pubDate);
+            pubDate = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+          } catch { pubDate = new Date().toISOString(); }
 
-          // Tentar extrair imagem
           let imageUrl = null;
-          if (item.enclosure && item.enclosure["@url"]) {
+          if (item.enclosure?.["@url"]) {
             imageUrl = item.enclosure["@url"];
-          } else if (item["media:content"] && item["media:content"]["@url"]) {
+          } else if (item["media:content"]?.["@url"]) {
             imageUrl = item["media:content"]["@url"];
-          } else if (item["media:group"] && item["media:group"]["media:content"] && item["media:group"]["media:content"]["@url"]) {
-             imageUrl = item["media:group"]["media:content"]["@url"];
+          } else if (item["media:group"]?.["media:content"]?.["@url"]) {
+            imageUrl = item["media:group"]["media:content"]["@url"];
           } else {
-            // Tentar extrair do HTML da descrição (tag img)
             const imgMatch = descriptionRaw.match(/<img[^>]+src="([^">]+)"/);
-            if (imgMatch) {
-              imageUrl = imgMatch[1];
-            }
+            if (imgMatch) imageUrl = imgMatch[1];
           }
 
-          const slug = createSlug(`${title}-${pubDate.substring(0, 10)}`); // Slug único com data
+          const slug = createSlug(`${title}-${pubDate.substring(0, 10)}`);
 
-          // 4. Inserir no banco (ignorar duplicatas)
-          const articleData = {
+          allArticles.push({
             feed_id: feed.id,
             title,
             description,
-            link: typeof link === 'string' ? link : (link['@href'] || link.href || ''),
+            link: typeof link === "string" ? link : (link["@href"] || link.href || ""),
             image_url: imageUrl,
             category: feed.category || "Geral",
             source: feed.name,
-            slug: slug,
+            slug,
             published_at: pubDate,
             active: true,
-          };
-
-          const { error: insertError } = await supabaseClient
-            .from("news_articles")
-            .upsert(articleData, { onConflict: "slug", ignoreDuplicates: true });
-
-          if (!insertError) {
-             newArticlesCount++;
-          } else {
-             console.error(`Erro ao inserir artigo ${slug}:`, insertError);
-          }
+          });
         }
 
-        results.push({
-          feed: feed.name,
-          status: "success",
-          items_found: items.length,
-          new_articles_processed: newArticlesCount
-        });
-
+        results.push({ feed: feed.name, status: "success", items: items.length });
       } catch (err: any) {
-        console.error(`Erro no feed ${feed.name}:`, err);
-        results.push({
-          feed: feed.name,
-          status: "error",
-          error: err.message || "Unknown error"
-        });
+        console.error(`Erro ${feed.name}: ${err.message}`);
+        results.push({ feed: feed.name, status: "error", error: err.message });
       }
     }
 
-    // 5. Limpeza de notícias antigas ( > 7 dias)
+    // Batch upsert all articles
+    console.log(`Inserindo ${allArticles.length} artigos em lotes de ${BATCH_SIZE}...`);
+    let inserted = 0;
+    for (let i = 0; i < allArticles.length; i += BATCH_SIZE) {
+      const batch = allArticles.slice(i, i + BATCH_SIZE);
+      const { error } = await supabaseClient
+        .from("news_articles")
+        .upsert(batch, { onConflict: "slug", ignoreDuplicates: true });
+
+      if (error) {
+        console.error(`Erro batch ${i}:`, error.message);
+      } else {
+        inserted += batch.length;
+      }
+    }
+
+    // Cleanup old articles (> 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
     await supabaseClient
       .from("news_articles")
       .delete()
       .lt("published_at", sevenDaysAgo.toISOString());
 
     return new Response(
-      JSON.stringify({ 
-        message: "Coleta de RSS finalizada", 
-        results 
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      JSON.stringify({ message: "RSS coletado", inserted, results }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
-
   } catch (error: any) {
-    console.error("Erro fatal na função rss-collector:", error);
+    console.error("Erro fatal:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
