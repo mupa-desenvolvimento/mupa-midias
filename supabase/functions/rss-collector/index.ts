@@ -156,14 +156,13 @@ serve(async (req: Request) => {
             feed_id: feed.id,
             title,
             description,
-            link: typeof link === 'string' ? link : (link['@href'] || link.href || ''), // Atom link object support
+            link: typeof link === 'string' ? link : (link['@href'] || link.href || ''),
             image_url: imageUrl,
             category: feed.category || "Geral",
             source: feed.name,
-            slug: slug, // Usando slug como identificador único
+            slug: slug,
             published_at: pubDate,
             active: true,
-            tenant_id: feed.tenant_id // Importante: manter tenant_id
           };
 
           const { error: insertError } = await supabaseClient

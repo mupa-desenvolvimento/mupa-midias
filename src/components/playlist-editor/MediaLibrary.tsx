@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Image, Video, FileText, Grip, Clock } from "lucide-react";
+import { Search, Image, Video, FileText, Grip, Clock, Newspaper } from "lucide-react";
 
 interface MediaLibraryProps {
   onDragStart: (media: MediaItem) => void;
@@ -16,6 +16,8 @@ const getMediaIcon = (type: string) => {
       return <Video className="w-4 h-4" />;
     case "image":
       return <Image className="w-4 h-4" />;
+    case "news":
+      return <Newspaper className="w-4 h-4" />;
     default:
       return <FileText className="w-4 h-4" />;
   }
@@ -74,6 +76,7 @@ export const MediaLibrary = ({ onDragStart }: MediaLibraryProps) => {
             <SelectItem value="all">Todos os tipos</SelectItem>
             <SelectItem value="image">Imagens</SelectItem>
             <SelectItem value="video">Vídeos</SelectItem>
+            <SelectItem value="news">Notícias</SelectItem>
           </SelectContent>
         </Select>
       </div>
