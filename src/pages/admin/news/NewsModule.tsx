@@ -1,36 +1,67 @@
 
-import { useState } from "react";
-import { useNews, NewsSettings } from "@/hooks/useNews";
-import { NewsFeedManager } from "@/components/news/NewsFeedManager";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { useNews, NewsArticle, NewsSettings } from "@/hooks/useNews";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, List, Tv, Plus } from "lucide-react";
-import { NewsContainer } from "@/components/news/NewsContainer";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Plus, Newspaper, LayoutGrid, List, Trash2, Edit2, 
+  Clock, Eye, RefreshCw, Tv 
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+// ─── News Slide type ───
+interface NewsSlide {
+  id: string;
+  name: string;
+  duration: number | null;
+  metadata: any;
+  created_at: string;
+  status: string;
+}
 
 export function NewsModule() {
   const queryClient = useQueryClient();
-  const { 
-    settings, 
-    articles, 
-    categories,
-    isLoading, 
-    updateSettings, 
-    triggerCollection 
-  } = useNews();
-  const [isSlideDialogOpen, setIsSlideDialogOpen] = useState(false);
+  const { articles, categories, triggerCollection } = useNews();
+
+  // ─── State ───
+  const [activeTab, setActiveTab] = useState("slides");
+  const [slideViewMode, setSlideViewMode] = useState<"grid" | "list">("grid");
+  const [previewCategory, setPreviewCategory] = useState<string>("all");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedSlide, setSelectedSlide] = useState<NewsSlide | null>(null);
   const [slideName, setSlideName] = useState("");
   const [slideCategory, setSlideCategory] = useState("all");
   const [slideDuration, setSlideDuration] = useState(15);
   const [creatingSlide, setCreatingSlide] = useState(false);
 
+  // ─── Fetch created news slides ───
+  const { data: slides = [], isLoading: slidesLoading } = useQuery({
+    queryKey: ["news-slides"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("media_items")
+        .select("*")
+        .eq("type", "news")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as NewsSlide[];
+    },
+  });
+
+  // ─── Create slide ───
   const handleCreateSlide = async () => {
     if (!slideName.trim()) {
       toast.error("Informe um nome para o slide");
@@ -40,292 +71,258 @@ export function NewsModule() {
     try {
       const metadata = {
         news_category: slideCategory === "all" ? null : slideCategory,
-        news_layout: settings?.layout_type || "modern",
-        news_theme: settings?.theme_mode || "dark",
-        news_view: settings?.type_view || "list",
-        news_max_items: settings?.max_items || 20,
       };
-
-      const { error } = await supabase
-        .from("media_items")
-        .insert({
-          name: slideName,
-          type: "news",
-          status: "active",
-          duration: slideDuration,
-          metadata,
-        });
-
+      const { error } = await supabase.from("media_items").insert({
+        name: slideName,
+        type: "news",
+        status: "active",
+        duration: slideDuration,
+        metadata,
+      });
       if (error) throw error;
-
-      toast.success("Slide de notícias criado! Agora adicione-o a uma playlist.");
+      toast.success("Slide criado! Adicione-o a uma playlist.");
+      queryClient.invalidateQueries({ queryKey: ["news-slides"] });
       queryClient.invalidateQueries({ queryKey: ["media-items"] });
-      setIsSlideDialogOpen(false);
+      setIsCreateOpen(false);
       setSlideName("");
       setSlideCategory("all");
       setSlideDuration(15);
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Erro ao criar slide de notícias");
+    } catch {
+      toast.error("Erro ao criar slide");
     } finally {
       setCreatingSlide(false);
     }
   };
-  
-  if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Carregando módulo de notícias...</div>;
-  }
 
-  const currentSettings: NewsSettings = settings || {
-    id: "default-settings",
-    type_view: "list",
-    display_time: 10,
-    max_items: 20,
-    theme_mode: "light",
-    layout_type: "modern",
-    active_categories: []
-  };
-
-  const previewArticles = (articles || []).filter(article => {
-    if (!currentSettings.active_categories || currentSettings.active_categories.length === 0) return true;
-    return currentSettings.active_categories.includes(article.category);
+  // ─── Delete slide ───
+  const deleteSlide = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("media_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["news-slides"] });
+      queryClient.invalidateQueries({ queryKey: ["media-items"] });
+      toast.success("Slide removido");
+      setIsDeleteOpen(false);
+      setSelectedSlide(null);
+    },
+    onError: () => toast.error("Erro ao remover slide"),
   });
+
+  // ─── Preview articles filtered by selected category ───
+  const filteredArticles = useMemo(() => {
+    if (!articles) return [];
+    if (previewCategory === "all") return articles.slice(0, 20);
+    return articles.filter((a) => a.category === previewCategory).slice(0, 20);
+  }, [articles, previewCategory]);
+
+  const getCategoryLabel = (cat: string | null) => cat || "Todas";
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Settings & Feeds */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Slide Creation Card */}
-          <Card className="border-primary/30 bg-primary/5">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Tv className="h-5 w-5" />
-                    Slides de Notícias para TV
-                  </CardTitle>
-                  <CardDescription>
-                    Crie slides de notícias por categoria e adicione-os às suas playlists.
-                  </CardDescription>
-                </div>
-                <Button onClick={() => setIsSlideDialogOpen(true)} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Criar Slide
-                </Button>
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <List className="h-5 w-5" />
-                    Gerenciamento de Feeds
-                  </CardTitle>
-                  <CardDescription>
-                    Configure as fontes de notícias (RSS) e categorias.
-                  </CardDescription>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => triggerCollection.mutate()}
-                  disabled={triggerCollection.isPending}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${triggerCollection.isPending ? 'animate-spin' : ''}`} />
-                  {triggerCollection.isPending ? "Coletando..." : "Forçar Coleta"}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <NewsFeedManager />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Exibição</CardTitle>
-              <CardDescription>
-                Personalize como as notícias aparecem na tela.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Categorias Ativas</Label>
-                  <span className="text-xs text-muted-foreground">
-                    {currentSettings.active_categories.length === 0 
-                      ? "Todas as categorias exibidas" 
-                      : `${currentSettings.active_categories.length} selecionadas`}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-3 p-4 border rounded-md bg-muted/20 min-h-[80px]">
-                  {(!categories || categories.length === 0) && (
-                    <div className="w-full text-center text-sm text-muted-foreground flex flex-col items-center justify-center h-full">
-                      <span>Nenhuma categoria encontrada.</span>
-                      <span className="text-xs opacity-70">Adicione feeds RSS para carregar categorias.</span>
-                    </div>
-                  )}
-                  {categories?.map((cat) => {
-                    const isSelected = currentSettings.active_categories.length === 0 || currentSettings.active_categories.includes(cat);
-                    return (
-                      <div key={cat} className="flex items-center space-x-2 bg-background p-2 rounded border shadow-sm">
-                        <Checkbox 
-                          id={`cat-${cat}`} 
-                          checked={isSelected}
-                          onCheckedChange={(checked) => {
-                            const currentCats = currentSettings.active_categories || [];
-                            let newCats: string[] = [];
-                            
-                            if (currentCats.length === 0) {
-                              if (checked === false && categories) {
-                                newCats = categories.filter(c => c !== cat);
-                              } else {
-                                newCats = []; 
-                              }
-                            } else {
-                              if (checked) {
-                                newCats = [...currentCats, cat];
-                              } else {
-                                newCats = currentCats.filter(c => c !== cat);
-                              }
-                            }
-                            
-                            if (categories && newCats.length === categories.length) {
-                              newCats = [];
-                            }
-                            
-                            updateSettings.mutate({ active_categories: newCats });
-                          }}
-                        />
-                        <Label htmlFor={`cat-${cat}`} className="cursor-pointer text-sm font-medium">{cat}</Label>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Modo de Visualização</Label>
-                  <Select
-                    value={currentSettings.type_view}
-                    onValueChange={(val: any) => updateSettings.mutate({ type_view: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="list">Lista Vertical</SelectItem>
-                      <SelectItem value="grid">Grade (Grid)</SelectItem>
-                      <SelectItem value="ticker">Ticker (Rodapé)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Layout do Card</Label>
-                  <Select
-                    value={currentSettings.layout_type}
-                    onValueChange={(val: any) => updateSettings.mutate({ layout_type: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="modern">Moderno</SelectItem>
-                      <SelectItem value="classic">Clássico</SelectItem>
-                      <SelectItem value="minimal">Minimalista</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Tempo de Exibição (segundos)</Label>
-                  <Select
-                    value={String(currentSettings.display_time)}
-                    onValueChange={(val) => updateSettings.mutate({ display_time: parseInt(val) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 segundos</SelectItem>
-                      <SelectItem value="10">10 segundos</SelectItem>
-                      <SelectItem value="15">15 segundos</SelectItem>
-                      <SelectItem value="20">20 segundos</SelectItem>
-                      <SelectItem value="30">30 segundos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Tema</Label>
-                  <Select
-                    value={currentSettings.theme_mode}
-                    onValueChange={(val: any) => updateSettings.mutate({ theme_mode: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Claro</SelectItem>
-                      <SelectItem value="dark">Escuro</SelectItem>
-                      <SelectItem value="system">Sistema</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Newspaper className="h-6 w-6 text-primary" />
+            Notícias
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Crie slides de notícias por categoria e adicione às suas playlists
+          </p>
         </div>
-
-        {/* Right Column: Preview */}
-        <div className="space-y-6">
-          <Card className="sticky top-6">
-            <CardHeader>
-              <CardTitle>Pré-visualização</CardTitle>
-              <CardDescription>
-                Como aparecerá na TV. {articles?.length || 0} notícias disponíveis.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="aspect-video w-full bg-slate-100 dark:bg-slate-950 rounded-lg overflow-hidden border shadow-sm relative">
-                <div className="absolute inset-0 overflow-auto">
-                   <NewsContainer 
-                     settings={currentSettings}
-                     articles={previewArticles}
-                     preview={true}
-                   />
-                </div>
-              </div>
-              <div className="mt-4 text-xs text-muted-foreground text-center">
-                * A visualização pode variar dependendo da resolução da tela.
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => triggerCollection.mutate()}
+            disabled={triggerCollection.isPending}
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", triggerCollection.isPending && "animate-spin")} />
+            Atualizar
+          </Button>
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Slide
+          </Button>
         </div>
       </div>
 
-      {/* Create Slide Dialog */}
-      <Dialog open={isSlideDialogOpen} onOpenChange={setIsSlideDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar Slide de Notícias</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="slides" className="gap-2">
+            <Tv className="h-4 w-4" />
+            Slides Criados
+          </TabsTrigger>
+          <TabsTrigger value="preview" className="gap-2">
+            <Eye className="h-4 w-4" />
+            Pré-visualização
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ━━━ TAB: Slides ━━━ */}
+        <TabsContent value="slides" className="mt-4">
+          {/* View mode toggle */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">
+              {slides.length} {slides.length === 1 ? "slide criado" : "slides criados"}
+            </p>
+            <div className="flex items-center gap-1 border rounded-md p-0.5">
+              <Button
+                variant={slideViewMode === "grid" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSlideViewMode("grid")}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={slideViewMode === "list" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSlideViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {slidesLoading ? (
+            <div className="text-center py-12 text-muted-foreground">Carregando slides...</div>
+          ) : slides.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Newspaper className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-semibold text-lg mb-1">Nenhum slide de notícias</h3>
+                <p className="text-muted-foreground text-sm max-w-sm mb-6">
+                  Crie seu primeiro slide de notícias para exibir nas suas TVs. 
+                  Escolha uma categoria e ele será atualizado automaticamente.
+                </p>
+                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar Primeiro Slide
+                </Button>
+              </CardContent>
+            </Card>
+          ) : slideViewMode === "grid" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {slides.map((slide) => (
+                <SlideCard
+                  key={slide.id}
+                  slide={slide}
+                  onDelete={() => { setSelectedSlide(slide); setIsDeleteOpen(true); }}
+                  articlesCount={
+                    articles?.filter((a) =>
+                      slide.metadata?.news_category ? a.category === slide.metadata.news_category : true
+                    ).length || 0
+                  }
+                />
+              ))}
+            </div>
+          ) : (
             <div className="space-y-2">
-              <Label>Nome do Slide</Label>
+              {slides.map((slide) => (
+                <SlideListItem
+                  key={slide.id}
+                  slide={slide}
+                  onDelete={() => { setSelectedSlide(slide); setIsDeleteOpen(true); }}
+                  articlesCount={
+                    articles?.filter((a) =>
+                      slide.metadata?.news_category ? a.category === slide.metadata.news_category : true
+                    ).length || 0
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ━━━ TAB: Preview ━━━ */}
+        <TabsContent value="preview" className="mt-4">
+          <div className="space-y-4">
+            {/* Category filter bar */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={previewCategory === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPreviewCategory("all")}
+                className="rounded-full"
+              >
+                Todas
+              </Button>
+              {categories?.map((cat) => (
+                <Button
+                  key={cat}
+                  variant={previewCategory === cat ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPreviewCategory(cat)}
+                  className="rounded-full"
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+
+            {/* Preview area */}
+            <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
+              {/* Simulated TV header */}
+              <div className="bg-gradient-to-r from-foreground/95 to-foreground/80 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                  <span className="text-background font-semibold text-sm tracking-wider uppercase">
+                    Notícias {previewCategory !== "all" ? `• ${previewCategory}` : ""}
+                  </span>
+                </div>
+                <span className="text-background/60 text-xs">
+                  {format(new Date(), "HH:mm • dd MMM yyyy", { locale: ptBR })}
+                </span>
+              </div>
+
+              {/* Articles */}
+              <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
+                {filteredArticles.length === 0 ? (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <Newspaper className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">Sem notícias nesta categoria</p>
+                    <p className="text-xs mt-1">Clique em "Atualizar" para coletar as últimas notícias</p>
+                  </div>
+                ) : (
+                  filteredArticles.map((article) => (
+                    <PreviewArticleCard key={article.id} article={article} />
+                  ))
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Mostrando {filteredArticles.length} de {articles?.length || 0} notícias disponíveis
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* ─── Create Dialog ─── */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Slide de Notícias</DialogTitle>
+            <DialogDescription>
+              Escolha uma categoria. As notícias serão atualizadas automaticamente no dispositivo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nome</Label>
               <Input
                 value={slideName}
                 onChange={(e) => setSlideName(e.target.value)}
                 placeholder="Ex: Notícias de Economia"
               />
             </div>
-
             <div className="space-y-2">
               <Label>Categoria</Label>
               <Select value={slideCategory} onValueChange={setSlideCategory}>
@@ -340,36 +337,148 @@ export function NewsModule() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label>Duração (segundos)</Label>
+              <Label>Duração na playlist (segundos)</Label>
               <Select value={String(slideDuration)} onValueChange={(v) => setSlideDuration(parseInt(v))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="10">10 segundos</SelectItem>
-                  <SelectItem value="15">15 segundos</SelectItem>
-                  <SelectItem value="20">20 segundos</SelectItem>
-                  <SelectItem value="30">30 segundos</SelectItem>
-                  <SelectItem value="60">60 segundos</SelectItem>
+                  <SelectItem value="10">10s</SelectItem>
+                  <SelectItem value="15">15s</SelectItem>
+                  <SelectItem value="20">20s</SelectItem>
+                  <SelectItem value="30">30s</SelectItem>
+                  <SelectItem value="60">60s</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <p className="text-xs text-muted-foreground">
-              Após criar, o slide aparecerá na Biblioteca de Mídias do editor de playlist. 
-              As notícias serão atualizadas automaticamente.
-            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSlideDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreateSlide} disabled={creatingSlide}>
               {creatingSlide ? "Criando..." : "Criar Slide"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─── Delete Confirmation ─── */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remover slide?</DialogTitle>
+            <DialogDescription>
+              O slide "{selectedSlide?.name}" será removido da biblioteca de mídias.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => selectedSlide && deleteSlide.mutate(selectedSlide.id)}
+              disabled={deleteSlide.isPending}
+            >
+              {deleteSlide.isPending ? "Removendo..." : "Remover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ─── Sub-components ───
+
+function SlideCard({ slide, onDelete, articlesCount }: { slide: NewsSlide; onDelete: () => void; articlesCount: number }) {
+  const category = slide.metadata?.news_category || "Todas";
+  return (
+    <Card className="group hover:shadow-md transition-all overflow-hidden">
+      {/* Color strip */}
+      <div className="h-1.5 bg-gradient-to-r from-primary to-primary/50" />
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1 min-w-0 flex-1">
+            <h3 className="font-semibold truncate">{slide.name}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary" className="text-xs">{category}</Badge>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {slide.duration || 15}s
+              </span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+          <span>{articlesCount} notícias</span>
+          <span>{format(new Date(slide.created_at), "dd/MM/yy", { locale: ptBR })}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SlideListItem({ slide, onDelete, articlesCount }: { slide: NewsSlide; onDelete: () => void; articlesCount: number }) {
+  const category = slide.metadata?.news_category || "Todas";
+  return (
+    <div className="group flex items-center gap-4 p-3 rounded-lg border bg-card hover:shadow-sm transition-all">
+      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <Newspaper className="h-5 w-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="font-medium truncate">{slide.name}</h3>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+          <Badge variant="secondary" className="text-xs">{category}</Badge>
+          <span>{slide.duration || 15}s</span>
+          <span>{articlesCount} notícias</span>
+        </div>
+      </div>
+      <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+        {format(new Date(slide.created_at), "dd/MM/yy", { locale: ptBR })}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive shrink-0"
+        onClick={onDelete}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+function PreviewArticleCard({ article }: { article: NewsArticle }) {
+  return (
+    <div className="flex gap-4 p-3 rounded-lg border bg-background hover:bg-muted/50 transition-colors group">
+      {article.image_url && (
+        <div className="w-24 h-16 rounded-md overflow-hidden shrink-0 bg-muted">
+          <img
+            src={article.image_url}
+            alt=""
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        </div>
+      )}
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+            {article.category}
+          </Badge>
+          <span className="text-[10px] text-muted-foreground truncate">
+            {article.source} • {format(new Date(article.published_at), "HH:mm", { locale: ptBR })}
+          </span>
+        </div>
+        <h4 className="text-sm font-medium leading-snug line-clamp-2">{article.title}</h4>
+      </div>
     </div>
   );
 }
