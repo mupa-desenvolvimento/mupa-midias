@@ -231,14 +231,37 @@ export function useNews() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["news-articles"] });
-      toast.success(`Coleta concluída: ${data?.processed_feeds ?? 0} feed processado`);
+      toast.success(`Coleta concluída: ${data?.processed_feeds ?? 0} feeds processados`);
+      // Auto-trigger image cache after collection
+      try {
+        await supabase.functions.invoke('news-image-cache', { body: { batch: 5 } });
+        queryClient.invalidateQueries({ queryKey: ["news-articles"] });
+      } catch { /* silent */ }
     },
     onError: (err: any) => {
       console.error("News Collection Error:", err);
-      const msg = err.message || "Erro desconhecido";
-      toast.error(`Erro ao coletar notícias: ${msg}`);
+      toast.error(`Erro ao coletar notícias: ${err.message || "Erro desconhecido"}`);
+    }
+  });
+
+  // --- Image Cache Trigger ---
+  const triggerImageCache = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('news-image-cache', {
+        body: { batch: 5 }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["news-articles"] });
+      toast.success(`Cache de imagens: ${data?.cached ?? 0} imagens salvas`);
+    },
+    onError: (err: any) => {
+      console.error("Image Cache Error:", err);
+      toast.error(`Erro ao cachear imagens: ${err.message || "Erro desconhecido"}`);
     }
   });
 
@@ -252,6 +275,7 @@ export function useNews() {
     updateFeed,
     deleteFeed,
     updateSettings,
-    triggerCollection
+    triggerCollection,
+    triggerImageCache
   };
 }

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, Newspaper, LayoutGrid, List, Trash2, 
-  Clock, Eye, RefreshCw, Tv, Monitor
+  Clock, Eye, RefreshCw, Tv, Monitor, ImageDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ interface NewsSlide {
 
 export function NewsModule() {
   const queryClient = useQueryClient();
-  const { articles, categories, triggerCollection } = useNews();
+  const { articles, categories, triggerCollection, triggerImageCache } = useNews();
 
   const [activeTab, setActiveTab] = useState("preview");
   const [slideViewMode, setSlideViewMode] = useState<"grid" | "list">("grid");
@@ -139,6 +139,15 @@ export function NewsModule() {
           >
             <RefreshCw className={cn("h-4 w-4 mr-2", triggerCollection.isPending && "animate-spin")} />
             Atualizar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => triggerImageCache.mutate()}
+            disabled={triggerImageCache.isPending}
+          >
+            <ImageDown className={cn("h-4 w-4 mr-2", triggerImageCache.isPending && "animate-spin")} />
+            Cachear Imagens
           </Button>
           <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />

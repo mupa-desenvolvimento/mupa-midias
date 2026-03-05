@@ -1109,6 +1109,8 @@ export type Database = {
           description: string | null
           feed_id: string | null
           id: string
+          image_cached: boolean | null
+          image_r2_key: string | null
           image_url: string | null
           imported_at: string
           link: string | null
@@ -1124,6 +1126,8 @@ export type Database = {
           description?: string | null
           feed_id?: string | null
           id?: string
+          image_cached?: boolean | null
+          image_r2_key?: string | null
           image_url?: string | null
           imported_at?: string
           link?: string | null
@@ -1139,6 +1143,8 @@ export type Database = {
           description?: string | null
           feed_id?: string | null
           id?: string
+          image_cached?: boolean | null
+          image_r2_key?: string | null
           image_url?: string | null
           imported_at?: string
           link?: string | null
