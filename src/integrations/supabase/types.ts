@@ -2173,6 +2173,7 @@ export type Database = {
           created_at: string
           current_temp: number | null
           daily_forecast: Json | null
+          display_time: number | null
           hourly_forecast: Json | null
           humidity: number | null
           id: string
@@ -2180,11 +2181,14 @@ export type Database = {
           is_default: boolean
           last_updated_at: string | null
           latitude: number | null
+          layout_type: string | null
           longitude: number | null
           openweather_city_id: string | null
           raw_data: Json | null
           state: string
           tenant_id: string | null
+          theme_color: string | null
+          type_view: string | null
           updated_at: string
           weather_description: string | null
           weather_icon: string | null
@@ -2195,6 +2199,7 @@ export type Database = {
           created_at?: string
           current_temp?: number | null
           daily_forecast?: Json | null
+          display_time?: number | null
           hourly_forecast?: Json | null
           humidity?: number | null
           id?: string
@@ -2202,11 +2207,14 @@ export type Database = {
           is_default?: boolean
           last_updated_at?: string | null
           latitude?: number | null
+          layout_type?: string | null
           longitude?: number | null
           openweather_city_id?: string | null
           raw_data?: Json | null
           state: string
           tenant_id?: string | null
+          theme_color?: string | null
+          type_view?: string | null
           updated_at?: string
           weather_description?: string | null
           weather_icon?: string | null
@@ -2217,6 +2225,7 @@ export type Database = {
           created_at?: string
           current_temp?: number | null
           daily_forecast?: Json | null
+          display_time?: number | null
           hourly_forecast?: Json | null
           humidity?: number | null
           id?: string
@@ -2224,11 +2233,14 @@ export type Database = {
           is_default?: boolean
           last_updated_at?: string | null
           latitude?: number | null
+          layout_type?: string | null
           longitude?: number | null
           openweather_city_id?: string | null
           raw_data?: Json | null
           state?: string
           tenant_id?: string | null
+          theme_color?: string | null
+          type_view?: string | null
           updated_at?: string
           weather_description?: string | null
           weather_icon?: string | null
