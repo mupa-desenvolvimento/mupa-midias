@@ -143,6 +143,8 @@ export function WeatherSettings() {
                             <SelectItem value="minimal">Minimal Widget</SelectItem>
                             <SelectItem value="card">Modern Card</SelectItem>
                             <SelectItem value="grid">Forecast Grid</SelectItem>
+                            <SelectItem value="glass">Glassmorphism</SelectItem>
+                            <SelectItem value="neon">Neon / Cyber</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>

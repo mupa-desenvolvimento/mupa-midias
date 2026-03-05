@@ -4,9 +4,13 @@ import { AppleWeatherLayout } from "./AppleWeatherLayout";
 import { MinimalWidgetLayout } from "./MinimalWidgetLayout";
 import { ModernCardLayout } from "./ModernCardLayout";
 import { ForecastGridLayout } from "./ForecastGridLayout";
+import { GlassWeatherLayout } from "./GlassWeatherLayout";
+import { NeonWeatherLayout } from "./NeonWeatherLayout";
+
+export type WeatherLayoutType = "apple" | "minimal" | "card" | "grid" | "glass" | "neon";
 
 interface WeatherContainerProps extends WeatherLayoutProps {
-  layoutOverride?: "apple" | "minimal" | "card" | "grid";
+  layoutOverride?: WeatherLayoutType;
 }
 
 export function WeatherContainer({ location, orientation = "horizontal", className, layoutOverride }: WeatherContainerProps) {
@@ -19,20 +23,21 @@ export function WeatherContainer({ location, orientation = "horizontal", classNa
     hourly_forecast: location.hourly_forecast || location.raw_data?.hourly_forecast
   };
 
-  // Widget mode always uses Minimal for now, unless overridden
-  if (location.type_view === "widget" && !layoutOverride) {
-    return <MinimalWidgetLayout location={enrichedLocation} orientation={orientation} className={className} />;
-  }
+  const props = { location: enrichedLocation, orientation, className };
 
   switch (layout) {
     case "minimal":
-      return <MinimalWidgetLayout location={enrichedLocation} orientation={orientation} className={className} />;
+      return <MinimalWidgetLayout {...props} />;
     case "card":
-      return <ModernCardLayout location={enrichedLocation} orientation={orientation} className={className} />;
+      return <ModernCardLayout {...props} />;
     case "grid":
-      return <ForecastGridLayout location={enrichedLocation} orientation={orientation} className={className} />;
+      return <ForecastGridLayout {...props} />;
+    case "glass":
+      return <GlassWeatherLayout {...props} />;
+    case "neon":
+      return <NeonWeatherLayout {...props} />;
     case "apple":
     default:
-      return <AppleWeatherLayout location={enrichedLocation} orientation={orientation} className={className} />;
+      return <AppleWeatherLayout {...props} />;
   }
 }

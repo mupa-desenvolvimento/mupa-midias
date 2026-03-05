@@ -22,7 +22,7 @@ export interface WeatherLocation {
   daily_forecast?: any;
   hourly_forecast?: any;
   type_view?: "widget" | "slide";
-  layout_type?: "apple" | "minimal" | "card" | "grid";
+  layout_type?: "apple" | "minimal" | "card" | "grid" | "glass" | "neon";
   display_time?: number;
   theme_color?: string;
   created_at?: string;
@@ -221,7 +221,7 @@ export function useWeather() {
       id: string; 
       type_view?: "widget" | "slide"; 
       display_time?: number; 
-      layout_type?: "apple" | "minimal" | "card" | "grid";
+      layout_type?: "apple" | "minimal" | "card" | "grid" | "glass" | "neon";
       theme_color?: string;
     }) => {
       const updateData: any = {};
