@@ -18,6 +18,7 @@ export interface NewsArticle {
   feed_id: string;
   title: string;
   description: string;
+  link?: string;
   image_url?: string;
   source: string;
   category: string;

@@ -3,6 +3,16 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Newspaper } from "lucide-react";
 import { cn } from "@/lib/utils";
+import QRCode from "react-qr-code";
+
+function ArticleQR({ url, size = 48 }: { url?: string | null; size?: number }) {
+  if (!url) return null;
+  return (
+    <div className="bg-white p-1 rounded shrink-0" style={{ width: size + 8, height: size + 8 }}>
+      <QRCode value={url} size={size} level="L" />
+    </div>
+  );
+}
 
 interface LayoutProps {
   articles: NewsArticle[];
@@ -49,6 +59,9 @@ export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
             <h2 className="text-sm md:text-base font-bold leading-tight line-clamp-3">{hero.title}</h2>
             <p className="text-[10px] text-white/60 line-clamp-2">{hero.description}</p>
           </div>
+          <div className="absolute bottom-3 right-3">
+            <ArticleQR url={hero.link} size={40} />
+          </div>
         </div>
         {/* Sidebar */}
         <div className="flex-[2] flex flex-col border-l border-white/10 min-w-0">
@@ -60,6 +73,7 @@ export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
                 <h3 className="text-[10px] font-semibold leading-tight line-clamp-2">{a.title}</h3>
                 <span className="text-[8px] text-white/40 mt-auto">{a.source}</span>
               </div>
+              <ArticleQR url={a.link} size={28} />
             </div>
           ))}
         </div>
@@ -81,6 +95,9 @@ export function LayoutGrid({ articles, category }: LayoutProps) {
           <div key={a.id} className="relative rounded-lg overflow-hidden group">
             <ArticleImage url={a.image_url} className="absolute inset-0 w-full h-full" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+            <div className="absolute top-1 right-1">
+              <ArticleQR url={a.link} size={24} />
+            </div>
             <div className="absolute bottom-0 left-0 right-0 p-2">
               <span className="text-[8px] uppercase text-emerald-400 font-semibold">{a.category}</span>
               <h3 className="text-[9px] font-bold leading-tight line-clamp-2 mt-0.5">{a.title}</h3>
@@ -106,10 +123,13 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
         <div className="flex-1 relative overflow-hidden">
           <ArticleImage url={hero.image_url} className="absolute inset-0 w-full h-full" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
+           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">{hero.category}</span>
             <h2 className="text-sm md:text-lg font-extrabold leading-tight line-clamp-3">{hero.title}</h2>
             <p className="text-[10px] text-white/60 line-clamp-2">{hero.description}</p>
+          </div>
+          <div className="absolute bottom-3 right-3">
+            <ArticleQR url={hero.link} size={40} />
           </div>
         </div>
       </div>
@@ -118,10 +138,11 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
         {ticker.map((a) => (
           <div key={a.id} className="flex-1 flex items-center gap-2 px-3 min-w-0">
             <ArticleImage url={a.image_url} className="w-10 h-10 rounded shrink-0" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h3 className="text-[9px] font-semibold leading-tight line-clamp-2">{a.title}</h3>
               <span className="text-[8px] text-white/40">{a.source}</span>
             </div>
+            <ArticleQR url={a.link} size={28} />
           </div>
         ))}
       </div>
@@ -159,6 +180,7 @@ export function LayoutMinimal({ articles, category }: LayoutProps) {
               {i === 0 && <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">{a.description}</p>}
             </div>
             <ArticleImage url={a.image_url} className="w-20 h-14 rounded-lg shrink-0" />
+            <ArticleQR url={a.link} size={32} />
           </div>
         ))}
       </div>
