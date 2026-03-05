@@ -130,7 +130,7 @@ export const InkySection = () => {
       }));
 
       const { data, error } = await supabase.functions.invoke(
-        "inky-chat",
+        "inky-landing",
         { body: { messages: conversationMessages, mode: activeMode } }
       );
 
