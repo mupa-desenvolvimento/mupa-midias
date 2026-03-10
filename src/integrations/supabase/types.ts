@@ -1104,6 +1104,8 @@ export type Database = {
       news_articles: {
         Row: {
           active: boolean | null
+          api_article_id: string | null
+          api_source: string | null
           category: string | null
           content: string | null
           description: string | null
@@ -1117,10 +1119,13 @@ export type Database = {
           published_at: string | null
           slug: string | null
           source: string | null
+          source_priority: number | null
           title: string
         }
         Insert: {
           active?: boolean | null
+          api_article_id?: string | null
+          api_source?: string | null
           category?: string | null
           content?: string | null
           description?: string | null
@@ -1134,10 +1139,13 @@ export type Database = {
           published_at?: string | null
           slug?: string | null
           source?: string | null
+          source_priority?: number | null
           title: string
         }
         Update: {
           active?: boolean | null
+          api_article_id?: string | null
+          api_source?: string | null
           category?: string | null
           content?: string | null
           description?: string | null
@@ -1151,6 +1159,7 @@ export type Database = {
           published_at?: string | null
           slug?: string | null
           source?: string | null
+          source_priority?: number | null
           title?: string
         }
         Relationships: [
@@ -1167,10 +1176,12 @@ export type Database = {
         Row: {
           active: boolean | null
           category: string | null
+          collector: string
           created_at: string
           id: string
           name: string
           priority: number | null
+          query: string | null
           rss_url: string
           tenant_id: string | null
           updated_at: string
@@ -1178,10 +1189,12 @@ export type Database = {
         Insert: {
           active?: boolean | null
           category?: string | null
+          collector?: string
           created_at?: string
           id?: string
           name: string
           priority?: number | null
+          query?: string | null
           rss_url: string
           tenant_id?: string | null
           updated_at?: string
@@ -1189,10 +1202,12 @@ export type Database = {
         Update: {
           active?: boolean | null
           category?: string | null
+          collector?: string
           created_at?: string
           id?: string
           name?: string
           priority?: number | null
+          query?: string | null
           rss_url?: string
           tenant_id?: string | null
           updated_at?: string
