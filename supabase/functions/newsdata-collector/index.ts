@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const NEWSDATA_ENDPOINT = "https://newsdata.io/api/1/news";
+const NEWSDATA_ENDPOINT = "https://newsdata.io/api/1/latest";
 
 const DEFAULT_MAX_FEEDS_PER_RUN = 4;
 const DEFAULT_MAX_ITEMS_PER_REQUEST = 10;
@@ -74,7 +74,7 @@ function mapLocalCategoryToNewsData(localCategory: string | null) {
   if (!c) return null;
 
   const mapping: Record<string, string> = {
-    geral: "general",
+    geral: "top",
     politica: "politics",
     economia: "business",
     negocios: "business",
@@ -84,8 +84,8 @@ function mapLocalCategoryToNewsData(localCategory: string | null) {
     ciencia: "science",
     entretenimento: "entertainment",
     mundo: "world",
-    brasil: "general",
-    cotidiano: "general",
+    brasil: "top",
+    cotidiano: "top",
   };
 
   return mapping[c] || null;
@@ -266,7 +266,7 @@ serve(async (req: Request) => {
         url.searchParams.set("apikey", newsDataApiKey);
         url.searchParams.set("country", country);
         url.searchParams.set("language", language);
-        url.searchParams.set("timeframe", String(timeframe));
+        // timeframe removed - not available on free plan
         url.searchParams.set("size", String(itemsPerRequest));
 
         if (apiCategory) url.searchParams.set("category", apiCategory);
