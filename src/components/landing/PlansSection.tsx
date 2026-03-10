@@ -242,18 +242,46 @@ const plans: Plan[] = [
 const PlanCard = ({ plan, onAction, showDetails = true }: { plan: Plan; onAction: () => void; showDetails?: boolean }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const themeColors = {
-    zinc: "from-zinc-500 to-zinc-700 border-zinc-500/30 hover:border-zinc-500/60 text-zinc-400 bg-zinc-500/10",
-    green: "from-green-500 to-emerald-700 border-green-500/30 hover:border-green-500/60 text-green-400 bg-green-500/10",
-    blue: "from-blue-500 to-cyan-700 border-blue-500/30 hover:border-blue-500/60 text-blue-400 bg-blue-500/10",
-    purple: "from-purple-500 to-pink-700 border-purple-500/30 hover:border-purple-500/60 text-purple-400 bg-purple-500/10"
-  };
+  const themeClasses = {
+    zinc: {
+      gradient: "from-border to-border",
+      border: "border-border/40 hover:border-border/70",
+      ring: "ring-border/70",
+      tagline: "text-muted-foreground",
+      icon: "bg-card/30 text-muted-foreground",
+      check: "text-muted-foreground",
+    },
+    green: {
+      gradient: "from-secondary to-accent",
+      border: "border-accent/30 hover:border-accent/60",
+      ring: "ring-accent",
+      tagline: "text-secondary",
+      icon: "bg-accent/15 text-accent",
+      check: "text-accent",
+    },
+    blue: {
+      gradient: "from-primary to-accent",
+      border: "border-primary/40 hover:border-primary/70",
+      ring: "ring-primary",
+      tagline: "text-secondary",
+      icon: "bg-primary/20 text-secondary",
+      check: "text-secondary",
+    },
+    purple: {
+      gradient: "from-accent to-primary",
+      border: "border-accent/40 hover:border-accent/70",
+      ring: "ring-accent",
+      tagline: "text-accent",
+      icon: "bg-accent/15 text-accent",
+      check: "text-accent",
+    },
+  } as const;
 
   const buttonStyles: Record<string, string> = {
-    lite: "bg-zinc-100 hover:bg-white text-black border border-white/20 shadow-sm font-bold",
-    flow: "bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 shadow-sm",
-    insight: "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20 border-0",
-    impact: "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-xl shadow-purple-500/30 border-0 font-bold tracking-wide"
+    lite: "bg-white hover:bg-background text-foreground border border-border shadow-sm font-bold",
+    flow: "bg-primary hover:bg-primary/90 text-primary-foreground border border-border/40 shadow-sm",
+    insight: "bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg shadow-accent/20 border-0",
+    impact: "bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-xl shadow-accent/30 border-0 font-bold tracking-wide"
   };
 
   const iconMap: Record<string, LucideIcon> = {
@@ -269,35 +297,32 @@ const PlanCard = ({ plan, onAction, showDetails = true }: { plan: Plan; onAction
     <motion.div 
       layout
       className={cn(
-        "relative rounded-2xl border bg-black/40 backdrop-blur-sm overflow-hidden transition-all duration-300 h-full",
-        `border-${plan.theme}-500/20`,
+        "relative rounded-2xl border bg-sidebar/40 backdrop-blur-sm overflow-hidden transition-all duration-300 h-full",
+        themeClasses[plan.theme].border,
         isExpanded ? "ring-2 ring-offset-0 ring-offset-transparent ring-opacity-50 z-20" : "hover:border-opacity-50 z-10",
-        plan.theme === "zinc" && isExpanded && "ring-zinc-500",
-        plan.theme === "green" && isExpanded && "ring-green-500",
-        plan.theme === "blue" && isExpanded && "ring-blue-500",
-        plan.theme === "purple" && isExpanded && "ring-purple-500",
-        plan.id === "impact" && !isExpanded && "border-purple-500/40 shadow-purple-900/10 shadow-2xl"
+        isExpanded && themeClasses[plan.theme].ring,
+        plan.id === "impact" && !isExpanded && "border-accent/60 shadow-accent/10 shadow-2xl"
       )}
     >
       {/* Top Gradient Line */}
-      <div className={cn("h-1 w-full bg-gradient-to-r", themeColors[plan.theme].split(" ")[0] + " " + themeColors[plan.theme].split(" ")[1])} />
+      <div className={cn("h-1 w-full bg-gradient-to-r", themeClasses[plan.theme].gradient)} />
 
       <div className="p-4 sm:p-6 md:p-8 flex flex-col h-full">
         {/* Header */}
         <div className="mb-6">
-          <div className={cn("inline-flex items-center justify-center w-12 h-12 rounded-lg mb-4", themeColors[plan.theme].split(" ").slice(3).join(" "))}>
+          <div className={cn("inline-flex items-center justify-center w-12 h-12 rounded-lg mb-4", themeClasses[plan.theme].icon)}>
             <Icon className="w-6 h-6" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">{plan.name}</h3>
-          <p className={cn("text-sm font-medium uppercase tracking-wider mb-4 min-h-[44px] flex items-center", themeColors[plan.theme].split(" ")[2])}>
+          <h3 className="text-2xl font-bold text-foreground mb-2 tracking-tight">{plan.name}</h3>
+          <p className={cn("text-sm font-medium uppercase tracking-wider mb-4 min-h-[44px] flex items-center", themeClasses[plan.theme].tagline)}>
             {plan.tagline}
           </p>
-          <p className="text-gray-400 leading-relaxed min-h-[100px] mb-4">
+          <p className="text-muted-foreground leading-relaxed min-h-[100px] mb-4">
             {plan.description}
           </p>
           
           {/* Support Badge */}
-          <div className="flex items-center gap-2 text-xs font-medium text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-3 py-1.5 rounded-full w-fit">
+          <div className="flex items-center gap-2 text-xs font-medium text-secondary bg-secondary/10 border border-secondary/20 px-3 py-1.5 rounded-full w-fit">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Suporte técnico remoto incluso
           </div>
@@ -308,21 +333,21 @@ const PlanCard = ({ plan, onAction, showDetails = true }: { plan: Plan; onAction
           {showDetails && (
             <Button 
               variant="outline" 
-              className="w-full border-white/10 hover:bg-white/5 text-white group"
+              className="w-full border-border/40 hover:bg-card/20 text-foreground group"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? "Ocultar detalhes" : "Ver detalhes"}
               {isExpanded ? (
-                <ChevronUp className="w-4 h-4 ml-2 text-gray-400" />
+                <ChevronUp className="w-4 h-4 ml-2 text-muted-foreground" />
               ) : (
-                <ChevronDown className="w-4 h-4 ml-2 text-gray-400 group-hover:translate-y-0.5 transition-transform" />
+                <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground group-hover:translate-y-0.5 transition-transform" />
               )}
             </Button>
           )}
 
           {!isExpanded && (
             <Button 
-              className={cn("w-full text-white font-medium h-auto py-3 whitespace-normal leading-tight", buttonStyles[plan.id])}
+              className={cn("w-full font-medium h-auto py-3 whitespace-normal leading-tight", buttonStyles[plan.id])}
               onClick={onAction}
             >
               {plan.buttonText}
@@ -340,20 +365,20 @@ const PlanCard = ({ plan, onAction, showDetails = true }: { plan: Plan; onAction
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="overflow-hidden"
             >
-              <div className="pt-8 border-t border-white/10 mt-6 space-y-8">
+              <div className="pt-8 border-t border-border/40 mt-6 space-y-8">
                 {plan.details.map((section, idx) => (
                   <div key={idx}>
-                    <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <h4 className="text-foreground font-semibold mb-3 flex items-center gap-2">
                       {section.title.includes("Inclui tudo") ? (
-                        <span className="text-gray-400 italic">{section.title}</span>
+                        <span className="text-muted-foreground italic">{section.title}</span>
                       ) : (
                         section.title
                       )}
                     </h4>
                     <ul className="space-y-2">
                       {section.items.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-400">
-                          <CheckCircle2 className={cn("w-4 h-4 mt-0.5 shrink-0", themeColors[plan.theme].split(" ")[2])} />
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className={cn("w-4 h-4 mt-0.5 shrink-0", themeClasses[plan.theme].check)} />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -362,7 +387,7 @@ const PlanCard = ({ plan, onAction, showDetails = true }: { plan: Plan; onAction
                 ))}
 
                 <Button 
-                  className={cn("w-full h-12 text-lg font-medium text-white mt-4", buttonStyles[plan.id])}
+                  className={cn("w-full h-12 text-lg font-medium mt-4", buttonStyles[plan.id])}
                   onClick={onAction}
                 >
                   {plan.id === 'lite' ? 'Solicitar proposta Lite' : plan.buttonText}
@@ -403,7 +428,7 @@ export const PlansSection = () => {
   };
 
   return (
-    <section className="py-24 bg-black relative overflow-hidden" id="plans">
+    <section className="py-24 bg-sidebar relative overflow-hidden" id="plans">
       <LeadFormModal 
         isOpen={!!leadFormType} 
         onClose={() => setLeadFormType(null)} 
@@ -420,7 +445,7 @@ export const PlansSection = () => {
       />
 
       {/* Background Elements */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(120,0,255,0.05),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(8,92,240,0.10),transparent_70%)]" />
       
       <div className="container mx-auto px-6 relative z-10">
         {/* Section Header */}
@@ -431,24 +456,24 @@ export const PlansSection = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 tracking-tight">
               Transforme suas telas em <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary via-accent to-primary">
                 inteligência de vendas
               </span>
             </h2>
-            <p className="text-xl text-gray-400 leading-relaxed mb-8">
+            <p className="text-xl text-muted-foreground leading-relaxed mb-8">
               Escolha o nível de tecnologia ideal para sua operação e evolua do controle total à personalização inteligente.
             </p>
 
             {/* View Toggle */}
             <div className="flex justify-center mb-12">
-              <ToggleGroup type="single" value={viewMode} onValueChange={(val) => val && setViewMode(val as 'carousel' | 'grid')} className="bg-zinc-900 p-1 rounded-full border border-zinc-800">
-                <ToggleGroupItem value="carousel" className="rounded-full px-4 data-[state=on]:bg-zinc-800 data-[state=on]:text-white text-zinc-400">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(val) => val && setViewMode(val as 'carousel' | 'grid')} className="bg-card/20 p-1 rounded-full border border-border/40">
+                <ToggleGroupItem value="carousel" className="rounded-full px-4 data-[state=on]:bg-card/30 data-[state=on]:text-foreground text-muted-foreground">
                   <Presentation className="w-4 h-4 mr-2" />
                   Apresentação
                 </ToggleGroupItem>
-                <ToggleGroupItem value="grid" className="rounded-full px-4 data-[state=on]:bg-zinc-800 data-[state=on]:text-white text-zinc-400">
+                <ToggleGroupItem value="grid" className="rounded-full px-4 data-[state=on]:bg-card/30 data-[state=on]:text-foreground text-muted-foreground">
                   <LayoutTemplate className="w-4 h-4 mr-2" />
                   Grade
                 </ToggleGroupItem>
@@ -497,8 +522,8 @@ export const PlansSection = () => {
 
         {/* Global Support Note */}
         <div className="text-center mb-24 max-w-3xl mx-auto">
-          <p className="text-gray-500 text-sm md:text-base border border-white/5 bg-white/5 rounded-full px-6 py-3 inline-block">
-            <span className="text-emerald-400 font-bold">Nota:</span> Todos os planos Mupa incluem suporte técnico remoto imediato para garantir máxima disponibilidade e agilidade no atendimento.
+          <p className="text-muted-foreground text-sm md:text-base border border-border/40 bg-card/20 rounded-full px-6 py-3 inline-block">
+            <span className="text-secondary font-bold">Nota:</span> Todos os planos Mupa incluem suporte técnico remoto imediato para garantir máxima disponibilidade e agilidade no atendimento.
           </p>
         </div>
 
@@ -511,12 +536,12 @@ export const PlansSection = () => {
               viewport={{ once: true }}
               className="inline-flex flex-col items-center gap-4"
             >
-              <h3 className="text-2xl text-gray-300 font-medium">Ainda não sabe qual plano escolher?</h3>
+              <h3 className="text-2xl text-foreground/80 font-medium">Ainda não sabe qual plano escolher?</h3>
               <Button 
                 variant="outline" 
                 size="lg"
                 onClick={() => setIsComparisonOpen(true)}
-                className="h-14 px-8 text-lg rounded-full border-white/20 hover:bg-white/10 text-white gap-2"
+                className="h-14 px-8 text-lg rounded-full border-border/50 hover:bg-card/20 text-foreground gap-2"
               >
                 <Scale className="w-5 h-5" />
                 Comparar planos
@@ -531,15 +556,15 @@ export const PlansSection = () => {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="relative rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-b from-gray-900 to-black text-center p-8 md:p-20"
+          className="relative rounded-3xl overflow-hidden border border-border/40 bg-gradient-to-b from-primary/40 to-sidebar text-center p-8 md:p-20"
         >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(120,0,255,0.15),transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(8,92,240,0.16),transparent_70%)]" />
           
           <div className="relative z-10 max-w-3xl mx-auto">
-            <h2 className="text-2xl md:text-5xl font-bold text-white mb-6">
+            <h2 className="text-2xl md:text-5xl font-bold text-foreground mb-6">
               Pronto para transformar suas telas em inteligência de mercado?
             </h2>
-            <p className="text-lg md:text-xl text-gray-400 mb-10 leading-relaxed">
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed">
               A Mupa vai além do digital signage tradicional. Entregamos dados reais de comportamento, análise de audiência e personalização estratégica para o varejo moderno.
             </p>
             
@@ -547,7 +572,7 @@ export const PlansSection = () => {
               <Button 
                 size="lg" 
                 onClick={() => setLeadFormType("general")}
-                className="w-full sm:w-auto h-14 px-8 text-lg rounded-full bg-white text-black hover:bg-gray-200 transition-colors"
+                className="w-full sm:w-auto h-14 px-8 text-lg rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Falar com especialista Mupa
               </Button>
@@ -555,7 +580,7 @@ export const PlansSection = () => {
                 size="lg" 
                 variant="outline" 
                 onClick={() => setLeadFormType("demo")}
-                className="w-full sm:w-auto h-14 px-8 text-lg rounded-full border-white/20 hover:bg-white/10 text-white"
+                className="w-full sm:w-auto h-14 px-8 text-lg rounded-full border-border/50 hover:bg-card/20 text-foreground"
               >
                 Agendar reunião executiva
               </Button>

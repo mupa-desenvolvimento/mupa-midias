@@ -194,7 +194,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-zinc-950 border-zinc-800 text-white max-h-[90vh] overflow-y-auto p-0 gap-0">
+      <DialogContent className="sm:max-w-[600px] bg-card border-border text-foreground max-h-[90vh] overflow-y-auto p-0 gap-0">
         <AnimatePresence mode="wait">
           {isSuccess ? (
             <motion.div
@@ -203,12 +203,12 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
               exit={{ opacity: 0, scale: 0.9 }}
               className="flex flex-col items-center justify-center py-16 text-center space-y-6 p-6"
             >
-              <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center">
-                <CheckCircle2 className="w-10 h-10 text-green-500" />
+              <div className="w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-secondary" />
               </div>
               <div className="space-y-2">
                 <h3 className="text-3xl font-bold">Tudo Pronto!</h3>
-                <p className="text-gray-400 text-lg">
+                <p className="text-muted-foreground text-lg">
                   {type === 'demo' 
                     ? "Redirecionando para a demonstração..." 
                     : "Recebemos suas informações com sucesso."}
@@ -218,21 +218,21 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
           ) : (
             <div className="flex flex-col h-full min-h-[500px]">
               {/* Header */}
-              <div className="p-6 border-b border-zinc-800 bg-zinc-900/30">
+              <div className="p-6 border-b border-border/40 bg-card/20">
                 <div className="flex items-center justify-between mb-4">
                   <DialogTitle className="text-2xl font-bold">{config.title}</DialogTitle>
-                  <span className="text-sm font-medium text-zinc-500 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
+                  <span className="text-sm font-medium text-muted-foreground bg-card/20 px-3 py-1 rounded-full border border-border/40">
                     Passo {currentStep + 1} de {steps.length}
                   </span>
                 </div>
-                <DialogDescription className="text-gray-400 text-base">
+                <DialogDescription className="text-muted-foreground text-base">
                   {config.subtitle}
                 </DialogDescription>
                 
                 {/* Progress Bar */}
-                <div className="w-full h-1.5 bg-zinc-900 mt-6 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-muted mt-6 rounded-full overflow-hidden">
                   <motion.div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                    className="h-full bg-gradient-to-r from-primary to-accent"
                     initial={{ width: 0 }}
                     animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
                     transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -252,8 +252,8 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                       transition={{ duration: 0.3 }}
                       className="space-y-6"
                     >
-                      <div className="flex items-center gap-3 text-xl font-semibold text-white mb-6">
-                        {currentStepData.icon && <currentStepData.icon className="w-6 h-6 text-purple-400" />}
+                      <div className="flex items-center gap-3 text-xl font-semibold text-foreground mb-6">
+                        {currentStepData.icon && <currentStepData.icon className="w-6 h-6 text-accent" />}
                         {currentStepData.title}
                       </div>
 
@@ -268,7 +268,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                 <FormItem>
                                   <FormLabel className="text-base">Qual seu nome completo?</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Ex: João Silva" className="bg-zinc-900 border-zinc-800 h-12 text-lg" {...field} />
+                                    <Input placeholder="Ex: João Silva" className="bg-background border-border h-12 text-lg" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -285,7 +285,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                 <FormItem>
                                   <FormLabel className="text-base">Seu melhor email corporativo</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="nome@empresa.com" type="email" className="bg-zinc-900 border-zinc-800 h-12 text-lg" {...field} />
+                                    <Input placeholder="nome@empresa.com" type="email" className="bg-background border-border h-12 text-lg" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -302,7 +302,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                 <FormItem>
                                   <FormLabel className="text-base">WhatsApp ou Telefone</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="(00) 00000-0000" className="bg-zinc-900 border-zinc-800 h-12 text-lg" {...field} />
+                                    <Input placeholder="(00) 00000-0000" className="bg-background border-border h-12 text-lg" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -319,7 +319,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                 <FormItem>
                                   <FormLabel className="text-base">Qual seu cargo atual?</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Ex: Gerente de Marketing" className="bg-zinc-900 border-zinc-800 h-12 text-lg" {...field} />
+                                    <Input placeholder="Ex: Gerente de Marketing" className="bg-background border-border h-12 text-lg" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -336,7 +336,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                 <FormItem>
                                   <FormLabel className="text-base">Nome da Empresa</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Ex: Minha Loja Ltda" className="bg-zinc-900 border-zinc-800 h-12 text-lg" {...field} />
+                                    <Input placeholder="Ex: Minha Loja Ltda" className="bg-background border-border h-12 text-lg" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -353,7 +353,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                 <FormItem>
                                   <FormLabel className="text-base">Em qual cidade está a matriz?</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Cidade - UF" className="bg-zinc-900 border-zinc-800 h-12 text-lg" {...field} />
+                                    <Input placeholder="Cidade - UF" className="bg-background border-border h-12 text-lg" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -371,7 +371,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                   <FormLabel className="text-base">Quantas lojas a rede possui?</FormLabel>
                                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                      <SelectTrigger className="bg-zinc-900 border-zinc-800 h-12 text-lg">
+                                      <SelectTrigger className="bg-background border-border h-12 text-lg">
                                         <SelectValue placeholder="Selecione uma opção" />
                                       </SelectTrigger>
                                     </FormControl>
@@ -398,7 +398,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                   <FormLabel className="text-base">Quantas telas você gerencia hoje?</FormLabel>
                                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                      <SelectTrigger className="bg-zinc-900 border-zinc-800 h-12 text-lg">
+                                      <SelectTrigger className="bg-background border-border h-12 text-lg">
                                         <SelectValue placeholder="Selecione uma opção" />
                                       </SelectTrigger>
                                     </FormControl>
@@ -442,7 +442,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                         </FormControl>
                                         <Label
                                           htmlFor={`${fieldName}-yes`}
-                                          className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:border-zinc-700 peer-data-[state=checked]:border-purple-500 peer-data-[state=checked]:bg-purple-500/10 cursor-pointer transition-all duration-200"
+                                          className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-border/40 bg-card/20 hover:bg-card/30 hover:border-border/70 peer-data-[state=checked]:border-accent peer-data-[state=checked]:bg-accent/10 cursor-pointer transition-all duration-200"
                                         >
                                           <span className="text-lg font-bold">Sim</span>
                                         </Label>
@@ -453,7 +453,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                                         </FormControl>
                                         <Label
                                           htmlFor={`${fieldName}-no`}
-                                          className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:border-zinc-700 peer-data-[state=checked]:border-zinc-500 peer-data-[state=checked]:bg-zinc-800 cursor-pointer transition-all duration-200"
+                                          className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-border/40 bg-card/20 hover:bg-card/30 hover:border-border/70 peer-data-[state=checked]:border-border peer-data-[state=checked]:bg-muted/30 cursor-pointer transition-all duration-200"
                                         >
                                           <span className="text-lg font-bold">Não</span>
                                         </Label>
@@ -473,13 +473,13 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
               </div>
 
               {/* Footer Actions */}
-              <div className="p-6 border-t border-zinc-800 bg-zinc-900/30 flex justify-between">
+              <div className="p-6 border-t border-border/40 bg-card/20 flex justify-between">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={handleBack}
                   disabled={currentStep === 0 || isSubmitting}
-                  className="text-zinc-400 hover:text-white"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Voltar
@@ -489,7 +489,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                   <Button 
                     onClick={form.handleSubmit(onSubmit)}
                     disabled={isSubmitting}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white min-w-[140px] h-11 text-base shadow-lg shadow-purple-900/20"
+                    className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground min-w-[140px] h-11 text-base shadow-lg shadow-accent/20"
                   >
                     {isSubmitting ? (
                       <>
@@ -507,7 +507,7 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
                   <Button 
                     type="button" 
                     onClick={handleNext}
-                    className="bg-white text-black hover:bg-gray-200 min-w-[140px] h-11 text-base"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[140px] h-11 text-base"
                   >
                     Próximo
                     <ArrowRight className="w-4 h-4 ml-2" />

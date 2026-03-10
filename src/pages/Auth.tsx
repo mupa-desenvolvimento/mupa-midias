@@ -9,7 +9,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/hooks/useTheme';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import logoHorizontal from '@/assets/logo_horizontal.svg';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Email inválido').max(255);
@@ -84,9 +83,9 @@ export default function Auth() {
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
               <img 
-                src={resolvedTheme === 'light' ? "/logo_background_branco.png" : logoHorizontal} 
+                src={resolvedTheme === "dark" ? "/Artboard%2017.svg" : "/Artboard%203.svg"} 
                 alt="MupaMídias" 
-                className="h-12" 
+                className="h-12 scale-[1.15]" 
               />
             </div>
             <CardDescription>Entre com suas credenciais para acessar o sistema</CardDescription>

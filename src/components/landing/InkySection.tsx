@@ -175,11 +175,11 @@ export const InkySection = () => {
     <section
       id="inky"
       ref={sectionRef}
-      className="py-16 md:py-28 bg-black relative overflow-hidden"
+      className="py-16 md:py-28 bg-sidebar relative overflow-hidden"
     >
       {/* Background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-cyan-600/8 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-accent/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
@@ -189,21 +189,21 @@ export const InkySection = () => {
             animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 }}
             transition={{ duration: 0.7 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/20 mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/15 border border-accent/30 mb-6">
               <img src={inkyAvatar} alt="Inky" className="w-6 h-6 rounded-full object-cover" />
-              <span className="text-xs font-semibold text-cyan-300 tracking-wide uppercase">
+              <span className="text-xs font-semibold text-secondary tracking-wide uppercase">
                 Conheça o Inky
               </span>
             </div>
 
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
               Tem dúvidas?{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-accent">
                 Pergunte ao Inky
               </span>
             </h2>
 
-            <p className="text-lg text-gray-400 mb-8 leading-relaxed max-w-xl">
+            <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-xl">
               O Inky é o nosso polvo assistente de Retail Media — ele combina
               inteligência de mídia, dados e operação para maximizar seus
               resultados no PDV. Escolha o modo de operação e explore.
@@ -222,15 +222,15 @@ export const InkySection = () => {
                     whileTap={{ scale: 0.98 }}
                     className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl border text-left transition-all ${
                       isActive
-                        ? "bg-cyan-500/10 border-cyan-500/40 shadow-lg shadow-cyan-500/5"
-                        : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
+                        ? "bg-accent/10 border-accent/40 shadow-lg shadow-accent/10"
+                        : "bg-card/20 border-border/40 hover:border-border/60 hover:bg-card/30"
                     }`}
                   >
                     <div
                       className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                         isActive
-                          ? "bg-cyan-500/20 text-cyan-400"
-                          : "bg-white/5 text-gray-500"
+                          ? "bg-accent/20 text-accent"
+                          : "bg-card/20 text-muted-foreground"
                       }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -238,17 +238,17 @@ export const InkySection = () => {
                     <div className="flex-1 min-w-0">
                       <div
                         className={`text-sm font-semibold ${
-                          isActive ? "text-white" : "text-gray-300"
+                          isActive ? "text-foreground" : "text-foreground/80"
                         }`}
                       >
                         {mode.emoji} {mode.label}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-xs text-muted-foreground truncate">
                         {mode.description}
                       </div>
                     </div>
                     {isActive && (
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-accent shrink-0 animate-pulse" />
                     )}
                   </motion.button>
                 );
@@ -263,27 +263,27 @@ export const InkySection = () => {
             transition={{ duration: 0.7, delay: 0.2 }}
           >
             <div
-              className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-2xl shadow-cyan-500/5 overflow-hidden flex flex-col"
+              className="rounded-2xl border border-border/40 bg-card/20 backdrop-blur-md shadow-2xl shadow-accent/10 overflow-hidden flex flex-col"
               style={{ height: 520 }}
             >
               {/* Header */}
-              <div className="px-5 py-3 border-b border-white/10 flex items-center gap-3 bg-white/[0.02]">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-cyan-500/30">
+              <div className="px-5 py-3 border-b border-border/40 flex items-center gap-3 bg-card/20">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-accent/30">
                   <img src={inkyAvatar} alt="Inky" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-bold text-white">Inky</div>
-                  <div className="text-xs text-cyan-400/80 flex items-center gap-1">
+                  <div className="text-sm font-bold text-foreground">Inky</div>
+                  <div className="text-xs text-accent/90 flex items-center gap-1">
                     <span className="relative flex h-1.5 w-1.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-secondary" />
                     </span>
                     Online agora
                   </div>
                 </div>
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 border border-white/10">
-                  <activeModeInfo.icon className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-[10px] font-medium text-cyan-300">
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-card/20 border border-border/40">
+                  <activeModeInfo.icon className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-[10px] font-medium text-secondary">
                     {activeModeInfo.label}
                   </span>
                 </div>
@@ -300,18 +300,18 @@ export const InkySection = () => {
                       }`}
                     >
                       {msg.role === "assistant" && (
-                        <div className="w-7 h-7 rounded-full overflow-hidden border border-cyan-500/20 mr-2 mt-1 shrink-0">
+                        <div className="w-7 h-7 rounded-full overflow-hidden border border-accent/20 mr-2 mt-1 shrink-0">
                           <img src={inkyAvatar} alt="Inky" className="w-full h-full object-cover" />
                         </div>
                       )}
                       <div
                         className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                           msg.role === "user"
-                            ? "bg-cyan-600/80 text-white rounded-tr-none"
-                            : "bg-white/[0.06] text-gray-200 rounded-tl-none border border-white/10"
+                            ? "bg-primary text-primary-foreground rounded-tr-none"
+                            : "bg-card/30 text-foreground/90 rounded-tl-none border border-border/40"
                         }`}
                       >
-                        <div className="prose prose-sm prose-invert max-w-none [&_p]:m-0 [&_strong]:text-cyan-300 [&_ul]:my-1 [&_li]:my-0">
+                        <div className="prose prose-sm prose-invert max-w-none [&_p]:m-0 [&_strong]:text-secondary [&_ul]:my-1 [&_li]:my-0">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                       </div>
@@ -319,12 +319,12 @@ export const InkySection = () => {
                   ))}
                   {isLoading && (
                     <div className="flex justify-start">
-                      <div className="w-7 h-7 rounded-full overflow-hidden border border-cyan-500/20 mr-2 mt-1 shrink-0">
+                      <div className="w-7 h-7 rounded-full overflow-hidden border border-accent/20 mr-2 mt-1 shrink-0">
                         <img src={inkyAvatar} alt="Inky" className="w-full h-full object-cover" />
                       </div>
-                      <div className="bg-white/[0.06] rounded-2xl rounded-tl-none px-4 py-3 border border-white/10 flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
-                        <span className="text-xs text-gray-400">
+                      <div className="bg-card/30 rounded-2xl rounded-tl-none px-4 py-3 border border-border/40 flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                        <span className="text-xs text-muted-foreground">
                           Inky pensando...
                         </span>
                       </div>
@@ -341,7 +341,7 @@ export const InkySection = () => {
                       key={s}
                       onClick={() => sendMessage(s)}
                       disabled={isLoading}
-                      className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-cyan-500/40 hover:bg-cyan-500/10 transition-all disabled:opacity-50"
+                      className="text-xs px-3 py-1.5 rounded-full bg-card/20 border border-border/40 text-muted-foreground hover:text-foreground hover:border-accent/40 hover:bg-accent/10 transition-all disabled:opacity-50"
                     >
                       {s}
                     </button>
@@ -350,7 +350,7 @@ export const InkySection = () => {
               )}
 
               {/* Input */}
-              <div className="px-4 py-3 border-t border-white/10 bg-white/[0.02]">
+              <div className="px-4 py-3 border-t border-border/40 bg-card/20">
                 <div className="flex items-center gap-2">
                   <Input
                     value={input}
@@ -358,13 +358,13 @@ export const InkySection = () => {
                     onKeyDown={handleKeyDown}
                     disabled={isLoading}
                     placeholder={`Pergunte ao Inky (${activeModeInfo.label})...`}
-                    className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus-visible:ring-cyan-500/50"
+                    className="flex-1 bg-card/20 border-border/40 text-foreground placeholder:text-muted-foreground focus-visible:ring-accent/50"
                   />
                   <Button
                     onClick={() => sendMessage(input)}
                     disabled={isLoading || !input.trim()}
                     size="icon"
-                    className="bg-cyan-600 hover:bg-cyan-700 text-white shrink-0"
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0"
                   >
                     <Send className="h-4 w-4" />
                   </Button>

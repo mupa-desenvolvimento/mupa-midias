@@ -50,7 +50,7 @@ export function ModernCardLayout({ location, orientation, className }: WeatherLa
       {/* Main Card */}
       <Card className={`${theme.cardBg} border-slate-800 text-white shadow-2xl ${isVertical ? 'w-full flex-none' : 'w-1/3 flex-none h-full'}`}>
         <CardHeader>
-          <CardTitle className="text-2xl font-light text-slate-400">{location.city}</CardTitle>
+          <CardTitle className="text-2xl font-light text-white/80">{location.city}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-8 space-y-6">
           <div className="relative">
@@ -66,7 +66,7 @@ export function ModernCardLayout({ location, orientation, className }: WeatherLa
             <span className="text-8xl font-bold tracking-tighter block mb-2">
               {Math.round(location.current_temp || 0)}°
             </span>
-            <span className="text-2xl capitalize text-slate-400 font-medium block">
+            <span className="text-2xl capitalize text-white/70 font-medium block">
               {location.weather_description}
             </span>
           </div>
@@ -75,12 +75,12 @@ export function ModernCardLayout({ location, orientation, className }: WeatherLa
             <div className={`flex flex-col items-center ${theme.cardBg}/50 p-4 rounded-2xl border border-slate-800`}>
               <Wind className={`w-6 h-6 mb-2 ${theme.accent}`} />
               <span className="text-xl font-bold">{location.wind_speed}</span>
-              <span className="text-xs text-slate-500 uppercase tracking-wider">km/h Vento</span>
+              <span className="text-xs text-white/60 uppercase tracking-wider">km/h Vento</span>
             </div>
             <div className={`flex flex-col items-center ${theme.cardBg}/50 p-4 rounded-2xl border border-slate-800`}>
               <Droplets className={`w-6 h-6 mb-2 ${theme.accent}`} />
               <span className="text-xl font-bold">{location.humidity}%</span>
-              <span className="text-xs text-slate-500 uppercase tracking-wider">Umidade</span>
+              <span className="text-xs text-white/60 uppercase tracking-wider">Umidade</span>
             </div>
           </div>
         </CardContent>
@@ -91,7 +91,7 @@ export function ModernCardLayout({ location, orientation, className }: WeatherLa
         {location.daily_forecast?.slice(1, 7).map((day: any, idx: number) => (
           <Card key={idx} className={`${theme.cardBg} border-slate-800 text-white hover:bg-slate-800 transition-all hover:scale-105 duration-300 cursor-default group`}>
             <CardContent className="flex flex-col items-center justify-center p-6 h-full">
-              <span className={`text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 group-hover:${theme.accent.replace('text-', 'text-')} transition-colors`}>
+              <span className={`text-sm font-bold text-white/60 uppercase tracking-widest mb-3 group-hover:${theme.accent.replace('text-', 'text-')} transition-colors`}>
                 {new Date(day.date).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}
               </span>
               <WeatherIcon 
@@ -101,9 +101,9 @@ export function ModernCardLayout({ location, orientation, className }: WeatherLa
               />
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-white">{Math.round(day.max_temp)}°</span>
-                <span className="text-lg text-slate-600 font-medium">{Math.round(day.min_temp)}°</span>
+                <span className="text-lg text-white/70 font-medium">{Math.round(day.min_temp)}°</span>
               </div>
-              <span className="text-xs text-slate-600 mt-2 capitalize opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-xs text-white/60 mt-2 capitalize opacity-0 group-hover:opacity-100 transition-opacity">
                 {day.weather_description}
               </span>
             </CardContent>

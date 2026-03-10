@@ -152,7 +152,7 @@ export function DeviceMonitorDialog({
               <div className="text-white text-center">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
                 <p>Aguardando conexão com o dispositivo...</p>
-                <p className="text-xs text-gray-400 mt-1">Certifique-se que o player está rodando.</p>
+                <p className="text-xs text-white/70 mt-1">Certifique-se que o player está rodando.</p>
               </div>
             ) : (
               <canvas 

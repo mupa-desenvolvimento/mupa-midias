@@ -19,7 +19,6 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoHorizontal from "@/assets/logo_horizontal.svg";
 import { Slide } from "@/types/presentation";
 import { ASSAI_SLIDES } from "@/data/assai-slides";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';

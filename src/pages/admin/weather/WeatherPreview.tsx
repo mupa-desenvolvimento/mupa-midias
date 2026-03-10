@@ -65,7 +65,7 @@ export function WeatherPreview({ location }: WeatherPreviewProps) {
           >
             {/* Content Background Simulation */}
             <div className="absolute inset-0 flex items-center justify-center bg-slate-900 pointer-events-none z-0">
-              <span className="text-slate-800 text-4xl font-bold uppercase tracking-widest rotate-[-15deg]">
+              <span className="text-muted-foreground/25 text-4xl font-bold uppercase tracking-widest rotate-[-15deg]">
                 Conteúdo da TV
               </span>
             </div>

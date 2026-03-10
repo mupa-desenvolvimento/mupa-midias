@@ -120,7 +120,7 @@ const Install = () => {
           <img 
             src="https://storage.googleapis.com/gpt-engineer-file-uploads/kqrRuPz304ckV2bn5HmQpveeQQo1/uploads/1762457442618-Logo_branca_vertical.png"
             alt="MupaMídias"
-            className={`w-24 h-24 mx-auto ${resolvedTheme === 'light' ? 'invert' : ''}`}
+            className={`w-24 h-24 mx-auto scale-[1.15] ${resolvedTheme === 'light' ? 'invert' : ''}`}
           />
           <p className="text-muted-foreground">
             Sistema de Digital Signage com IA

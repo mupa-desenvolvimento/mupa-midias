@@ -48,7 +48,7 @@ const Header = () => {
   return (
     <header className="border-b border-sidebar-border bg-sidebar/95 backdrop-blur-md">
       <div className="flex h-16 items-center px-6 gap-4">
-        <SidebarTrigger className="lg:hidden" />
+        <SidebarTrigger className="md:hidden" />
 
         <div className="flex-1">
           <h1 className="text-xl font-semibold">{getPageTitle()}</h1>

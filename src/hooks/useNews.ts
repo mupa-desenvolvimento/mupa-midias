@@ -40,6 +40,12 @@ export interface NewsSettings {
 
 export function useNews() {
   const queryClient = useQueryClient();
+  const formatInvokeError = (err: any) => {
+    const status = err?.context?.status;
+    if (status === 404) return "Função não encontrada";
+    if (status === 401 || status === 403) return "Sem permissão para executar a função";
+    return err?.message || "Erro desconhecido";
+  };
 
   // --- Feeds ---
   const { data: feeds, isLoading: isLoadingFeeds } = useQuery({
@@ -228,20 +234,21 @@ export function useNews() {
   // --- Edge Function Trigger ---
   const triggerCollection = useMutation({
     mutationFn: async () => {
-      const rss = await supabase.functions.invoke('rss-collector', {
-        body: { maxFeeds: 50, maxItems: 20, batchSize: 20, force: true }
-      });
+      const [rss, newsdata] = await Promise.all([
+        supabase.functions.invoke('rss-collector', {
+          body: { maxFeeds: 50, maxItems: 20, batchSize: 20, force: true },
+        }),
+        supabase.functions.invoke('newsdata-collector', {
+          body: { maxFeeds: 4, maxItems: 10, batchSize: 20, force: true, timeframe: 1, country: "br", language: "pt" },
+        }),
+      ]);
 
-      const newsdata = await supabase.functions.invoke('newsdata-collector', {
-        body: { maxFeeds: 4, maxItems: 10, batchSize: 20, force: true, timeframe: 1, country: "br", language: "pt" }
-      });
-
-      if (rss.error) throw rss.error;
-      if (newsdata.error) {
-        return { rss: rss.data, newsdata_error: newsdata.error.message || "Erro no NewsData", newsdata: null };
-      }
-
-      return { rss: rss.data, newsdata: newsdata.data };
+      return {
+        rss: rss.data ?? null,
+        rss_error: rss.error ? formatInvokeError(rss.error) : null,
+        newsdata: newsdata.data ?? null,
+        newsdata_error: newsdata.error ? formatInvokeError(newsdata.error) : null,
+      };
     },
     onSuccess: async (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["news-articles"] });
@@ -249,7 +256,11 @@ export function useNews() {
       const newsdataProcessed = data?.newsdata?.processed_feeds ?? 0;
       const newsdataReqs = data?.newsdata?.api_requests ?? 0;
 
-      if (data?.newsdata_error) {
+      if (data?.rss_error && data?.newsdata_error) {
+        toast.error("Erro ao coletar notícias (RSS e NewsData)");
+      } else if (data?.rss_error) {
+        toast.error(`RSS: erro • NewsData: ${newsdataProcessed} feeds (${newsdataReqs} req)`);
+      } else if (data?.newsdata_error) {
         toast.success(`RSS: ${rssProcessed} feeds processados • NewsData: erro`);
       } else if (data?.newsdata?.needs_migration) {
         toast.success(`RSS: ${rssProcessed} feeds processados • NewsData: precisa migração`);

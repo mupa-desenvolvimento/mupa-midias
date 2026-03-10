@@ -33,7 +33,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import QRCode from "react-qr-code";
-import logoHorizontal from "@/assets/logo_horizontal.svg";
 import { Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
 import { usePresentationConfig } from "@/hooks/usePresentationConfig";
@@ -66,77 +65,77 @@ const themes: Record<string, Theme> = {
   default: {
     id: "default",
     name: "MUPA Creative",
-    bg: "bg-black",
+    bg: "bg-sidebar",
     bgEffects: (
       <>
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(120,0,255,0.2),transparent_50%)]" />
-        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_80%,rgba(0,100,255,0.1),transparent_50%)]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(8,92,240,0.18),transparent_50%)]" />
+        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_80%,rgba(175,233,253,0.10),transparent_50%)]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
       </>
     ),
-    textPrimary: "text-white",
-    textSecondary: "text-gray-400",
-    textAccent: "text-purple-400",
-    accentGradient: "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 text-transparent bg-clip-text",
-    cardBg: "bg-white/5",
-    cardBorder: "border-white/10",
-    cardHover: "hover:bg-white/10 hover:border-purple-500/30",
-    buttonPrimary: "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-purple-500/20",
-    buttonSecondary: "bg-white/5 hover:bg-white/10 text-white border border-white/10",
-    iconBg: "bg-white/5",
-    iconColor: "text-purple-400",
-    progressBar: "bg-gradient-to-r from-blue-500 to-purple-500",
-    font: "selection:bg-purple-500/30 font-sans",
+    textPrimary: "text-foreground",
+    textSecondary: "text-muted-foreground",
+    textAccent: "text-accent",
+    accentGradient: "bg-gradient-to-r from-secondary via-accent to-primary text-transparent bg-clip-text",
+    cardBg: "bg-card/30 backdrop-blur-sm",
+    cardBorder: "border-border/40",
+    cardHover: "hover:bg-card/40 hover:border-accent/40",
+    buttonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-accent/20",
+    buttonSecondary: "bg-card/20 hover:bg-card/30 text-foreground border border-border/40",
+    iconBg: "bg-accent/15",
+    iconColor: "text-accent",
+    progressBar: "bg-gradient-to-r from-primary to-accent",
+    font: "selection:bg-accent/30 font-sans",
     logoClass: "brightness-0 invert"
   },
   neon: {
     id: "neon",
     name: "Tech Growth",
-    bg: "bg-slate-950",
+    bg: "bg-sidebar",
     bgEffects: (
       <>
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20" />
-        <div className="absolute top-0 w-full h-full bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(9,38,118,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(9,38,118,0.35)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-25" />
+        <div className="absolute top-0 w-full h-full bg-gradient-to-b from-accent/10 to-transparent pointer-events-none" />
       </>
     ),
-    textPrimary: "text-emerald-50",
-    textSecondary: "text-slate-400",
-    textAccent: "text-emerald-400",
-    accentGradient: "bg-gradient-to-r from-emerald-400 to-cyan-400 text-transparent bg-clip-text",
-    cardBg: "bg-slate-900/60 backdrop-blur-md",
-    cardBorder: "border-emerald-500/20",
-    cardHover: "hover:border-emerald-500/50 hover:bg-slate-800/80 hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]",
-    buttonPrimary: "bg-emerald-500 hover:bg-emerald-600 text-black font-bold shadow-[0_0_20px_rgba(16,185,129,0.4)]",
-    buttonSecondary: "bg-slate-900 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-950/30",
-    iconBg: "bg-emerald-500/10",
-    iconColor: "text-emerald-400",
-    progressBar: "bg-gradient-to-r from-emerald-500 to-cyan-500",
-    font: "selection:bg-emerald-500/30 font-sans tracking-tight",
+    textPrimary: "text-foreground",
+    textSecondary: "text-muted-foreground",
+    textAccent: "text-accent",
+    accentGradient: "bg-gradient-to-r from-secondary to-accent text-transparent bg-clip-text",
+    cardBg: "bg-card/30 backdrop-blur-md",
+    cardBorder: "border-border/40",
+    cardHover: "hover:border-accent/50 hover:bg-card/40 hover:shadow-[0_0_30px_-5px_rgba(8,92,240,0.25)]",
+    buttonPrimary: "bg-accent hover:bg-accent/90 text-accent-foreground font-bold shadow-[0_0_20px_rgba(8,92,240,0.35)]",
+    buttonSecondary: "bg-card/20 border border-border/40 text-foreground hover:bg-card/30",
+    iconBg: "bg-accent/15",
+    iconColor: "text-accent",
+    progressBar: "bg-gradient-to-r from-primary to-accent",
+    font: "selection:bg-accent/30 font-sans tracking-tight",
     logoClass: "brightness-0 invert"
   },
   light: {
     id: "light",
     name: "Clean Enterprise",
-    bg: "bg-slate-50",
+    bg: "bg-background",
     bgEffects: (
       <>
-        <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
-        <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-50 to-transparent opacity-80" />
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(213,213,213,0.6)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
+        <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-secondary/60 to-transparent opacity-80" />
       </>
     ),
-    textPrimary: "text-slate-900",
-    textSecondary: "text-slate-500",
-    textAccent: "text-blue-600",
-    accentGradient: "bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text",
+    textPrimary: "text-foreground",
+    textSecondary: "text-muted-foreground",
+    textAccent: "text-primary",
+    accentGradient: "bg-gradient-to-r from-primary to-accent text-transparent bg-clip-text",
     cardBg: "bg-white",
-    cardBorder: "border-slate-200",
-    cardHover: "hover:shadow-xl hover:border-blue-300 hover:-translate-y-1 transition-all duration-300",
-    buttonPrimary: "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20",
-    buttonSecondary: "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    progressBar: "bg-blue-600",
-    font: "selection:bg-blue-100 font-sans",
+    cardBorder: "border-border",
+    cardHover: "hover:shadow-xl hover:border-accent/50 hover:-translate-y-1 transition-all duration-300",
+    buttonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-accent/20",
+    buttonSecondary: "bg-white border border-border text-foreground hover:bg-background",
+    iconBg: "bg-secondary/60",
+    iconColor: "text-primary",
+    progressBar: "bg-primary",
+    font: "selection:bg-secondary font-sans",
     logoClass: ""
   }
 };
@@ -203,7 +202,7 @@ export default function Presentation() {
   
   const slide = slides[currentSlide];
   const theme = themes[currentThemeId];
-  const logoSrc = currentThemeId === "light" ? "/logo_background_branco.png" : logoHorizontal;
+  const logoSrc = currentThemeId === "light" ? "/Artboard%203.svg" : "/Artboard%2017.svg";
 
   const handleUpdateSlide = (updatedSlide: Slide) => {
     const newSlides = [...slides];
@@ -339,7 +338,7 @@ export default function Presentation() {
         >
           {/* Header Comum */}
           <div className="flex justify-between items-center mb-6 shrink-0">
-            <img src={logoSrc} alt="MUPA" className={`h-8 md:h-10 ${theme.logoClass} opacity-80`} />
+            <img src={logoSrc} alt="MUPA" className={`h-8 md:h-10 scale-[1.15] ${theme.logoClass} opacity-80`} />
             <div className={`flex items-center gap-2 ${theme.textSecondary} text-sm font-medium`}>
               {slide.icon && <slide.icon className="w-4 h-4" />}
               <span className="hidden md:inline">Apresentação Comercial</span>

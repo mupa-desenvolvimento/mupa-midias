@@ -395,8 +395,8 @@ const MobileDemo = () => {
 
               <div className="space-y-3">
                 <h1 className="text-3xl font-bold">MUPA AI</h1>
-                <p className="text-gray-400">Permita o acesso à câmera para analisarmos seu perfil e sugerirmos produtos ideais.</p>
-                <p className="text-xs text-gray-600">Nenhuma imagem é gravada. Análise 100% anônima.</p>
+                <p className="text-white/80">Permita o acesso à câmera para analisarmos seu perfil e sugerirmos produtos ideais.</p>
+                <p className="text-xs text-white/60">Nenhuma imagem é gravada. Análise 100% anônima.</p>
               </div>
 
               {error && (
@@ -450,7 +450,7 @@ const MobileDemo = () => {
               {/* Progress & Real-time Stats */}
               <div className="w-full space-y-4">
                 <div className="space-y-2">
-                    <div className="flex justify-between text-sm text-gray-400">
+                    <div className="flex justify-between text-sm text-white/70">
                         <span>Analisando perfil...</span>
                         <span>{detectionProgress}%</span>
                     </div>
@@ -487,12 +487,12 @@ const MobileDemo = () => {
                              </div>
                         </motion.div>
                     ) : (
-                        <span className="text-gray-500 text-sm animate-pulse">Procurando rosto...</span>
+                        <span className="text-white/60 text-sm animate-pulse">Procurando rosto...</span>
                     )}
                 </div>
               </div>
 
-              <Button variant="ghost" className="text-gray-500" onClick={reset}>
+              <Button variant="ghost" className="text-white/70 hover:text-white transition-colors" onClick={reset}>
                 Cancelar
               </Button>
             </div>
@@ -517,7 +517,7 @@ const MobileDemo = () => {
                   )}
                 </div>
                 <h1 className="text-2xl font-bold">Perfil Identificado!</h1>
-                <div className="flex justify-center gap-4 text-sm text-gray-400">
+                <div className="flex justify-center gap-4 text-sm text-white/70">
                   <span className="flex items-center gap-1">
                     <User className="w-4 h-4" />
                     {result.gender === 'female' ? 'Mulher' : 'Homem'}
@@ -570,10 +570,10 @@ const MobileDemo = () => {
                         <div className="p-3 flex flex-col justify-center flex-1 min-w-0">
                           <span className="text-xs text-purple-400 font-medium">{product.category}</span>
                           <h3 className="text-white font-bold leading-tight truncate">{product.name}</h3>
-                          <span className="text-xs text-gray-500 mt-1">Faixa: {product.minAge}–{product.maxAge} anos</span>
+                          <span className="text-xs text-white/60 mt-1">Faixa: {product.minAge}–{product.maxAge} anos</span>
                         </div>
                         <div className="flex items-center px-3 bg-white/5">
-                          <ArrowRight className="w-5 h-5 text-gray-400" />
+                          <ArrowRight className="w-5 h-5 text-white/70" />
                         </div>
                       </div>
                     </Card>

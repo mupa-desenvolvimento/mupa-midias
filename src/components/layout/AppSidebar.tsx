@@ -21,7 +21,6 @@ import {
   QrCode,
   Link,
 } from "lucide-react";
-import logoHorizontal from "@/assets/logo_horizontal.svg";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -40,6 +39,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarFooter,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -91,11 +91,12 @@ const AppSidebar = () => {
   return (
     <Sidebar className="border-r border-sidebar-border bg-sidebar/95 backdrop-blur-md" collapsible="icon">
       <SidebarHeader className="p-4">
-        <div className="flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger className="h-9 w-9" />
           <img 
-            src={resolvedTheme === 'light' ? "/logo_background_branco.png" : logoHorizontal} 
+            src={resolvedTheme === "dark" ? "/Artboard%2017.svg" : "/Artboard%203.svg"} 
             alt="MupaMídias" 
-            className="h-10" 
+            className="h-10 scale-[1.3] group-data-[collapsible=icon]:hidden" 
           />
         </div>
       </SidebarHeader>
