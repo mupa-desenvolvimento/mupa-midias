@@ -110,7 +110,7 @@ serve(async (req: Request) => {
       payload = {};
     }
 
-    const maxFeeds = Math.max(1, Math.min(Number(payload.maxFeeds) || DEFAULT_MAX_FEEDS_PER_RUN, 5));
+    const maxFeeds = Math.max(1, Math.min(Number(payload.maxFeeds) || DEFAULT_MAX_FEEDS_PER_RUN, 50));
     const maxItems = Math.max(1, Math.min(Number(payload.maxItems) || DEFAULT_MAX_ITEMS_PER_FEED, 8));
     const batchSize = Math.max(1, Math.min(Number(payload.batchSize) || DEFAULT_BATCH_SIZE, 20));
     const shouldCleanup = payload.cleanup === true;
@@ -163,10 +163,11 @@ serve(async (req: Request) => {
       feedsQuery = feedsQuery.eq("collector", "rss");
     }
 
+    const feedWindowSize = Math.min(total, Math.max(maxFeeds * 8, maxFeeds));
     const { data: feeds, error: feedsError } = await feedsQuery
       .order("priority", { ascending: false })
       .order("created_at", { ascending: true })
-      .range(offset, Math.min(offset + maxFeeds - 1, total - 1));
+      .range(offset, Math.min(offset + feedWindowSize - 1, total - 1));
 
     if (feedsError) throw feedsError;
 
@@ -179,8 +180,27 @@ serve(async (req: Request) => {
 
     const results: any[] = [];
     let inserted = 0;
+    const selectedFeeds: any[] = [];
+    const selectedFeedIds = new Set<string>();
+    const selectedCategories = new Set<string>();
 
     for (const feed of feeds) {
+      if (selectedFeeds.length >= maxFeeds) break;
+      const category = (feed.category || "geral").toString().trim().toLowerCase() || "geral";
+      if (selectedCategories.has(category)) continue;
+      selectedFeeds.push(feed);
+      selectedFeedIds.add(feed.id);
+      selectedCategories.add(category);
+    }
+
+    for (const feed of feeds) {
+      if (selectedFeeds.length >= maxFeeds) break;
+      if (selectedFeedIds.has(feed.id)) continue;
+      selectedFeeds.push(feed);
+      selectedFeedIds.add(feed.id);
+    }
+
+    for (const feed of selectedFeeds) {
       if (timeExceeded(startTime)) {
         results.push({ feed: feed.name, status: "skipped", reason: "time_budget_exceeded" });
         break;
@@ -212,6 +232,7 @@ serve(async (req: Request) => {
 
         const limitedItems = items.slice(0, maxItems);
 
+        const normalizedCategory = (feed.category || "geral").toString().trim().toLowerCase() || "geral";
         const articles = limitedItems.map((item: any) => {
           const title = (item.title || "Sem título").toString().substring(0, 255);
           const linkRaw = item.link || "";
@@ -233,7 +254,7 @@ serve(async (req: Request) => {
             description: stripHtml(descriptionRaw).substring(0, 300),
             link: typeof linkRaw === "string" ? linkRaw : (linkRaw["@href"] || linkRaw.href || ""),
             image_url: imageUrl,
-            category: feed.category || "Geral",
+            category: normalizedCategory,
             source: feed.name,
             slug: createSlug(`${title}-${pubDate.substring(0, 10)}`),
             published_at: pubDate,
@@ -241,22 +262,35 @@ serve(async (req: Request) => {
           };
         });
 
+        let insertedForFeed = 0;
         for (let i = 0; i < articles.length; i += batchSize) {
           if (timeExceeded(startTime)) break;
 
           const batch = articles.slice(i, i + batchSize);
+          const batchSlugs = batch.map((a: any) => a.slug).filter(Boolean);
+
+          const { data: existing } = await supabaseClient
+            .from("news_articles")
+            .select("slug")
+            .in("slug", batchSlugs);
+
+          const existingSlugs = new Set((existing || []).map((r: any) => r.slug));
+          const toInsert = batch.filter((a: any) => !existingSlugs.has(a.slug));
+          if (toInsert.length === 0) continue;
+
           const { error } = await supabaseClient
             .from("news_articles")
-            .upsert(batch, { onConflict: "slug", ignoreDuplicates: true });
+            .upsert(toInsert, { onConflict: "slug", ignoreDuplicates: true });
 
           if (!error) {
-            inserted += batch.length;
+            inserted += toInsert.length;
+            insertedForFeed += toInsert.length;
           } else {
             console.error(`Erro ao inserir lote (${feed.name}):`, error.message);
           }
         }
 
-        results.push({ feed: feed.name, status: "success", items_processed: articles.length });
+        results.push({ feed: feed.name, status: "success", items_processed: articles.length, inserted: insertedForFeed, category: normalizedCategory });
       } catch (err: any) {
         console.error(`Erro no feed ${feed.name}:`, err.message);
         results.push({ feed: feed.name, status: "error", error: err.message });
@@ -278,8 +312,9 @@ serve(async (req: Request) => {
       JSON.stringify({
         message: "Coleta de RSS concluída",
         total_feeds: total,
-        processed_feeds: feeds.length,
+        processed_feeds: selectedFeeds.length,
         collector_filter: useCollectorFilter ? "rss" : null,
+        categories_processed: Array.from(selectedCategories),
         inserted,
         offset,
         next_offset: nextOffset,

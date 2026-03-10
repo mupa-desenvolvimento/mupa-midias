@@ -217,6 +217,7 @@ serve(async (req: Request) => {
     const rotationSeed = Math.floor(Date.now() / 3600000);
     const offset = providedOffset ?? (force ? 0 : ((rotationSeed * maxFeeds) % total));
 
+    const feedWindowSize = Math.min(total, Math.max(maxFeeds * 8, maxFeeds));
     const { data: feeds, error: feedsError } = await supabaseClient
       .from("news_feeds")
       .select("id,tenant_id,name,category,query,priority")
@@ -224,7 +225,7 @@ serve(async (req: Request) => {
       .eq("collector", "newsdata")
       .order("priority", { ascending: false })
       .order("created_at", { ascending: true })
-      .range(offset, Math.min(offset + maxFeeds - 1, total - 1));
+      .range(offset, Math.min(offset + feedWindowSize - 1, total - 1));
 
     if (feedsError) {
       if (isMissingColumn(feedsError, "collector") || isMissingColumn(feedsError, "query")) {
@@ -251,9 +252,30 @@ serve(async (req: Request) => {
 
     const results: any[] = [];
     let upsertAttempted = 0;
+    let inserted = 0;
     let apiRequests = 0;
 
+    const selectedFeeds: any[] = [];
+    const selectedFeedIds = new Set<string>();
+    const selectedCategories = new Set<string>();
+
     for (const feed of feeds) {
+      if (selectedFeeds.length >= maxFeeds) break;
+      const category = safeString(feed.category, 80).toLowerCase() || "geral";
+      if (selectedCategories.has(category)) continue;
+      selectedFeeds.push(feed);
+      selectedFeedIds.add(feed.id);
+      selectedCategories.add(category);
+    }
+
+    for (const feed of feeds) {
+      if (selectedFeeds.length >= maxFeeds) break;
+      if (selectedFeedIds.has(feed.id)) continue;
+      selectedFeeds.push(feed);
+      selectedFeedIds.add(feed.id);
+    }
+
+    for (const feed of selectedFeeds) {
       if (timeExceeded(startTime)) {
         results.push({ feed: feed.name, status: "skipped", reason: "time_budget_exceeded" });
         break;
@@ -287,6 +309,9 @@ serve(async (req: Request) => {
           const slug = createSlugFromNewsData(item);
           const title = safeString(item.title || "Sem título", 255);
 
+          const localCategory = safeString(feed.category, 80).toLowerCase();
+          const normalizedCategory = localCategory || safeString(apiCategory, 80).toLowerCase() || "geral";
+
           return {
             feed_id: feed.id,
             title,
@@ -294,7 +319,7 @@ serve(async (req: Request) => {
             content: safeString(item.content, 4000),
             link: safeString(item.link, 2000) || null,
             image_url: safeString(item.image_url, 2000) || null,
-            category: safeString(feed.category, 80) || safeString(apiCategory, 80) || "geral",
+            category: normalizedCategory,
             source: safeString(item.source_id || feed.name || "newsdata", 120),
             slug,
             published_at: publishedAt,
@@ -305,19 +330,33 @@ serve(async (req: Request) => {
           };
         });
 
+        let insertedForFeed = 0;
         for (let i = 0; i < articles.length; i += batchSize) {
           if (timeExceeded(startTime)) break;
 
           const batch = articles.slice(i, i + batchSize);
+          const batchSlugs = batch.map((a: any) => a.slug).filter(Boolean);
+
+          const { data: existing } = await supabaseClient
+            .from("news_articles")
+            .select("slug")
+            .in("slug", batchSlugs);
+
+          const existingSlugs = new Set((existing || []).map((r: any) => r.slug));
+          const toInsert = batch.filter((a: any) => !existingSlugs.has(a.slug));
+          if (toInsert.length === 0) continue;
+
           const { error } = await supabaseClient
             .from("news_articles")
-            .upsert(batch, { onConflict: "slug", ignoreDuplicates: true });
+            .upsert(toInsert, { onConflict: "slug", ignoreDuplicates: true });
 
           if (error) {
             throw error;
           }
 
-          upsertAttempted += batch.length;
+          upsertAttempted += toInsert.length;
+          inserted += toInsert.length;
+          insertedForFeed += toInsert.length;
         }
 
         results.push({
@@ -325,7 +364,9 @@ serve(async (req: Request) => {
           status: "success",
           items_received: items.length,
           items_upsert_attempted: articles.length,
+          inserted: insertedForFeed,
           api_category: apiCategory,
+          category: safeString(feed.category, 80).toLowerCase() || null,
           q: q || null,
         });
       } catch (err: any) {
@@ -348,11 +389,12 @@ serve(async (req: Request) => {
       JSON.stringify({
         message: "Coleta via NewsData.io concluída",
         total_feeds: total,
-        processed_feeds: feeds.length,
+        processed_feeds: selectedFeeds.length,
         offset,
         next_offset: nextOffset,
         api_requests: apiRequests,
         upsert_attempted: upsertAttempted,
+        inserted,
         timeframe_days: timeframe,
         params: { country, language },
         time_ms: Date.now() - startTime,

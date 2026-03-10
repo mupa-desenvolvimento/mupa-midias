@@ -42,6 +42,18 @@ export function useNews() {
   const queryClient = useQueryClient();
   const formatInvokeError = (err: any) => {
     const status = err?.context?.status;
+    const body = err?.context?.body;
+
+    if (typeof body === "string" && body.trim()) {
+      try {
+        const json = JSON.parse(body);
+        const fromBody = json?.error || json?.message;
+        if (fromBody) return String(fromBody);
+      } catch {
+        return body.slice(0, 300);
+      }
+    }
+
     if (status === 404) return "Função não encontrada";
     if (status === 401 || status === 403) return "Sem permissão para executar a função";
     return err?.message || "Erro desconhecido";
@@ -155,7 +167,7 @@ export function useNews() {
         .select("*")
         .eq("active", true)
         .order("published_at", { ascending: false })
-        .limit(50); // Initial limit
+        .limit(1000);
 
       if (error) throw error;
       return data as NewsArticle[];
@@ -183,7 +195,7 @@ export function useNews() {
       if (!data) return {
         type_view: "list",
         display_time: 10,
-        max_items: 20,
+        max_items: 5,
         theme_mode: "light",
         layout_type: "modern",
         active_categories: []
@@ -236,10 +248,10 @@ export function useNews() {
     mutationFn: async () => {
       const [rss, newsdata] = await Promise.all([
         supabase.functions.invoke('rss-collector', {
-          body: { maxFeeds: 3, maxItems: 5, batchSize: 10, force: true },
+          body: { maxFeeds: 50, maxItems: 5, batchSize: 20, force: true },
         }),
         supabase.functions.invoke('newsdata-collector', {
-          body: { maxFeeds: 4, maxItems: 10, batchSize: 20, force: true, timeframe: 1, country: "br", language: "pt" },
+          body: { maxFeeds: 50, maxItems: 5, batchSize: 50, force: true, timeframe: 1, country: "br", language: "pt" },
         }),
       ]);
 
@@ -253,19 +265,22 @@ export function useNews() {
     onSuccess: async (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["news-articles"] });
       const rssProcessed = data?.rss?.processed_feeds ?? 0;
+      const rssInserted = data?.rss?.inserted ?? 0;
+      const rssCategories = Array.isArray(data?.rss?.categories_processed) ? data.rss.categories_processed.length : 0;
       const newsdataProcessed = data?.newsdata?.processed_feeds ?? 0;
       const newsdataReqs = data?.newsdata?.api_requests ?? 0;
+      const newsdataInserted = data?.newsdata?.inserted ?? 0;
 
       if (data?.rss_error && data?.newsdata_error) {
         toast.error("Erro ao coletar notícias (RSS e NewsData)");
       } else if (data?.rss_error) {
-        toast.error(`RSS: erro • NewsData: ${newsdataProcessed} feeds (${newsdataReqs} req)`);
+        toast.error(`RSS: erro • NewsData: ${newsdataProcessed} feeds (${newsdataReqs} req, ${newsdataInserted} novas)`);
       } else if (data?.newsdata_error) {
-        toast.success(`RSS: ${rssProcessed} feeds processados • NewsData: erro`);
+        toast.success(`RSS: ${rssProcessed} feeds (${rssCategories} categorias, ${rssInserted} novas) • NewsData: erro`);
       } else if (data?.newsdata?.needs_migration) {
-        toast.success(`RSS: ${rssProcessed} feeds processados • NewsData: precisa migração`);
+        toast.success(`RSS: ${rssProcessed} feeds (${rssCategories} categorias, ${rssInserted} novas) • NewsData: precisa migração`);
       } else {
-        toast.success(`RSS: ${rssProcessed} feeds • NewsData: ${newsdataProcessed} feeds (${newsdataReqs} req)`);
+        toast.success(`RSS: ${rssProcessed} feeds (${rssCategories} categorias, ${rssInserted} novas) • NewsData: ${newsdataProcessed} feeds (${newsdataReqs} req, ${newsdataInserted} novas)`);
       }
       // Auto-trigger image cache after collection
       try {

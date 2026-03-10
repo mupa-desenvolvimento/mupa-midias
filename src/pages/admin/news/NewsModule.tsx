@@ -107,8 +107,25 @@ export function NewsModule() {
 
   const filteredArticles = useMemo(() => {
     if (!articles) return [];
-    const filtered = previewCategory === "all" ? articles : articles.filter((a) => a.category === previewCategory);
-    return filtered.slice(0, 20);
+    const perCategory = 5;
+
+    if (previewCategory !== "all") {
+      return articles.filter((a) => a.category === previewCategory).slice(0, perCategory);
+    }
+
+    const countsByCategory = new Map<string, number>();
+    const picked: NewsArticle[] = [];
+
+    for (const article of articles) {
+      const category = article.category || "geral";
+      const count = countsByCategory.get(category) ?? 0;
+      if (count >= perCategory) continue;
+
+      picked.push(article);
+      countsByCategory.set(category, count + 1);
+    }
+
+    return picked;
   }, [articles, previewCategory]);
 
   const articlesWithImages = useMemo(() => {
@@ -163,6 +180,37 @@ export function NewsModule() {
         <StatCard label="Categorias" value={categories?.length || 0} />
         <StatCard label="Slides" value={slides.length} />
       </div>
+
+      {triggerCollection.data ? (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex flex-wrap gap-x-6 gap-y-1">
+                <span className="font-medium">Última coleta</span>
+                {triggerCollection.data?.rss_error ? (
+                  <span className="text-destructive">RSS: {triggerCollection.data.rss_error}</span>
+                ) : (
+                  <span>
+                    RSS: {triggerCollection.data?.rss?.inserted ?? 0} novas •{" "}
+                    {triggerCollection.data?.rss?.processed_feeds ?? 0} feeds •{" "}
+                    {(triggerCollection.data?.rss?.categories_processed?.length ?? 0)} categorias
+                  </span>
+                )}
+                {triggerCollection.data?.newsdata_error ? (
+                  <span className="text-destructive">NewsData: {triggerCollection.data.newsdata_error}</span>
+                ) : triggerCollection.data?.newsdata?.needs_migration ? (
+                  <span className="text-muted-foreground">NewsData: precisa migração</span>
+                ) : (
+                  <span>
+                    NewsData: {triggerCollection.data?.newsdata?.inserted ?? 0} novas •{" "}
+                    {triggerCollection.data?.newsdata?.api_requests ?? 0} req
+                  </span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

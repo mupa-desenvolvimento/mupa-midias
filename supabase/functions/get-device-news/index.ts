@@ -61,7 +61,7 @@ serve(async (req) => {
     
     const newsSettings = settings || {
       active_categories: [],
-      max_items: 20,
+      max_items: 5,
       display_time: 10,
       type_view: "list",
       theme_mode: "system",
@@ -86,24 +86,44 @@ serve(async (req) => {
       );
     }
 
-    // Get Latest Articles
+    const allowedCategories =
+      Array.isArray(newsSettings.active_categories) && newsSettings.active_categories.length > 0
+        ? newsSettings.active_categories
+        : null;
+
+    const perCategory = Math.max(1, Math.min(Number(newsSettings.max_items) || 5, 50));
+    const categoriesCount = allowedCategories?.length || 10;
+    const prefetchLimit = Math.min(1000, Math.max(200, perCategory * categoriesCount * 6));
+
     let articlesQuery = supabase
       .from("news_articles")
       .select("*")
       .in("feed_id", feedIds)
       .eq("active", true)
       .order("published_at", { ascending: false })
-      .limit(newsSettings.max_items || 20);
+      .limit(prefetchLimit);
 
-    if (newsSettings.active_categories && Array.isArray(newsSettings.active_categories) && newsSettings.active_categories.length > 0) {
-      articlesQuery = articlesQuery.in("category", newsSettings.active_categories);
+    if (allowedCategories) {
+      articlesQuery = articlesQuery.in("category", allowedCategories);
     }
 
-    const { data: articles, error: articlesError } = await articlesQuery;
+    const { data: rawArticles, error: articlesError } = await articlesQuery;
     if (articlesError) throw articlesError;
 
+    const picked: any[] = [];
+    const countsByCategory = new Map<string, number>();
+
+    for (const article of rawArticles || []) {
+      const category = article.category || "geral";
+      const count = countsByCategory.get(category) ?? 0;
+      if (count >= perCategory) continue;
+
+      picked.push(article);
+      countsByCategory.set(category, count + 1);
+    }
+
     return new Response(
-      JSON.stringify({ settings: newsSettings, articles: articles || [] }),
+      JSON.stringify({ settings: newsSettings, articles: picked }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
