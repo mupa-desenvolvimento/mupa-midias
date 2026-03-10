@@ -8,10 +8,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DEFAULT_MAX_FEEDS_PER_RUN = 10;
-const DEFAULT_MAX_ITEMS_PER_FEED = 20;
+const DEFAULT_MAX_FEEDS_PER_RUN = 5;
+const DEFAULT_MAX_ITEMS_PER_FEED = 10;
 const DEFAULT_BATCH_SIZE = 20;
-const MAX_RUNTIME_MS = 50000;
+const MAX_RUNTIME_MS = 45000;
 
 function stripHtml(html: string) {
   if (!html) return "";
