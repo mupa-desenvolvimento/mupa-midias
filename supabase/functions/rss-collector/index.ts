@@ -188,7 +188,7 @@ serve(async (req: Request) => {
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 7000);
+        const timeout = setTimeout(() => controller.abort(), 5000);
         const response = await fetch(feed.rss_url, { signal: controller.signal });
         clearTimeout(timeout);
 
