@@ -50,4 +50,18 @@ verify_jwt = false
 
 [functions.newsdata-collector]
 verify_jwt = false
-schedule = "*/45 * * * *"
+
+[functions.news-image-cache]
+verify_jwt = false
+
+[functions.inky-chat]
+verify_jwt = false
+
+[functions.device-api]
+verify_jwt = false
+
+[functions.delete-device]
+verify_jwt = false
+
+[functions.price-check-proxy]
+verify_jwt = false
