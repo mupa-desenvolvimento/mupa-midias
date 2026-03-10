@@ -74,6 +74,14 @@ function timeExceeded(startTime: number) {
   return Date.now() - startTime >= MAX_RUNTIME_MS;
 }
 
+function isMissingCollectorColumn(err: any) {
+  const msg = (err?.message || "").toString().toLowerCase();
+  const details = (err?.details || "").toString().toLowerCase();
+  const hint = (err?.hint || "").toString().toLowerCase();
+  const code = (err?.code || "").toString();
+  return code === "42703" || msg.includes("collector") && (msg.includes("does not exist") || details.includes("does not exist") || hint.includes("does not exist"));
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -108,10 +116,29 @@ serve(async (req: Request) => {
     const shouldCleanup = payload.cleanup === true;
     const force = payload.force === true;
 
-    const { count: totalFeeds, error: countError } = await supabaseClient
-      .from("news_feeds")
-      .select("id", { count: "exact", head: true })
-      .eq("active", true);
+    let useCollectorFilter = true;
+    let totalFeeds: number | null = null;
+    let countError: any = null;
+
+    {
+      const res = await supabaseClient
+        .from("news_feeds")
+        .select("id", { count: "exact", head: true })
+        .eq("active", true)
+        .eq("collector", "rss");
+      totalFeeds = res.count ?? null;
+      countError = res.error;
+    }
+
+    if (countError && isMissingCollectorColumn(countError)) {
+      useCollectorFilter = false;
+      const res = await supabaseClient
+        .from("news_feeds")
+        .select("id", { count: "exact", head: true })
+        .eq("active", true);
+      totalFeeds = res.count ?? null;
+      countError = res.error;
+    }
 
     if (countError) throw countError;
 
@@ -127,10 +154,16 @@ serve(async (req: Request) => {
     const rotationSeed = Math.floor(Date.now() / 3600000); // rotates each hour
     const offset = providedOffset ?? (force ? 0 : ((rotationSeed * maxFeeds) % total));
 
-    const { data: feeds, error: feedsError } = await supabaseClient
+    let feedsQuery = supabaseClient
       .from("news_feeds")
       .select("id,name,category,rss_url")
-      .eq("active", true)
+      .eq("active", true);
+
+    if (useCollectorFilter) {
+      feedsQuery = feedsQuery.eq("collector", "rss");
+    }
+
+    const { data: feeds, error: feedsError } = await feedsQuery
       .order("priority", { ascending: false })
       .order("created_at", { ascending: true })
       .range(offset, Math.min(offset + maxFeeds - 1, total - 1));
@@ -246,6 +279,7 @@ serve(async (req: Request) => {
         message: "Coleta de RSS concluída",
         total_feeds: total,
         processed_feeds: feeds.length,
+        collector_filter: useCollectorFilter ? "rss" : null,
         inserted,
         offset,
         next_offset: nextOffset,

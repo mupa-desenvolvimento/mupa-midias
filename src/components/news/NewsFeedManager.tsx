@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,7 +51,7 @@ export function NewsFeedManager() {
     }
   };
 
-  const CATEGORIES = ["Geral", "Esportes", "Tecnologia", "Economia", "Entretenimento", "Saúde", "Política"];
+  const CATEGORIES = ["Geral", "Brasil", "Mundo", "Política", "Economia", "Tecnologia", "Esportes", "Cotidiano", "Entretenimento", "Saúde", "Ciência"];
 
   const handleImportDefaults = async () => {
     setImporting(true);
@@ -89,14 +89,88 @@ export function NewsFeedManager() {
     }
   };
 
+  const handleImportNewsData = async () => {
+    setImporting(true);
+    try {
+      const { data: tenantId } = await supabase.rpc('get_user_tenant_id_strict');
+      if (!tenantId) throw new Error("Usuário sem tenant");
+
+      const { data: defaultLocation } = await supabase
+        .from("weather_locations")
+        .select("city,state")
+        .eq("tenant_id", tenantId)
+        .eq("is_default", true)
+        .maybeSingle();
+
+      const localTerms = [defaultLocation?.city, defaultLocation?.state].filter(Boolean) as string[];
+      const localQuery = localTerms.length > 0 ? localTerms.map((t) => `"${t}"`).join(" OR ") : null;
+
+      const defaultNewsDataFeeds = [
+        { name: "NewsData.io — Geral", category: "Geral", query: null, priority: 3 },
+        { name: "NewsData.io — Política", category: "Política", query: null, priority: 3 },
+        { name: "NewsData.io — Economia", category: "Economia", query: null, priority: 3 },
+        { name: "NewsData.io — Tecnologia", category: "Tecnologia", query: null, priority: 3 },
+        { name: "NewsData.io — Esportes", category: "Esportes", query: null, priority: 2 },
+        { name: "NewsData.io — Mundo", category: "Mundo", query: null, priority: 2 },
+        ...(localQuery ? [{ name: "NewsData.io — Local", category: "Cotidiano", query: localQuery, priority: 5 }] : []),
+      ];
+
+      const existingNewsDataNames = new Set(
+        (feeds || [])
+          .filter((f) => (f as any).collector === "newsdata")
+          .map((f) => f.name)
+      );
+
+      const feedsToInsert = defaultNewsDataFeeds
+        .filter((f) => !existingNewsDataNames.has(f.name))
+        .map((f) => ({
+          tenant_id: tenantId,
+          name: f.name,
+          rss_url: "https://newsdata.io/api/1/news",
+          category: f.category,
+          priority: f.priority,
+          active: true,
+          collector: "newsdata",
+          query: f.query,
+        }));
+
+      if (feedsToInsert.length === 0) {
+        toast.info("Feeds do NewsData.io já estão configurados.");
+        return;
+      }
+
+      const { error } = await supabase.from("news_feeds").insert(feedsToInsert);
+      if (error) {
+        const msg = (error as any)?.message?.toString?.() || "";
+        if (msg.toLowerCase().includes("collector") && msg.toLowerCase().includes("does not exist")) {
+          toast.error("Seu banco ainda não tem suporte a NewsData.io. Rode a migração de newsdata_integration.");
+          return;
+        }
+        throw error;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["news-feeds"] });
+      toast.success(`${feedsToInsert.length} feeds do NewsData.io adicionados!`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao configurar NewsData.io.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Feeds RSS</h3>
+        <h3 className="text-lg font-medium">Fontes de Notícias</h3>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleImportDefaults} disabled={importing || isLoading}>
             <Download className="w-4 h-4 mr-2" />
             {importing ? "Importando..." : "Importar Padrões"}
+          </Button>
+          <Button variant="outline" onClick={handleImportNewsData} disabled={importing || isLoading}>
+            <Globe className="w-4 h-4 mr-2" />
+            {importing ? "Importando..." : "Ativar NewsData.io"}
           </Button>
           <Button onClick={() => handleOpenDialog()} className="gap-2">
             <Plus className="w-4 h-4" /> Adicionar Feed

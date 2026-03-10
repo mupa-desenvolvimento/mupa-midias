@@ -8,6 +8,8 @@ export interface NewsFeed {
   name: string;
   category: string;
   rss_url: string;
+  collector?: string;
+  query?: string | null;
   active: boolean;
   priority: number;
   created_at?: string;
@@ -226,15 +228,34 @@ export function useNews() {
   // --- Edge Function Trigger ---
   const triggerCollection = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('rss-collector', {
+      const rss = await supabase.functions.invoke('rss-collector', {
         body: { maxFeeds: 50, maxItems: 20, batchSize: 20, force: true }
       });
-      if (error) throw error;
-      return data;
+
+      const newsdata = await supabase.functions.invoke('newsdata-collector', {
+        body: { maxFeeds: 4, maxItems: 10, batchSize: 20, force: true, timeframe: 1, country: "br", language: "pt" }
+      });
+
+      if (rss.error) throw rss.error;
+      if (newsdata.error) {
+        return { rss: rss.data, newsdata_error: newsdata.error.message || "Erro no NewsData", newsdata: null };
+      }
+
+      return { rss: rss.data, newsdata: newsdata.data };
     },
     onSuccess: async (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["news-articles"] });
-      toast.success(`Coleta concluída: ${data?.processed_feeds ?? 0} feeds processados`);
+      const rssProcessed = data?.rss?.processed_feeds ?? 0;
+      const newsdataProcessed = data?.newsdata?.processed_feeds ?? 0;
+      const newsdataReqs = data?.newsdata?.api_requests ?? 0;
+
+      if (data?.newsdata_error) {
+        toast.success(`RSS: ${rssProcessed} feeds processados • NewsData: erro`);
+      } else if (data?.newsdata?.needs_migration) {
+        toast.success(`RSS: ${rssProcessed} feeds processados • NewsData: precisa migração`);
+      } else {
+        toast.success(`RSS: ${rssProcessed} feeds • NewsData: ${newsdataProcessed} feeds (${newsdataReqs} req)`);
+      }
       // Auto-trigger image cache after collection
       try {
         await supabase.functions.invoke('news-image-cache', { body: { batch: 5 } });
