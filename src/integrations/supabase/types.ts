@@ -16,7 +16,12 @@ export type Database = {
     Tables: {
       api_integrations: {
         Row: {
+          auth_body_json: Json
+          auth_method: string | null
+          auth_token_path: string | null
           auth_type: string
+          auth_url: string | null
+          barcode_param_name: string | null
           base_url: string
           created_at: string
           default_settings: Json | null
@@ -25,11 +30,25 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          request_headers_json: Json
+          request_method: string | null
+          request_params_json: Json
+          request_url: string | null
+          response_mapping_json: Json
           slug: string
+          store_param_name: string | null
+          token_cache: Json
+          token_expiration_seconds: number | null
+          token_expires_at: string | null
           updated_at: string
         }
         Insert: {
+          auth_body_json?: Json
+          auth_method?: string | null
+          auth_token_path?: string | null
           auth_type?: string
+          auth_url?: string | null
+          barcode_param_name?: string | null
           base_url: string
           created_at?: string
           default_settings?: Json | null
@@ -38,11 +57,25 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          request_headers_json?: Json
+          request_method?: string | null
+          request_params_json?: Json
+          request_url?: string | null
+          response_mapping_json?: Json
           slug: string
+          store_param_name?: string | null
+          token_cache?: Json
+          token_expiration_seconds?: number | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Update: {
+          auth_body_json?: Json
+          auth_method?: string | null
+          auth_token_path?: string | null
           auth_type?: string
+          auth_url?: string | null
+          barcode_param_name?: string | null
           base_url?: string
           created_at?: string
           default_settings?: Json | null
@@ -51,7 +84,16 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          request_headers_json?: Json
+          request_method?: string | null
+          request_params_json?: Json
+          request_url?: string | null
+          response_mapping_json?: Json
           slug?: string
+          store_param_name?: string | null
+          token_cache?: Json
+          token_expiration_seconds?: number | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -620,6 +662,7 @@ export type Database = {
       }
       devices: {
         Row: {
+          api_integration_id: string | null
           blocked_message: string | null
           camera_enabled: boolean
           channel_id: string | null
@@ -639,6 +682,7 @@ export type Database = {
           name: string
           override_media_expires_at: string | null
           override_media_id: string | null
+          price_integration_enabled: boolean
           region_id: string | null
           resolution: string | null
           status: string
@@ -647,6 +691,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          api_integration_id?: string | null
           blocked_message?: string | null
           camera_enabled?: boolean
           channel_id?: string | null
@@ -666,6 +711,7 @@ export type Database = {
           name: string
           override_media_expires_at?: string | null
           override_media_id?: string | null
+          price_integration_enabled?: boolean
           region_id?: string | null
           resolution?: string | null
           status?: string
@@ -674,6 +720,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          api_integration_id?: string | null
           blocked_message?: string | null
           camera_enabled?: boolean
           channel_id?: string | null
@@ -693,6 +740,7 @@ export type Database = {
           name?: string
           override_media_expires_at?: string | null
           override_media_id?: string | null
+          price_integration_enabled?: boolean
           region_id?: string | null
           resolution?: string | null
           status?: string
@@ -701,6 +749,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "devices_api_integration_id_fkey"
+            columns: ["api_integration_id"]
+            isOneToOne: false
+            referencedRelation: "api_integrations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "devices_channel_id_fkey"
             columns: ["channel_id"]
