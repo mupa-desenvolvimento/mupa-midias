@@ -1,4 +1,5 @@
 // deno-lint-ignore-file
+// @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 declare const Deno: {

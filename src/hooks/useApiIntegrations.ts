@@ -12,17 +12,26 @@ export type ApiIntegrationRow = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  auth_curl?: string | null;
   auth_url: string | null;
   auth_method: string | null;
   auth_body_json: Json;
+  auth_headers_json?: Json;
+  auth_query_params_json?: Json;
+  auth_body_text?: string | null;
   auth_token_path: string | null;
   token_expiration_seconds: number | null;
   token_cache: Json;
   token_expires_at: string | null;
+  request_curl?: string | null;
   request_url: string | null;
   request_method: string | null;
   request_headers_json: Json;
   request_params_json: Json;
+  request_query_params_json?: Json;
+  request_body_json?: Json;
+  request_body_text?: string | null;
+  request_variables_json?: Json;
   barcode_param_name: string | null;
   store_param_name: string | null;
   response_mapping_json: Json;
@@ -64,15 +73,24 @@ export function useApiIntegrations() {
           base_url: newIntegration.base_url,
           description: newIntegration.description ?? null,
           is_active: newIntegration.is_active ?? true,
+          auth_curl: (newIntegration as any).auth_curl ?? null,
           auth_url: newIntegration.auth_url ?? null,
           auth_method: newIntegration.auth_method ?? null,
           auth_body_json: (newIntegration.auth_body_json ?? {}) as unknown as Json,
+          auth_headers_json: ((newIntegration as any).auth_headers_json ?? {}) as unknown as Json,
+          auth_query_params_json: ((newIntegration as any).auth_query_params_json ?? {}) as unknown as Json,
+          auth_body_text: (newIntegration as any).auth_body_text ?? null,
           auth_token_path: newIntegration.auth_token_path ?? null,
           token_expiration_seconds: newIntegration.token_expiration_seconds ?? null,
+          request_curl: (newIntegration as any).request_curl ?? null,
           request_url: newIntegration.request_url ?? null,
           request_method: newIntegration.request_method ?? null,
           request_headers_json: (newIntegration.request_headers_json ?? {}) as unknown as Json,
           request_params_json: (newIntegration.request_params_json ?? {}) as unknown as Json,
+          request_query_params_json: ((newIntegration as any).request_query_params_json ?? {}) as unknown as Json,
+          request_body_json: ((newIntegration as any).request_body_json ?? {}) as unknown as Json,
+          request_body_text: (newIntegration as any).request_body_text ?? null,
+          request_variables_json: ((newIntegration as any).request_variables_json ?? []) as unknown as Json,
           barcode_param_name: newIntegration.barcode_param_name ?? null,
           store_param_name: newIntegration.store_param_name ?? null,
           response_mapping_json: (newIntegration.response_mapping_json ?? {}) as unknown as Json,
@@ -103,15 +121,24 @@ export function useApiIntegrations() {
           base_url: updates.base_url,
           description: updates.description ?? null,
           is_active: updates.is_active,
+          auth_curl: (updates as any).auth_curl ?? null,
           auth_url: updates.auth_url ?? null,
           auth_method: updates.auth_method ?? null,
           auth_body_json: (updates.auth_body_json ?? {}) as unknown as Json,
+          auth_headers_json: ((updates as any).auth_headers_json ?? {}) as unknown as Json,
+          auth_query_params_json: ((updates as any).auth_query_params_json ?? {}) as unknown as Json,
+          auth_body_text: (updates as any).auth_body_text ?? null,
           auth_token_path: updates.auth_token_path ?? null,
           token_expiration_seconds: updates.token_expiration_seconds ?? null,
+          request_curl: (updates as any).request_curl ?? null,
           request_url: updates.request_url ?? null,
           request_method: updates.request_method ?? null,
           request_headers_json: (updates.request_headers_json ?? {}) as unknown as Json,
           request_params_json: (updates.request_params_json ?? {}) as unknown as Json,
+          request_query_params_json: ((updates as any).request_query_params_json ?? {}) as unknown as Json,
+          request_body_json: ((updates as any).request_body_json ?? {}) as unknown as Json,
+          request_body_text: (updates as any).request_body_text ?? null,
+          request_variables_json: ((updates as any).request_variables_json ?? []) as unknown as Json,
           barcode_param_name: updates.barcode_param_name ?? null,
           store_param_name: updates.store_param_name ?? null,
           response_mapping_json: (updates.response_mapping_json ?? {}) as unknown as Json,

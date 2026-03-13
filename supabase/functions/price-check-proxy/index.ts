@@ -17,9 +17,67 @@ type TokenCache = {
   expires_at: string;
 };
 
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+const normalizeMethod = (value: any, fallback: HttpMethod): HttpMethod => {
+  const m = String(value || "").toUpperCase();
+  if (m === "GET" || m === "POST" || m === "PUT" || m === "PATCH" || m === "DELETE") return m;
+  return fallback;
+};
+
 const isJwtLike = (value: string) => {
   const parts = value.split(".");
   return parts.length === 3 && parts.every((p) => p.length >= 10);
+};
+
+const interpolateString = (value: string, context: Record<string, string>) => {
+  return String(value ?? "").replace(/\{(\w+)\}/g, (_, key) => (context[key] ?? `{${key}}`));
+};
+
+const interpolateJson = (value: any, context: Record<string, string>): any => {
+  if (value == null) return value;
+  if (typeof value === "string") return interpolateString(value, context);
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.map((v) => interpolateJson(v, context));
+  if (typeof value === "object") {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[interpolateString(String(k), context)] = interpolateJson(v, context);
+    }
+    return out;
+  }
+  return String(value);
+};
+
+const safeParseJsonValue = (text: string) => {
+  const raw = String(text ?? "").trim();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const safeReadResponse = async (response: Response) => {
+  const text = await response.text();
+  const json = safeParseJsonValue(text);
+  return { text, json };
+};
+
+const getUrlWithQuery = (baseUrl: string, query: any) => {
+  const url = String(baseUrl ?? "").trim();
+  if (!url) return url;
+  const q = query && typeof query === "object" && !Array.isArray(query) ? query : {};
+  const u = new URL(url);
+  for (const [k, v] of Object.entries(q)) {
+    if (Array.isArray(v)) {
+      v.forEach((vv) => u.searchParams.append(String(k), String(vv ?? "")));
+    } else {
+      u.searchParams.set(String(k), String(v ?? ""));
+    }
+  }
+  return u.toString();
 };
 
 const normalizeHeaders = (raw: any) => {
@@ -94,6 +152,72 @@ const isCacheValid = (cache: any) => {
   const expiresAtMs = Date.parse(expiresAt);
   if (!Number.isFinite(expiresAtMs)) return false;
   return Date.now() < expiresAtMs - 30_000;
+};
+
+const fetchCurlToken = async (supabaseClient: any, integration: any) => {
+  const authUrl = integration.auth_url ? String(integration.auth_url) : "";
+  if (!authUrl) {
+    return { token: "", expiresAt: "" };
+  }
+
+  const tokenCache = integration.token_cache as any;
+  if (isCacheValid(tokenCache)) {
+    return { token: String(tokenCache.access_token), expiresAt: String(tokenCache.expires_at) };
+  }
+
+  const method = normalizeMethod(integration.auth_method, "POST");
+  const headers = normalizeHeaders(integration.auth_headers_json);
+  const queryParams = integration.auth_query_params_json;
+  const bodyJson = integration.auth_body_json;
+  const bodyText = integration.auth_body_text != null ? String(integration.auth_body_text) : "";
+
+  const url = getUrlWithQuery(authUrl, queryParams);
+
+  let body: string | undefined = undefined;
+  if (method !== "GET") {
+    if (bodyText.trim()) {
+      body = bodyText;
+    } else if (bodyJson && typeof bodyJson === "object") {
+      if (!headers["Content-Type"] && !headers["content-type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+      body = JSON.stringify(bodyJson);
+    }
+  }
+
+  const response = await fetch(url, { method, headers, body: method === "GET" ? undefined : body });
+  const { text, json } = await safeReadResponse(response);
+
+  if (!response.ok) {
+    throw new Error(`Erro ao obter token: ${response.status} ${response.statusText}`);
+  }
+
+  const tokenPath = integration.auth_token_path ? String(integration.auth_token_path) : "";
+  const token =
+    (json && tokenPath ? get(json, tokenPath) : undefined) ??
+    (json ? json?.token ?? json?.access_token : undefined);
+
+  if (!token || typeof token !== "string") {
+    throw new Error("Resposta de token inválida (token não encontrado)");
+  }
+
+  const expiresIn =
+    (json && typeof json?.expires_in === "number" ? json.expires_in : undefined) ??
+    (typeof integration.token_expiration_seconds === "number" ? integration.token_expiration_seconds : undefined) ??
+    (typeof integration.token_expiration_seconds === "string" && String(integration.token_expiration_seconds).trim()
+      ? Number(integration.token_expiration_seconds)
+      : undefined) ??
+    3600;
+
+  const expiresAt = new Date(Date.now() + Number(expiresIn) * 1000).toISOString();
+  const newCache: TokenCache = { access_token: token, expires_at: expiresAt };
+
+  await supabaseClient
+    .from("price_check_integrations")
+    .update({ token_cache: newCache })
+    .eq("id", integration.id);
+
+  return { token, expiresAt };
 };
 
 const buildTokenRequest = (config: any) => {
@@ -208,9 +332,17 @@ serve(async (req: Request) => {
       action !== "auth_endpoint_test" &&
       action !== "auth_body_test" &&
       action !== "auth_body_test_direct" &&
+      action !== "request_test" &&
       (!device_id || !barcode)
     ) {
       throw new Error("Missing device_id or barcode");
+    }
+
+    if (action === "request_test") {
+      if (!barcode) throw new Error("Missing barcode");
+      if (!integration_id && !device_id) {
+        throw new Error("Missing integration_id or device_id");
+      }
     }
 
     if (action === "auth_body_test_direct") {
@@ -310,6 +442,19 @@ serve(async (req: Request) => {
     if (intError || !integration) throw new Error("Integration not found");
 
     if (action === "auth_test") {
+      if (integration.auth_url) {
+        const r = await fetchCurlToken(supabaseClient, integration);
+        return new Response(JSON.stringify({
+          success: true,
+          auth_type: integration.auth_type,
+          token_preview: r.token ? getTokenPreview(r.token) : "",
+          expires_at: r.expiresAt || "",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
       if (integration.auth_type === "oauth2") {
         const tokenCache = await fetchOAuthToken(supabaseClient, integration);
         return new Response(JSON.stringify({
@@ -334,6 +479,69 @@ serve(async (req: Request) => {
     }
 
     if (action === "auth_endpoint_test") {
+      if (integration.auth_url) {
+        const authUrl = String(integration.auth_url || "");
+        const method = normalizeMethod(integration.auth_method, "POST");
+        const headers = normalizeHeaders(integration.auth_headers_json);
+        const queryParams = integration.auth_query_params_json;
+        const bodyJson = integration.auth_body_json;
+        const bodyText = integration.auth_body_text != null ? String(integration.auth_body_text) : "";
+
+        const url = getUrlWithQuery(authUrl, queryParams);
+
+        let body: string | undefined = undefined;
+        if (method !== "GET") {
+          if (bodyText.trim()) {
+            body = bodyText;
+          } else if (bodyJson && typeof bodyJson === "object") {
+            if (!headers["Content-Type"] && !headers["content-type"]) {
+              headers["Content-Type"] = "application/json";
+            }
+            body = JSON.stringify(bodyJson);
+          }
+        }
+
+        const response = await fetch(url, { method, headers, body: method === "GET" ? undefined : body });
+        const { text, json } = await safeReadResponse(response);
+
+        const tokenPath = integration.auth_token_path ? String(integration.auth_token_path) : "";
+        const token =
+          (json && tokenPath ? get(json, tokenPath) : undefined) ??
+          (json ? json?.token ?? json?.access_token : undefined);
+
+        let tokenPreview: string | undefined = undefined;
+        let expiresAt: string | undefined = undefined;
+
+        if (typeof token === "string" && token) {
+          tokenPreview = getTokenPreview(token);
+          const expiresIn =
+            (json && typeof json?.expires_in === "number" ? json.expires_in : undefined) ??
+            (typeof integration.token_expiration_seconds === "number" ? integration.token_expiration_seconds : undefined) ??
+            (typeof integration.token_expiration_seconds === "string" && String(integration.token_expiration_seconds).trim()
+              ? Number(integration.token_expiration_seconds)
+              : undefined) ??
+            3600;
+          expiresAt = new Date(Date.now() + Number(expiresIn) * 1000).toISOString();
+          const newCache: TokenCache = { access_token: token, expires_at: expiresAt };
+          await supabaseClient
+            .from("price_check_integrations")
+            .update({ token_cache: newCache })
+            .eq("id", integration.id);
+        }
+
+        return new Response(JSON.stringify({
+          success: response.ok,
+          auth_type: integration.auth_type,
+          status: response.status,
+          response: sanitizeForUi(json ?? text),
+          token_preview: tokenPreview,
+          expires_at: expiresAt,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
       if (integration.auth_type !== "oauth2") {
         return new Response(JSON.stringify({
           success: true,
@@ -465,46 +673,97 @@ serve(async (req: Request) => {
     }
 
     // 2. Prepare Request
-    let url = integration.endpoint_url;
-    let body = null;
-    let headers = {
-      "Content-Type": "application/json",
-      ...integration.headers,
-    };
+    const requestUrlBase = integration.request_url ? String(integration.request_url) : String(integration.endpoint_url || "");
+    const requestMethod = normalizeMethod(integration.request_method ?? integration.method, "GET");
+    let url = requestUrlBase;
+    let body: string | null = null;
+
+    const headers = {
+      ...normalizeHeaders(integration.headers),
+      ...normalizeHeaders(integration.request_headers_json),
+    } as Record<string, string>;
 
     // Auth Headers
-    if (integration.auth_type === "api_key") {
+    let token = "";
+    if (integration.auth_url) {
+      const r = await fetchCurlToken(supabaseClient, integration);
+      token = r.token || "";
+    } else if (integration.auth_type === "api_key") {
       const config = integration.auth_config as any;
       if (config.header_name && config.api_key) {
-        headers[config.header_name] = config.api_key;
+        headers[String(config.header_name)] = String(config.api_key);
       }
     } else if (integration.auth_type === "bearer_token") {
       const config = integration.auth_config as any;
       if (config.token) {
-        headers["Authorization"] = `Bearer ${config.token}`;
+        headers["Authorization"] = `Bearer ${String(config.token)}`;
       }
     } else if (integration.auth_type === "basic_auth") {
       const config = integration.auth_config as any;
       if (config.username && config.password) {
-        const encoded = btoa(`${config.username}:${config.password}`);
+        const encoded = btoa(`${String(config.username)}:${String(config.password)}`);
         headers["Authorization"] = `Basic ${encoded}`;
       }
     } else if (integration.auth_type === "oauth2") {
       const tokenCache = await fetchOAuthToken(supabaseClient, integration);
-      headers["Authorization"] = `Bearer ${tokenCache.access_token}`;
+      token = tokenCache.access_token;
     }
 
-    // Barcode Parameter Injection
-    if (integration.barcode_param_type === "path_param") {
-      url = url.replace("{barcode}", barcode);
-    } else if (integration.barcode_param_type === "query_param") {
-      const paramName = integration.barcode_param_name || "barcode";
-      const urlObj = new URL(url);
-      urlObj.searchParams.append(paramName, barcode);
-      url = urlObj.toString();
-    } else if (integration.barcode_param_type === "body_json") {
-      const paramName = integration.barcode_param_name || "barcode";
-      body = JSON.stringify({ [paramName]: barcode });
+    const storeCode = reqBody?.store ?? reqBody?.store_code ?? reqBody?.storeCode ?? "";
+    const context: Record<string, string> = {
+      barcode: String(barcode ?? ""),
+      ean: String(barcode ?? ""),
+      gtin: String(barcode ?? ""),
+      store: String(storeCode ?? ""),
+      store_code: String(storeCode ?? ""),
+      token,
+    };
+
+    url = interpolateString(url, context);
+    for (const [k, v] of Object.entries(headers)) {
+      const nk = interpolateString(String(k), context);
+      const nv = interpolateString(String(v ?? ""), context);
+      if (nk !== k) {
+        delete headers[k];
+        headers[nk] = nv;
+      } else {
+        headers[k] = nv;
+      }
+    }
+
+    const queryParams = interpolateJson(integration.request_query_params_json, context);
+    url = getUrlWithQuery(url, queryParams);
+
+    const hasBodyMethod = requestMethod !== "GET" && requestMethod !== "DELETE";
+    if (hasBodyMethod) {
+      const rawText = integration.request_body_text != null ? String(integration.request_body_text) : "";
+      const rawJson = integration.request_body_json;
+
+      if (rawText.trim()) {
+        body = interpolateString(rawText, context);
+      } else if (rawJson && typeof rawJson === "object" && Object.keys(rawJson).length > 0) {
+        if (!headers["Content-Type"] && !headers["content-type"]) {
+          headers["Content-Type"] = "application/json";
+        }
+        body = JSON.stringify(interpolateJson(rawJson, context));
+      }
+    }
+
+    if (!body) {
+      if (integration.barcode_param_type === "path_param") {
+        url = url.replace("{barcode}", String(barcode));
+      } else if (integration.barcode_param_type === "query_param") {
+        const paramName = integration.barcode_param_name || "barcode";
+        const urlObj = new URL(url);
+        urlObj.searchParams.append(paramName, String(barcode));
+        url = urlObj.toString();
+      } else if (integration.barcode_param_type === "body_json") {
+        const paramName = integration.barcode_param_name || "barcode";
+        if (!headers["Content-Type"] && !headers["content-type"]) {
+          headers["Content-Type"] = "application/json";
+        }
+        body = JSON.stringify({ [paramName]: String(barcode) });
+      }
     }
 
     // 3. Execute Request
@@ -515,11 +774,11 @@ serve(async (req: Request) => {
 
     try {
       const fetchOptions: RequestInit = {
-        method: integration.method,
+        method: requestMethod,
         headers: headers,
       };
       
-      if (integration.method === "POST" && body) {
+      if (hasBodyMethod && body) {
         fetchOptions.body = body;
       }
 
@@ -530,7 +789,8 @@ serve(async (req: Request) => {
         throw new Error(`External API Error: ${response.status} ${response.statusText}`);
       }
 
-      responseData = await response.json();
+      const { text, json } = await safeReadResponse(response);
+      responseData = json ?? text;
     } catch (reqError: any) {
       errorMessage = reqError.message;
       if (!responseStatus) responseStatus = 500;
@@ -547,9 +807,55 @@ serve(async (req: Request) => {
       status_code: responseStatus,
       response_time_ms: responseTime,
       error_message: errorMessage,
-      request_payload: body ? JSON.parse(body) : null,
+      request_payload: body ? (safeParseJsonValue(body) ?? body) : null,
       response_payload: responseData
     });
+
+    if (action === "request_test") {
+      const config = integration.mapping_config as any;
+      const mapping = config?.fields || config || {};
+      const resolveValue = (obj: any, path: string, defaultValue: any = undefined) => {
+        if (!path) return defaultValue;
+        const val = get(obj, path);
+        return val !== undefined ? val : defaultValue;
+      };
+
+      const normalizedProduct = {
+        barcode: resolveValue(responseData, mapping.barcode, barcode),
+        internal_code: resolveValue(responseData, mapping.internal_code, ""),
+        description: resolveValue(responseData, mapping.description, "Produto sem descrição"),
+        image: resolveValue(responseData, mapping.image, ""),
+        unit: resolveValue(responseData, mapping.unit, "UN"),
+        price_current: Number(resolveValue(responseData, mapping.price_current, 0)) || 0,
+        price_original: mapping.price_original ? Number(resolveValue(responseData, mapping.price_original)) : null,
+        prices: [] as any[]
+      };
+
+      if (mapping.prices && Array.isArray(mapping.prices)) {
+        normalizedProduct.prices = mapping.prices.map((p: any) => ({
+          label: p.label,
+          value: Number(get(responseData, p.path)) || 0
+        }));
+      }
+
+      return new Response(JSON.stringify({
+        success: !errorMessage && responseStatus >= 200 && responseStatus < 300,
+        status: responseStatus,
+        error: errorMessage,
+        request: {
+          url,
+          method: requestMethod,
+          headers: sanitizeForUi(headers),
+          body: body ? (safeParseJsonValue(body) ?? body) : null,
+        },
+        response: sanitizeForUi(responseData),
+        product: normalizedProduct,
+        response_time_ms: responseTime,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
 
     if (errorMessage) {
       throw new Error(errorMessage);

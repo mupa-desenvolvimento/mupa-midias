@@ -10,6 +10,24 @@ export interface PriceCheckIntegration {
   company_id: string | null;
   auth_type: 'none' | 'api_key' | 'bearer_token' | 'basic_auth' | 'oauth2';
   auth_config: Record<string, any>;
+  auth_curl?: string | null;
+  request_curl?: string | null;
+  auth_url?: string | null;
+  auth_method?: string | null;
+  auth_headers_json?: Record<string, any>;
+  auth_query_params_json?: Record<string, any>;
+  auth_body_json?: Record<string, any>;
+  auth_body_text?: string | null;
+  auth_token_path?: string | null;
+  token_expiration_seconds?: number | null;
+  token_cache?: any;
+  request_url?: string | null;
+  request_method?: string | null;
+  request_headers_json?: Record<string, any>;
+  request_query_params_json?: Record<string, any>;
+  request_body_json?: Record<string, any>;
+  request_body_text?: string | null;
+  request_variables_json?: any;
   endpoint_url: string;
   method: 'GET' | 'POST';
   barcode_param_type: 'query_param' | 'path_param' | 'body_json' | 'form_data';
@@ -36,6 +54,20 @@ export interface PriceCheckLog {
   error_message?: string;
 }
 
+function isMissingTableError(error: any) {
+  const code = String(error?.code ?? "");
+  const message = String(error?.message ?? "").toLowerCase();
+  const details = String(error?.details ?? "").toLowerCase();
+  const status = Number(error?.status ?? 0);
+
+  if (code === "42P01") return true;
+  if (status === 404) return true;
+  if (message.includes("does not exist") && message.includes("relation")) return true;
+  if (details.includes("does not exist") && details.includes("relation")) return true;
+
+  return false;
+}
+
 export function usePriceCheckIntegrations() {
   const queryClient = useQueryClient();
 
@@ -53,6 +85,9 @@ export function usePriceCheckIntegrations() {
         .order("created_at", { ascending: false });
 
       if (error) {
+        if (isMissingTableError(error)) {
+          return [] as PriceCheckIntegration[];
+        }
         toast.error("Erro ao carregar integrações");
         throw error;
       }
@@ -70,6 +105,23 @@ export function usePriceCheckIntegrations() {
           company_id: newIntegration.company_id,
           auth_type: newIntegration.auth_type,
           auth_config: newIntegration.auth_config as unknown as Json,
+          auth_curl: (newIntegration as any).auth_curl ?? null,
+          request_curl: (newIntegration as any).request_curl ?? null,
+          auth_url: (newIntegration as any).auth_url ?? null,
+          auth_method: (newIntegration as any).auth_method ?? null,
+          auth_headers_json: ((newIntegration as any).auth_headers_json ?? {}) as unknown as Json,
+          auth_query_params_json: ((newIntegration as any).auth_query_params_json ?? {}) as unknown as Json,
+          auth_body_json: ((newIntegration as any).auth_body_json ?? {}) as unknown as Json,
+          auth_body_text: (newIntegration as any).auth_body_text ?? null,
+          auth_token_path: (newIntegration as any).auth_token_path ?? null,
+          token_expiration_seconds: (newIntegration as any).token_expiration_seconds ?? null,
+          request_url: (newIntegration as any).request_url ?? null,
+          request_method: (newIntegration as any).request_method ?? null,
+          request_headers_json: ((newIntegration as any).request_headers_json ?? {}) as unknown as Json,
+          request_query_params_json: ((newIntegration as any).request_query_params_json ?? {}) as unknown as Json,
+          request_body_json: ((newIntegration as any).request_body_json ?? {}) as unknown as Json,
+          request_body_text: (newIntegration as any).request_body_text ?? null,
+          request_variables_json: ((newIntegration as any).request_variables_json ?? []) as unknown as Json,
           endpoint_url: newIntegration.endpoint_url,
           method: newIntegration.method,
           barcode_param_type: newIntegration.barcode_param_type,
@@ -104,6 +156,23 @@ export function usePriceCheckIntegrations() {
           company_id: updates.company_id,
           auth_type: updates.auth_type,
           auth_config: updates.auth_config as unknown as Json,
+          auth_curl: (updates as any).auth_curl ?? null,
+          request_curl: (updates as any).request_curl ?? null,
+          auth_url: (updates as any).auth_url ?? null,
+          auth_method: (updates as any).auth_method ?? null,
+          auth_headers_json: ((updates as any).auth_headers_json ?? {}) as unknown as Json,
+          auth_query_params_json: ((updates as any).auth_query_params_json ?? {}) as unknown as Json,
+          auth_body_json: ((updates as any).auth_body_json ?? {}) as unknown as Json,
+          auth_body_text: (updates as any).auth_body_text ?? null,
+          auth_token_path: (updates as any).auth_token_path ?? null,
+          token_expiration_seconds: (updates as any).token_expiration_seconds ?? null,
+          request_url: (updates as any).request_url ?? null,
+          request_method: (updates as any).request_method ?? null,
+          request_headers_json: ((updates as any).request_headers_json ?? {}) as unknown as Json,
+          request_query_params_json: ((updates as any).request_query_params_json ?? {}) as unknown as Json,
+          request_body_json: ((updates as any).request_body_json ?? {}) as unknown as Json,
+          request_body_text: (updates as any).request_body_text ?? null,
+          request_variables_json: ((updates as any).request_variables_json ?? []) as unknown as Json,
           endpoint_url: updates.endpoint_url,
           method: updates.method,
           barcode_param_type: updates.barcode_param_type,

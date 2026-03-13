@@ -58,6 +58,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -223,6 +224,10 @@ const Devices = () => {
     }
   };
 
+  const handleTogglePriceIntegration = async (device: DeviceWithRelations, enabled: boolean) => {
+    await updateDevice.mutateAsync({ id: device.id, price_integration_enabled: enabled });
+  };
+
   return (
     <PageShell
       className="animate-fade-in"
@@ -280,7 +285,7 @@ const Devices = () => {
       <ListViewport
         contentClassName={
           state.view === "grid"
-            ? "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+            ? "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             : "flex flex-col gap-4"
         }
       >
@@ -326,6 +331,7 @@ const Devices = () => {
                     <TableHead>Status</TableHead>
                     <TableHead>Último acesso</TableHead>
                     <TableHead>Playlist</TableHead>
+                    <TableHead>Perfil</TableHead>
                       <TableHead>Integração</TableHead>
                     <TableHead>Resolução</TableHead>
                     <TableHead>Câmera IA</TableHead>
@@ -341,7 +347,17 @@ const Devices = () => {
                           {device.device_code}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {device.name}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 truncate">{device.name}</div>
+                            <div className="flex items-center gap-2">
+                              {device.is_blocked && (
+                                <Badge variant="destructive">Bloqueado</Badge>
+                              )}
+                              {!device.is_blocked && device.override_media_id && (
+                                <Badge variant="secondary">Mídia Avulsa</Badge>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {device.store?.name || "Sem loja"}
@@ -358,11 +374,24 @@ const Devices = () => {
                           {device.current_playlist?.name || "Nenhuma"}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {device.api_integration?.name
-                            ? `API: ${device.api_integration.name}`
-                            : device.price_check_integration?.name
-                              ? `Legacy: ${device.price_check_integration.name}`
-                              : "Nenhuma"}
+                          {device.display_profile?.name || "Padrão"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 truncate">
+                              {device.api_integration?.name
+                                ? `API: ${device.api_integration.name}`
+                                : device.price_check_integration?.name
+                                  ? `Legacy: ${device.price_check_integration.name}`
+                                  : "Nenhuma"}
+                            </div>
+                            <Switch
+                              checked={(device as any)?.price_integration_enabled !== false}
+                              onCheckedChange={(checked) => handleTogglePriceIntegration(device, checked)}
+                              disabled={updateDevice.isPending}
+                              title="Ativar/Desativar integração de preço"
+                            />
+                          </div>
                         </TableCell>
                         <TableCell className="font-mono text-xs">
                           {device.resolution ||
@@ -552,11 +581,19 @@ const Devices = () => {
                     <span className="text-sm text-muted-foreground">
                       Integração de Preço
                     </span>
-                    <span className="text-sm font-medium">
-                      {device.api_integration?.name ||
-                        device.price_check_integration?.name ||
-                        "Nenhuma"}
-                    </span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-sm font-medium truncate">
+                        {device.api_integration?.name ||
+                          device.price_check_integration?.name ||
+                          "Nenhuma"}
+                      </span>
+                      <Switch
+                        checked={(device as any)?.price_integration_enabled !== false}
+                        onCheckedChange={(checked) => handleTogglePriceIntegration(device, checked)}
+                        disabled={updateDevice.isPending}
+                        title="Ativar/Desativar integração de preço"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between">

@@ -101,8 +101,16 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
     /* Add the radial gradients from the landing page as a fixed background */
     background-image: 
       radial-gradient(circle at 50% 0%, rgba(8, 92, 240, 0.12), transparent 50%),

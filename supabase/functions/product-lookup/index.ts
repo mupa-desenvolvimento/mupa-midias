@@ -98,7 +98,7 @@ Deno.serve(async (req: Request) => {
     // Buscar dispositivo e sua empresa
     const { data: device, error: deviceError } = await supabase
       .from('devices')
-      .select('id, company_id, store_id, store_code, price_integration_id')
+      .select('id, company_id, store_id, store_code, price_integration_id, price_integration_enabled')
       .eq('device_code', device_code)
       .single();
     
@@ -121,6 +121,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const storeCode = device.store_code || '1';
+    const priceIntegrationEnabled = (device as any)?.price_integration_enabled !== false;
 
     // 1. Verificar cache local primeiro (Product Cache)
     const { data: cached } = await supabase
@@ -168,10 +169,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // 2. Resolver Integração
-    let integrationId = device.price_integration_id;
+    let integrationId = priceIntegrationEnabled ? device.price_integration_id : null;
 
     // Se não houver no dispositivo, busca na empresa (integração ativa padrão)
-    if (!integrationId) {
+    if (!integrationId && priceIntegrationEnabled) {
       // Prioridade: Integração marcada como "active" para a empresa
       const { data: companyInt } = await supabase
         .from('price_check_integrations')

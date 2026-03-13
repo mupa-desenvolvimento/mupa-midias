@@ -24,6 +24,31 @@ export function useAuth() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+
+    const isInvalidRefreshToken = (error: any) => {
+      const message = String(error?.message ?? '');
+      const name = String(error?.name ?? '');
+      const status = Number(error?.status ?? 0);
+      return (
+        status === 400 &&
+        (message.toLowerCase().includes('invalid refresh token') ||
+          message.toLowerCase().includes('refresh token') ||
+          name === 'AuthApiError')
+      );
+    };
+
+    const resetAuthState = () => {
+      setAuthState({
+        user: null,
+        session: null,
+        roles: [],
+        isLoading: false,
+        isAdmin: false,
+        isAdminGlobal: false,
+      });
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setAuthState(prev => ({
@@ -37,18 +62,23 @@ export function useAuth() {
             fetchUserRoles(session.user.id);
           }, 0);
         } else {
-          setAuthState(prev => ({
-            ...prev,
-            roles: [],
-            isAdmin: false,
-            isAdminGlobal: false,
-            isLoading: false,
-          }));
+          resetAuthState();
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    (async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (cancelled) return;
+
+      if (error && isInvalidRefreshToken(error)) {
+        await supabase.auth.signOut();
+        if (cancelled) return;
+        resetAuthState();
+        return;
+      }
+
       setAuthState(prev => ({
         ...prev,
         session,
@@ -60,9 +90,12 @@ export function useAuth() {
       } else {
         setAuthState(prev => ({ ...prev, isLoading: false }));
       }
-    });
+    })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserRoles = async (userId: string) => {

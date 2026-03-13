@@ -104,13 +104,13 @@ export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
   const heroDescription = normalizeDisplayText(hero.description);
 
   return (
-    <div className="aspect-video bg-black text-white rounded-lg overflow-hidden flex flex-col">
+    <div className="w-full h-full bg-black text-white overflow-hidden flex flex-col min-h-0">
       <LayoutHeader category={category} />
       <div className="flex-1 flex min-h-0">
         {/* Hero */}
         <div className="flex-[3] relative overflow-hidden">
           <ArticleImage url={hero.image_url} className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-blue-400 font-semibold">{heroCategory}</span>
             <h2 className="text-sm md:text-base font-bold leading-tight line-clamp-3">{heroTitle}</h2>
@@ -145,7 +145,7 @@ export function LayoutGrid({ articles, category }: LayoutProps) {
   if (items.length === 0) return <EmptyState />;
 
   return (
-    <div className="aspect-video bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-lg overflow-hidden flex flex-col">
+    <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden flex flex-col min-h-0">
       <LayoutHeader category={category} />
       <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-2 p-3 min-h-0">
         {items.map((a) => (
@@ -177,14 +177,14 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
   const heroDescription = normalizeDisplayText(hero.description);
 
   return (
-    <div className="aspect-video bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-lg overflow-hidden flex flex-col">
+    <div className="w-full h-full bg-gradient-to-br from-indigo-950 to-slate-900 text-white overflow-hidden flex flex-col min-h-0">
       <LayoutHeader category={category} variant="accent" />
       {/* Main content */}
       <div className="flex-1 flex items-stretch min-h-0">
         <div className="flex-1 relative overflow-hidden">
           <ArticleImage url={hero.image_url} className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">{heroCategory}</span>
             <h2 className="text-sm md:text-lg font-extrabold leading-tight line-clamp-3">{heroTitle}</h2>
             <p className="text-[10px] text-white/60 line-clamp-2">{heroDescription}</p>
@@ -217,7 +217,7 @@ export function LayoutMinimal({ articles, category }: LayoutProps) {
   if (items.length === 0) return <EmptyState />;
 
   return (
-    <div className="aspect-video bg-white text-slate-900 rounded-lg overflow-hidden flex flex-col shadow-inner">
+    <div className="w-full h-full bg-white text-slate-900 overflow-hidden flex flex-col shadow-inner min-h-0">
       <div className="px-5 pt-4 pb-2 flex items-center justify-between border-b border-slate-100">
         <div className="flex items-center gap-2">
           <div className="h-6 w-1 bg-red-500 rounded-full" />
@@ -277,7 +277,7 @@ function LayoutHeader({ category, variant }: { category: string; variant?: "acce
 
 function EmptyState() {
   return (
-    <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center text-muted-foreground">
+    <div className="w-full h-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
       <Newspaper className="h-10 w-10 mb-2 opacity-30" />
       <p className="text-sm font-medium">Sem notícias para exibir</p>
       <p className="text-xs">Clique em "Atualizar" para coletar</p>

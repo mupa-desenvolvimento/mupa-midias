@@ -13,12 +13,14 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, ArrowLeft, Check, Copy, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCompanies } from "@/hooks/useCompanies";
 import { supabase } from "@/integrations/supabase/client";
 
 import { IntegrationMapping } from "./components/IntegrationMapping";
+import { inferCommonVariables, parseCurl, type ParsedCurl } from "@/lib/parseCurl";
 
 // Validation Schemas
 const formSchema = z.object({
@@ -28,10 +30,14 @@ const formSchema = z.object({
   environment: z.enum(["production", "staging"]),
   
   // Auth Config
+  auth_curl_text: z.string().default(""),
+  auth_token_path: z.string().optional().nullable(),
+  token_expiration_seconds: z.coerce.number().int().positive().optional().nullable(),
   auth_type: z.enum(["none", "api_key", "bearer_token", "basic_auth", "oauth2"]),
   auth_config: z.record(z.any()).default({}),
   
   // Endpoint Config
+  request_curl_text: z.string().default(""),
   endpoint_url: z.string().url("URL inválida"),
   method: z.enum(["GET", "POST"]),
   barcode_param_type: z.enum(["query_param", "path_param", "body_json", "form_data"]),
@@ -54,9 +60,15 @@ export default function PriceCheckIntegrationForm() {
   const [isTestingAuth, setIsTestingAuth] = useState(false);
   const [isTestingAuthEndpoint, setIsTestingAuthEndpoint] = useState(false);
   const [isTestingBodyAuthEndpoint, setIsTestingBodyAuthEndpoint] = useState(false);
+  const [isTestingRequest, setIsTestingRequest] = useState(false);
   const [lastAuthTest, setLastAuthTest] = useState<{ tokenPreview?: string; expiresAt?: string } | null>(null);
   const [lastAuthEndpointTest, setLastAuthEndpointTest] = useState<{ status: number; response: any; tokenPreview?: string; expiresAt?: string } | null>(null);
   const [lastBodyAuthEndpointTest, setLastBodyAuthEndpointTest] = useState<{ status: number; response: any; tokenPreview?: string } | null>(null);
+  const [lastRequestTest, setLastRequestTest] = useState<{ status: number; response: any; request?: any; product?: any; error?: string | null; responseTimeMs?: number } | null>(null);
+  const [testBarcode, setTestBarcode] = useState("");
+  const [testStoreCode, setTestStoreCode] = useState("");
+  const [parsedAuth, setParsedAuth] = useState<ParsedCurl | null>(null);
+  const [parsedRequest, setParsedRequest] = useState<ParsedCurl | null>(null);
 
   const isEditing = !!id && id !== "new";
   const existingIntegration = integrations?.find(i => i.id === id);
@@ -68,8 +80,12 @@ export default function PriceCheckIntegrationForm() {
       company_id: null,
       status: "active",
       environment: "production",
+      auth_curl_text: "",
+      auth_token_path: "token",
+      token_expiration_seconds: 3600,
       auth_type: "none",
       auth_config: {},
+      request_curl_text: "",
       endpoint_url: "",
       method: "GET",
       barcode_param_type: "query_param",
@@ -206,6 +222,49 @@ export default function PriceCheckIntegrationForm() {
     }
   };
 
+  const handleTestRequest = async () => {
+    if (!isEditing || !id) return;
+    const barcode = String(testBarcode || "").trim();
+    if (!barcode) {
+      toast.error("Informe um código de barras para testar");
+      return;
+    }
+    setIsTestingRequest(true);
+    setLastRequestTest(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("price-check-proxy", {
+        body: {
+          action: "request_test",
+          integration_id: id,
+          barcode,
+          store_code: String(testStoreCode || "").trim() || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (!data) throw new Error("Sem resposta do servidor");
+
+      setLastRequestTest({
+        status: Number(data.status ?? 0),
+        response: data.response,
+        request: data.request,
+        product: data.product,
+        error: data.error ?? null,
+        responseTimeMs: typeof data.response_time_ms === "number" ? data.response_time_ms : undefined,
+      });
+
+      if (data.success) {
+        toast.success("Request executado e resposta salva");
+      } else {
+        toast.error("Request executado com falha (resposta salva)");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao testar request");
+    } finally {
+      setIsTestingRequest(false);
+    }
+  };
+
   useEffect(() => {
     if (existingIntegration) {
       form.reset({
@@ -213,8 +272,12 @@ export default function PriceCheckIntegrationForm() {
         company_id: existingIntegration.company_id,
         status: existingIntegration.status,
         environment: existingIntegration.environment,
+        auth_curl_text: (existingIntegration as any).auth_curl ?? "",
+        auth_token_path: (existingIntegration as any).auth_token_path ?? "",
+        token_expiration_seconds: (existingIntegration as any).token_expiration_seconds ?? null,
         auth_type: existingIntegration.auth_type,
         auth_config: existingIntegration.auth_config || {},
+        request_curl_text: (existingIntegration as any).request_curl ?? "",
         endpoint_url: existingIntegration.endpoint_url,
         method: existingIntegration.method,
         barcode_param_type: existingIntegration.barcode_param_type,
@@ -225,13 +288,93 @@ export default function PriceCheckIntegrationForm() {
     }
   }, [existingIntegration, form]);
 
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      if (name === "auth_curl_text") {
+        const raw = String((values as any).auth_curl_text ?? "").trim();
+        if (!raw) {
+          setParsedAuth(null);
+          return;
+        }
+        try {
+          const parsed = inferCommonVariables(parseCurl(raw));
+          setParsedAuth(parsed);
+        } catch {
+          setParsedAuth(null);
+        }
+      }
+
+      if (name === "request_curl_text") {
+        const raw = String((values as any).request_curl_text ?? "").trim();
+        if (!raw) {
+          setParsedRequest(null);
+          return;
+        }
+        try {
+          const parsed = inferCommonVariables(parseCurl(raw));
+          setParsedRequest(parsed);
+          if (parsed.urlWithoutQuery) {
+            form.setValue("endpoint_url", parsed.urlWithoutQuery, { shouldDirty: true });
+          }
+          if (parsed.method === "GET" || parsed.method === "POST") {
+            form.setValue("method", parsed.method, { shouldDirty: true });
+          }
+        } catch {
+          setParsedRequest(null);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
+      let authParsed: ParsedCurl | null = null;
+      let requestParsed: ParsedCurl | null = null;
+
+      if (values.auth_curl_text?.trim()) {
+        try {
+          authParsed = inferCommonVariables(parseCurl(values.auth_curl_text));
+        } catch {
+          authParsed = null;
+        }
+      }
+
+      if (values.request_curl_text?.trim()) {
+        try {
+          requestParsed = inferCommonVariables(parseCurl(values.request_curl_text));
+        } catch {
+          requestParsed = null;
+        }
+      }
+
+      const payload: Partial<PriceCheckIntegration> & Record<string, any> = {
+        ...values,
+        auth_curl: values.auth_curl_text?.trim() ? values.auth_curl_text : null,
+        request_curl: values.request_curl_text?.trim() ? values.request_curl_text : null,
+        auth_url: authParsed?.urlWithoutQuery || null,
+        auth_method: authParsed?.method || null,
+        auth_headers_json: authParsed?.headers || {},
+        auth_query_params_json: authParsed?.query || {},
+        auth_body_json: authParsed?.bodyJson != null ? authParsed.bodyJson : {},
+        auth_body_text: authParsed?.bodyJson == null ? (authParsed?.bodyText || null) : null,
+        auth_token_path: values.auth_token_path?.trim() ? values.auth_token_path : null,
+        token_expiration_seconds: values.token_expiration_seconds ?? null,
+        request_url: requestParsed?.urlWithoutQuery || values.endpoint_url,
+        request_method: requestParsed?.method || values.method,
+        request_headers_json: requestParsed?.headers || {},
+        request_query_params_json: requestParsed?.query || {},
+        request_body_json: requestParsed?.bodyJson != null ? requestParsed.bodyJson : {},
+        request_body_text: requestParsed?.bodyJson == null ? (requestParsed?.bodyText || null) : null,
+        request_variables_json: requestParsed?.variables || [],
+        endpoint_url: values.endpoint_url || requestParsed?.urlWithoutQuery || "",
+      };
+
       if (isEditing) {
-        await updateIntegration.mutateAsync({ id, ...values });
+        await updateIntegration.mutateAsync({ id, ...payload });
       } else {
-        await createIntegration.mutateAsync(values);
+        await createIntegration.mutateAsync(payload);
       }
       navigate("/admin/integrations");
     } catch (error) {
@@ -382,6 +525,58 @@ export default function PriceCheckIntegrationForm() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="auth_curl_text"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Auth CURL (Opcional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="curl --location 'https://api.cliente.com/login' --header 'Content-Type: application/json' --data '{...}'" {...field} value={field.value ?? ""} className="font-mono min-h-[160px]" />
+                          </FormControl>
+                          <FormDescription>
+                            Cole uma requisição CURL completa. O sistema extrai URL, método, headers, body e query params para salvar estruturado.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {parsedAuth?.variables?.length ? (
+                      <div className="rounded-md border border-white/10 bg-muted/10 p-3 text-sm text-muted-foreground">
+                        Variáveis detectadas: {parsedAuth.variables.map((v) => `{${v.name}}`).join(", ")}
+                      </div>
+                    ) : null}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="auth_token_path"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token path</FormLabel>
+                            <FormControl>
+                              <Input placeholder="token | data.token | access_token" {...field} value={field.value ?? ""} className="font-mono" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="token_expiration_seconds"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Expiração (segundos)</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} value={(field.value as any) ?? ""} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
                     <FormField
                       control={form.control}
                       name="auth_type"
@@ -834,6 +1029,81 @@ export default function PriceCheckIntegrationForm() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="request_curl_text"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Request CURL</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="curl --location 'https://api.cliente.com/v1/precos?loja=1&ean={barcode}' --header 'Authorization: Bearer {token}'" {...field} value={field.value ?? ""} className="font-mono min-h-[200px]" />
+                          </FormControl>
+                          <FormDescription>
+                            Cole a CURL de consulta de preço. Variáveis como <code>{"{barcode}"}</code> e <code>{"{store}"}</code> podem ser usadas no URL, query, headers e body.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {parsedRequest?.variables?.length ? (
+                      <div className="rounded-md border border-white/10 bg-muted/10 p-3 text-sm text-muted-foreground">
+                        Variáveis detectadas: {parsedRequest.variables.map((v) => `{${v.name}}`).join(", ")}
+                      </div>
+                    ) : null}
+
+                    <div className="rounded-md border border-white/10 bg-muted/10 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-medium text-white">Testar Request</div>
+                          <div className="text-xs text-muted-foreground">
+                            Executa a requisição usando a configuração salva e registra a resposta em <span className="font-mono">price_check_logs</span>
+                          </div>
+                        </div>
+                        <Button type="button" variant="secondary" onClick={handleTestRequest} disabled={!isEditing || isTestingRequest}>
+                          {isTestingRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                          <span className="ml-2">{isTestingRequest ? "Testando..." : "Testar"}</span>
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium text-white">Código de barras</div>
+                          <Input value={testBarcode} onChange={(e) => setTestBarcode(e.target.value)} placeholder="7891234567890" className="font-mono" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium text-white">Store code (opcional)</div>
+                          <Input value={testStoreCode} onChange={(e) => setTestStoreCode(e.target.value)} placeholder="0001" className="font-mono" />
+                        </div>
+                      </div>
+
+                      {lastRequestTest ? (
+                        <div className="space-y-2">
+                          <div className="text-xs text-muted-foreground">
+                            Status: <span className="font-mono">{lastRequestTest.status}</span>
+                            {typeof lastRequestTest.responseTimeMs === "number" ? (
+                              <span className="ml-2">Tempo: <span className="font-mono">{lastRequestTest.responseTimeMs}ms</span></span>
+                            ) : null}
+                            {lastRequestTest.error ? (
+                              <span className="ml-2">Erro: <span className="font-mono">{lastRequestTest.error}</span></span>
+                            ) : null}
+                          </div>
+
+                          {lastRequestTest.request ? (
+                            <div className="rounded-md bg-black/20 p-3 text-xs font-mono whitespace-pre-wrap break-words">
+                              {`${String(lastRequestTest.request.method || "")} ${String(lastRequestTest.request.url || "")}`}
+                            </div>
+                          ) : null}
+
+                          <div className="rounded-md bg-black/20 p-3 text-xs font-mono whitespace-pre-wrap break-words">
+                            {typeof lastRequestTest.response === "string"
+                              ? lastRequestTest.response
+                              : JSON.stringify(lastRequestTest.response, null, 2)}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
                     <div className="grid grid-cols-[1fr_3fr] gap-4">
                       <FormField
                         control={form.control}

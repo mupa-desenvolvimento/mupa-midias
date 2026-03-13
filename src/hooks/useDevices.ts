@@ -13,6 +13,7 @@ export interface Device {
   current_playlist_id: string | null;
   price_integration_id: string | null;
   api_integration_id: string | null;
+  price_integration_enabled?: boolean;
   status: string;
   last_seen_at: string | null;
   resolution: string | null;
@@ -60,6 +61,7 @@ export interface DeviceUpdate {
   current_playlist_id?: string | null;
   price_integration_id?: string | null;
   api_integration_id?: string | null;
+  price_integration_enabled?: boolean;
   status?: string;
   resolution?: string | null;
   camera_enabled?: boolean;
@@ -82,6 +84,18 @@ export const useDevices = () => {
         current_playlist:playlists(id, name),
         price_check_integration:price_check_integrations(id, name),
         api_integration:api_integrations(id, name)
+      `;
+
+      const fallbackSelectV2 = `
+        id, device_code, name, store_id, company_id, display_profile_id, current_playlist_id,
+        price_integration_id, api_integration_id, price_integration_enabled,
+        status, last_seen_at, resolution, camera_enabled, metadata, is_active, is_blocked,
+        blocked_message, override_media_id, override_media_expires_at, last_sync_requested_at,
+        created_at, updated_at,
+        store:stores(id, name, code),
+        company:companies(id, name, slug),
+        display_profile:display_profiles(id, name, resolution),
+        current_playlist:playlists(id, name)
       `;
 
       const fallbackSelect = `
@@ -111,18 +125,29 @@ export const useDevices = () => {
         const shouldFallback =
           msg.includes("schema cache") ||
           msg.includes("price_integration_id") ||
+          msg.includes("price_integration_enabled") ||
           msg.includes("api_integration_id") ||
           msg.includes("price_check_integrations") ||
           msg.includes("api_integrations");
 
         if (shouldFallback) {
-          const fallback = await supabase
+          const fallbackV2 = await supabase
             .from("devices")
-            .select(fallbackSelect)
+            .select(fallbackSelectV2)
             .order("created_at", { ascending: false });
 
-          data = fallback.data as any[] | null;
-          queryError = fallback.error;
+          if (fallbackV2.error) {
+            const fallbackV1 = await supabase
+              .from("devices")
+              .select(fallbackSelect)
+              .order("created_at", { ascending: false });
+
+            data = fallbackV1.data as any[] | null;
+            queryError = fallbackV1.error;
+          } else {
+            data = fallbackV2.data as any[] | null;
+            queryError = null;
+          }
         }
       }
 
@@ -176,11 +201,27 @@ export const useDevices = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, ...updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["devices"] });
+      const previous = queryClient.getQueryData<DeviceWithRelations[]>(["devices"]);
+      if (previous) {
+        queryClient.setQueryData<DeviceWithRelations[]>(
+          ["devices"],
+          previous.map((d) => (d.id === id ? ({ ...d, ...updates } as any) : d)),
+        );
+      }
+      return { previous };
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<DeviceWithRelations[]>(["devices"], (current) => {
+        if (!current) return current;
+        return current.map((d) => (d.id === updated.id ? ({ ...d, ...(updated as any) } as any) : d));
+      });
       queryClient.invalidateQueries({ queryKey: ["devices"] });
       toast({ title: "Dispositivo atualizado com sucesso" });
     },
-    onError: (error) => {
+    onError: (error, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(["devices"], ctx.previous);
       toast({ title: "Erro ao atualizar dispositivo", description: error.message, variant: "destructive" });
     },
   });

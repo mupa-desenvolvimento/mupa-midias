@@ -253,7 +253,7 @@ export const PlaylistEditor = () => {
     const id = await ensurePlaylistExists();
     if (!id) return;
 
-    if (!item.image_url && item.type !== 'news') {
+    if (!item.image_url && item.type !== "news" && item.type !== "weather") {
       toast({
         title: "Conteúdo automático sem imagem",
         variant: "destructive",
@@ -261,13 +261,15 @@ export const PlaylistEditor = () => {
       return;
     }
 
-    const mediaType = item.type === 'news' ? 'news' : 'image';
-    const fileUrl = item.image_url || (item.type === 'news' ? 'https://placehold.co/1920x1080/2563eb/ffffff?text=Noticias' : null);
+    const mediaType = item.type === "weather" ? "weather" : item.type === "news" ? "news" : "image";
+    const fileUrl = item.type === "weather"
+      ? null
+      : item.image_url || (item.type === "news" ? "https://placehold.co/1920x1080/2563eb/ffffff?text=Noticias" : null);
 
     const { data: media, error } = await supabase
       .from("media_items")
       .insert({
-        name: item.title,
+        name: item.type === "weather" ? "Clima" : item.title,
         type: mediaType,
         file_url: fileUrl,
         status: "active",

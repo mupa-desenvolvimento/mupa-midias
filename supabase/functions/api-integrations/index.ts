@@ -38,9 +38,11 @@ const isCacheValid = (cache: any) => {
   return Date.now() < ms - 30_000;
 };
 
-const normalizeMethod = (value: any, fallback: "GET" | "POST"): "GET" | "POST" => {
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+const normalizeMethod = (value: any, fallback: HttpMethod): HttpMethod => {
   const m = String(value || "").toUpperCase();
-  if (m === "GET" || m === "POST") return m;
+  if (m === "GET" || m === "POST" || m === "PUT" || m === "PATCH" || m === "DELETE") return m;
   return fallback;
 };
 
@@ -152,21 +154,44 @@ const getOrFetchToken = async (supabaseAdmin: any, integration: any) => {
   }
 
   const method = normalizeMethod(integration.auth_method, "POST");
-  const bodyJson = integration.auth_body_json && typeof integration.auth_body_json === "object" ? integration.auth_body_json : {};
 
+  const headersJson =
+    integration.auth_headers_json && typeof integration.auth_headers_json === "object"
+      ? integration.auth_headers_json
+      : {};
   const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headersJson)) {
+    const name = String(k).trim();
+    if (!name) continue;
+    headers[name] = String(v ?? "");
+  }
+
+  const queryJson =
+    integration.auth_query_params_json && typeof integration.auth_query_params_json === "object"
+      ? integration.auth_query_params_json
+      : {};
+  const legacyBodyJson =
+    integration.auth_body_json && typeof integration.auth_body_json === "object"
+      ? integration.auth_body_json
+      : {};
+  const bodyText = integration.auth_body_text != null ? String(integration.auth_body_text) : "";
+
   let body: string | undefined;
   let url = authUrl;
 
   if (method === "GET") {
     const u = new URL(authUrl);
-    for (const [k, v] of Object.entries(bodyJson)) {
-      u.searchParams.set(k, String(v ?? ""));
+    for (const [k, v] of Object.entries({ ...(legacyBodyJson || {}), ...(queryJson || {}) })) {
+      u.searchParams.set(String(k), String(v ?? ""));
     }
     url = u.toString();
+  } else if (bodyText.trim()) {
+    body = bodyText;
   } else {
-    headers["Content-Type"] = "application/json";
-    body = JSON.stringify(bodyJson);
+    if (!headers["Content-Type"] && !headers["content-type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+    body = JSON.stringify(legacyBodyJson);
   }
 
   const res = await fetch(url, { method, headers, body });
@@ -219,7 +244,10 @@ const executeIntegration = async (
     store,
   };
 
-  const headersJson = integration.request_headers_json && typeof integration.request_headers_json === "object" ? integration.request_headers_json : {};
+  const headersJson =
+    integration.request_headers_json && typeof integration.request_headers_json === "object"
+      ? integration.request_headers_json
+      : {};
   const interpolatedHeaders = interpolateJson(headersJson, context);
   const headers: Record<string, string> = {};
   for (const [k, v] of Object.entries(interpolatedHeaders || {})) {
@@ -227,30 +255,70 @@ const executeIntegration = async (
     if (!name) continue;
     headers[name] = String(v ?? "");
   }
-  if (!headers["Content-Type"] && requestMethod === "POST") {
-    headers["Content-Type"] = "application/json";
-  }
+  const hasBodyMethod = requestMethod !== "GET" && requestMethod !== "DELETE";
 
-  const paramsJson = integration.request_params_json && typeof integration.request_params_json === "object" ? integration.request_params_json : {};
-  let params = interpolateJson(paramsJson, context);
-  if (!params || typeof params !== "object" || Array.isArray(params)) params = {};
+  const legacyParamsJson =
+    integration.request_params_json && typeof integration.request_params_json === "object"
+      ? integration.request_params_json
+      : {};
+  const queryParamsJson =
+    integration.request_query_params_json && typeof integration.request_query_params_json === "object"
+      ? integration.request_query_params_json
+      : {};
+
+  let queryParams = interpolateJson(queryParamsJson, context);
+  if (!queryParams || typeof queryParams !== "object" || Array.isArray(queryParams)) queryParams = {};
+
+  let legacyParams = interpolateJson(legacyParamsJson, context);
+  if (!legacyParams || typeof legacyParams !== "object" || Array.isArray(legacyParams)) legacyParams = {};
 
   const barcodeName = integration.barcode_param_name ? String(integration.barcode_param_name) : "";
   const storeName = integration.store_param_name ? String(integration.store_param_name) : "";
-  if (barcodeName && params[barcodeName] == null) params[barcodeName] = barcode;
-  if (storeName && params[storeName] == null) params[storeName] = store;
+
+  if (barcodeName) {
+    if (requestMethod === "GET") {
+      if (queryParams[barcodeName] == null && legacyParams[barcodeName] == null) queryParams[barcodeName] = barcode;
+    } else {
+      if (legacyParams[barcodeName] == null) legacyParams[barcodeName] = barcode;
+    }
+  }
+  if (storeName) {
+    if (requestMethod === "GET") {
+      if (queryParams[storeName] == null && legacyParams[storeName] == null) queryParams[storeName] = store;
+    } else {
+      if (legacyParams[storeName] == null) legacyParams[storeName] = store;
+    }
+  }
 
   let finalUrl = url;
-  let body: string | undefined;
+  const u = new URL(url);
+  const queryMerged = requestMethod === "GET" ? { ...legacyParams, ...queryParams } : { ...queryParams };
+  for (const [k, v] of Object.entries(queryMerged)) {
+    u.searchParams.set(String(k), String(v ?? ""));
+  }
+  finalUrl = u.toString();
 
-  if (requestMethod === "GET") {
-    const u = new URL(url);
-    for (const [k, v] of Object.entries(params)) {
-      u.searchParams.set(k, String(v ?? ""));
+  const requestBodyJson =
+    integration.request_body_json && typeof integration.request_body_json === "object" && !Array.isArray(integration.request_body_json)
+      ? integration.request_body_json
+      : {};
+  const requestBodyText = integration.request_body_text != null ? String(integration.request_body_text) : "";
+
+  let body: string | undefined;
+  if (hasBodyMethod) {
+    if (requestBodyText.trim()) {
+      body = interpolateString(requestBodyText, context);
+    } else if (requestBodyJson && Object.keys(requestBodyJson).length > 0) {
+      if (!headers["Content-Type"] && !headers["content-type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+      body = JSON.stringify(interpolateJson(requestBodyJson, context));
+    } else {
+      if (!headers["Content-Type"] && !headers["content-type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+      body = JSON.stringify(legacyParams);
     }
-    finalUrl = u.toString();
-  } else {
-    body = JSON.stringify(params);
   }
 
   const res = await fetch(finalUrl, { method: requestMethod, headers, body });

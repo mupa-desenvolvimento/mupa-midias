@@ -226,6 +226,22 @@ const OfflinePlayer = () => {
     const item = items[index];
     const media = item?.media;
     if (!media) return;
+    if (media.type === "news" || media.type === "weather") {
+      const video = slot === "A" ? videoARef.current : videoBRef.current;
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+        video.style.display = "none";
+      }
+      const img = slot === "A" ? imgARef.current : imgBRef.current;
+      if (img) {
+        img.style.display = "none";
+        img.removeAttribute("src");
+      }
+      setNextReadySlot(slot);
+      return;
+    }
     const url = media.blob_url || media.file_url;
     if (!url) return;
 
@@ -284,6 +300,34 @@ const OfflinePlayer = () => {
   useEffect(() => {
     if (displayOverrideMedia) return;
     if (items.length === 0 || !activeMedia) return;
+    if (activeMedia.type === "news" || activeMedia.type === "weather") {
+      const videoA = videoARef.current;
+      const videoB = videoBRef.current;
+      if (videoA) {
+        videoA.pause();
+        videoA.removeAttribute("src");
+        videoA.load();
+        videoA.style.display = "none";
+      }
+      if (videoB) {
+        videoB.pause();
+        videoB.removeAttribute("src");
+        videoB.load();
+        videoB.style.display = "none";
+      }
+      const imgA = imgARef.current;
+      const imgB = imgBRef.current;
+      if (imgA) {
+        imgA.style.display = "none";
+        imgA.removeAttribute("src");
+      }
+      if (imgB) {
+        imgB.style.display = "none";
+        imgB.removeAttribute("src");
+      }
+      mediaElementRef.current = null;
+      return;
+    }
     const url = resolvedMediaUrl || activeMedia.blob_url || activeMedia.file_url;
     if (!url) return;
     const slot = activePlayer;
@@ -615,6 +659,19 @@ const OfflinePlayer = () => {
           />
         ) : (
           <div className="relative w-full h-full">
+            {(activeMedia?.type === "news" || activeMedia?.type === "weather") && activeMedia ? (
+              <div className="absolute inset-0">
+                <MediaRenderer
+                  onElementRef={(el) => {
+                    mediaElementRef.current = el;
+                  }}
+                  media={activeMedia as any}
+                  mediaUrl={resolvedMediaUrl || activeMedia.file_url || ""}
+                  objectFit={getObjectFit()}
+                  onEnded={goToNext}
+                />
+              </div>
+            ) : null}
             <div className="absolute inset-0">
               <video
                 ref={videoARef}

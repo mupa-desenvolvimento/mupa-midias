@@ -42,6 +42,7 @@ const formSchema = z.object({
   current_playlist_id: z.string().optional(),
   price_integration_id: z.string().optional(),
   api_integration_id: z.string().optional(),
+  price_integration_enabled: z.boolean().default(true),
   resolution: z.string().optional(),
   camera_enabled: z.boolean().default(false),
   store_code: z.string().optional(),
@@ -89,6 +90,7 @@ export function DeviceFormDialog({
       current_playlist_id: device?.current_playlist_id || undefined,
       price_integration_id: device?.price_integration_id || undefined,
       api_integration_id: (device as any)?.api_integration_id || undefined,
+      price_integration_enabled: (device as any)?.price_integration_enabled ?? true,
       resolution: device?.resolution || "1920x1080",
       camera_enabled: device?.camera_enabled || false,
       store_code: (device as any)?.store_code || "",
@@ -104,6 +106,7 @@ export function DeviceFormDialog({
         current_playlist_id: device?.current_playlist_id || undefined,
         price_integration_id: device?.price_integration_id || undefined,
         api_integration_id: (device as any)?.api_integration_id || undefined,
+        price_integration_enabled: (device as any)?.price_integration_enabled ?? true,
         resolution: device?.resolution || "1920x1080",
         camera_enabled: device?.camera_enabled || false,
         store_code: (device as any)?.store_code || "",
@@ -126,6 +129,7 @@ export function DeviceFormDialog({
       const optionalFields: Record<string, any> = {};
       if (data.price_integration_id) optionalFields.price_integration_id = data.price_integration_id;
       if (data.api_integration_id) optionalFields.api_integration_id = data.api_integration_id;
+      optionalFields.price_integration_enabled = data.price_integration_enabled;
       if (data.store_code) optionalFields.store_code = data.store_code;
       if (data.current_playlist_id) optionalFields.current_playlist_id = data.current_playlist_id;
       if (data.store_id) optionalFields.store_id = data.store_id;
@@ -404,6 +408,24 @@ export function DeviceFormDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="price_integration_enabled"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Integração de Preço</FormLabel>
+                    <FormDescription>
+                      Desative para impedir consultas externas (usa apenas cache/fallback)
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

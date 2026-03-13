@@ -7,7 +7,7 @@ import { setupKioskMode } from "@/utils/nativeBridge";
 import { Capacitor } from "@capacitor/core";
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
 import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useMediaRotation, useClock } from "@/hooks/player";
-import { PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen } from "@/components/player-core";
+import { MediaRenderer, PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen } from "@/components/player-core";
 import {
   Bell,
   Camera,
@@ -117,6 +117,22 @@ const WebViewPlayer = () => {
     const item = items[index];
     const media = item?.media;
     if (!media) return;
+    if (media.type === "news" || media.type === "weather") {
+      const video = slot === "A" ? videoARef.current : videoBRef.current;
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+        video.style.display = "none";
+      }
+      const img = slot === "A" ? imgARef.current : imgBRef.current;
+      if (img) {
+        img.style.display = "none";
+        img.removeAttribute("src");
+      }
+      setNextReadySlot(slot);
+      return;
+    }
     const url = media.blob_url || media.file_url;
     if (!url) return;
 
@@ -257,6 +273,34 @@ const WebViewPlayer = () => {
 
   useEffect(() => {
     if (items.length === 0 || !activeMedia) return;
+    if (activeMedia.type === "news" || activeMedia.type === "weather") {
+      const videoA = videoARef.current;
+      const videoB = videoBRef.current;
+      if (videoA) {
+        videoA.pause();
+        videoA.removeAttribute("src");
+        videoA.load();
+        videoA.style.display = "none";
+      }
+      if (videoB) {
+        videoB.pause();
+        videoB.removeAttribute("src");
+        videoB.load();
+        videoB.style.display = "none";
+      }
+      const imgA = imgARef.current;
+      const imgB = imgBRef.current;
+      if (imgA) {
+        imgA.style.display = "none";
+        imgA.removeAttribute("src");
+      }
+      if (imgB) {
+        imgB.style.display = "none";
+        imgB.removeAttribute("src");
+      }
+      mediaElementRef.current = null;
+      return;
+    }
     const url = activeMedia.blob_url || activeMedia.file_url;
     if (!url) return;
     const slot = activePlayer;
@@ -327,7 +371,7 @@ const WebViewPlayer = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-black overflow-hidden select-none">
+    <div className="fixed inset-0 bg-black overflow-hidden select-none">
       {Capacitor.isNativePlatform() && (
         <div className="absolute top-2 left-2 z-50 px-2 py-1 rounded bg-black/70 text-[10px] text-white/70">
           <span>WebViewPlayer • rota: {deviceCode ? `/webview/${deviceCode}` : "/android-player"}</span>
@@ -345,7 +389,12 @@ const WebViewPlayer = () => {
       </div>
 
       {/* Media */}
-      <div className="relative w-full h-screen">
+      <div className="absolute inset-0">
+        {(activeMedia.type === "news" || activeMedia.type === "weather") && (
+          <div className="absolute inset-0 z-10">
+            <MediaRenderer media={activeMedia as any} mediaUrl={activeMedia.file_url || ""} objectFit={getObjectFit()} />
+          </div>
+        )}
         <div className="absolute inset-0">
           <video
             ref={videoARef}

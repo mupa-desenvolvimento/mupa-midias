@@ -6,8 +6,9 @@ export interface CachedMedia {
   id: string;
   name: string;
   type: string;
-  file_url: string;
+  file_url: string | null;
   duration: number;
+  metadata?: any;
   blob_url?: string;
   cached_at: number;
 }
@@ -425,8 +426,14 @@ export const useOfflinePlayer = (deviceCode: string) => {
             const channelItems: CachedPlaylistItem[] = [];
             
             for (const item of channel.playlist_channel_items || []) {
-              if (item.media && item.media.file_url) {
-                mediaToDownload.push({ id: item.media.id, url: item.media.file_url, name: item.media.name });
+              if (item.media) {
+                const isNonFileSlide = item.media.type === "news" || item.media.type === "weather";
+                if (!isNonFileSlide && item.media.file_url) {
+                  mediaToDownload.push({ id: item.media.id, url: item.media.file_url, name: item.media.name });
+                }
+                if (!isNonFileSlide && !item.media.file_url) {
+                  continue;
+                }
                 channelItems.push({
                   id: item.id,
                   media_id: item.media_id,
@@ -443,6 +450,7 @@ export const useOfflinePlayer = (deviceCode: string) => {
                     type: item.media.type,
                     file_url: item.media.file_url,
                     duration: item.media.duration || 10,
+                    metadata: item.media.metadata,
                     cached_at: Date.now(),
                   },
                 });
@@ -467,8 +475,14 @@ export const useOfflinePlayer = (deviceCode: string) => {
           }
         } else {
           for (const item of playlist.playlist_items || []) {
-            if (item.media && item.media.file_url) {
-              mediaToDownload.push({ id: item.media.id, url: item.media.file_url, name: item.media.name });
+            if (item.media) {
+              const isNonFileSlide = item.media.type === "news" || item.media.type === "weather";
+              if (!isNonFileSlide && item.media.file_url) {
+                mediaToDownload.push({ id: item.media.id, url: item.media.file_url, name: item.media.name });
+              }
+              if (!isNonFileSlide && !item.media.file_url) {
+                continue;
+              }
               items.push({
                 id: item.id,
                 media_id: item.media_id,
@@ -485,6 +499,7 @@ export const useOfflinePlayer = (deviceCode: string) => {
                   type: item.media.type,
                   file_url: item.media.file_url,
                   duration: item.media.duration || 10,
+                  metadata: item.media.metadata,
                   cached_at: Date.now(),
                 },
               });

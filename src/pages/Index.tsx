@@ -1,10 +1,8 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { useTheme } from "@/hooks/useTheme";
 import { PlansSection } from "@/components/landing/PlansSection";
 import { InkySection } from "@/components/landing/InkySection";
 import { LeadFormModal, LeadFormType } from "@/components/landing/LeadFormModal";
@@ -100,8 +98,7 @@ const Navbar = () => {
   const backgroundOpacity = useTransform(scrollY, [0, 100], [0, 0.9]);
   const backdropBlur = useTransform(scrollY, [0, 100], ["0px", "10px"]);
   const borderOpacity = useTransform(scrollY, [0, 100], [0, 0.1]);
-  const { resolvedTheme } = useTheme();
-  const logoSrc = resolvedTheme === "dark" ? "/Artboard%2016.svg" : "/Artboard%201.svg";
+  const logoSrc = "/Artboard%2016.svg";
 
   return (
     <motion.header
@@ -138,7 +135,7 @@ const Navbar = () => {
             {[
               { href: "#features", label: "Recursos" },
               { href: "#ai", label: "Inteligência Artificial" },
-              { href: "#inky", label: "Inky 🐙" },
+              { href: "#inky", label: "Inky" },
               { href: "#analytics", label: "Analytics" },
               { href: "#plans", label: "Planos" },
             ].map((link) => (
@@ -149,7 +146,6 @@ const Navbar = () => {
             ))}
           </nav>
           <div className="flex items-center gap-4">
-            <ThemeToggle />
             <Link to="/auth" className="hidden md:block">
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6">Entrar</Button>
             </Link>
@@ -195,57 +191,109 @@ const Navbar = () => {
 
 const Hero = () => {
   const [leadFormType, setLeadFormType] = useState<LeadFormType | null>(null);
+  const [heroVideos, setHeroVideos] = useState<string[]>([]);
+  const [heroVideoIndex, setHeroVideoIndex] = useState(0);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/hero_videos/manifest.json", { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return (await res.json()) as unknown;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const list = (data as any)?.videos;
+        if (Array.isArray(list) && list.every((v) => typeof v === "string")) {
+          setHeroVideos(list);
+          setHeroVideoIndex(0);
+          return;
+        }
+        setHeroVideos(["/hero_videos/IMG_4595.mp4"]);
+        setHeroVideoIndex(0);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setHeroVideos(["/hero_videos/IMG_4595.mp4"]);
+        setHeroVideoIndex(0);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = heroVideoRef.current;
+    if (!el) return;
+    el.load();
+    const p = el.play();
+    if (p && typeof (p as Promise<void>).catch === "function") (p as Promise<void>).catch(() => undefined);
+  }, [heroVideoIndex, heroVideos]);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       <LeadFormModal isOpen={!!leadFormType} onClose={() => setLeadFormType(null)} type={leadFormType || "general"} />
       {/* Background Elements */}
-      <div className="absolute inset-0 bg-sidebar">
-        <motion.div 
-          animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.1, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(8,92,240,0.18),transparent_50%)]" 
+      <div className="absolute inset-0 bg-black">
+        <video
+          ref={heroVideoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          src={heroVideos[heroVideoIndex] ?? "/hero_videos/IMG_4595.mp4"}
+          autoPlay
+          muted
+          loop={heroVideos.length <= 1}
+          playsInline
+          preload="metadata"
+          onEnded={() => {
+            if (heroVideos.length <= 1) return;
+            setHeroVideoIndex((idx) => (idx + 1) % heroVideos.length);
+          }}
+          onError={() => {
+            if (heroVideos.length <= 1) return;
+            setHeroVideoIndex((idx) => (idx + 1) % heroVideos.length);
+          }}
         />
-        <motion.div 
-          animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.2, 1] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_80%,rgba(175,233,253,0.10),transparent_50%)]" 
-        />
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/35 to-black/70" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(8,92,240,0.22),transparent_55%)]" />
       </div>
 
-      <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
-        <motion.div initial="hidden" animate="visible" variants={containerVariants} className="text-left">
+      <div className="container mx-auto px-6 relative z-10 flex flex-col items-center justify-center text-center min-h-[calc(100vh-5rem)]">
+        <motion.div initial="hidden" animate="visible" variants={containerVariants} className="flex flex-col items-center">
           <motion.div
             variants={itemVariants}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card/20 border border-border/40 mb-6"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/35 border border-white/15 mb-7 backdrop-blur-sm"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-xs font-medium text-foreground/80">Nova Versão 2.0 Disponível</span>
+            <span className="text-xs font-medium text-white/85">A nova infraestrutura de mídia para o varejo</span>
           </motion.div>
 
           <motion.h1
             variants={itemVariants}
-            className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight tracking-tight text-foreground"
+            className="text-4xl sm:text-6xl md:text-7xl font-semibold mb-6 leading-[1.05] tracking-tight text-white"
           >
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary via-accent to-primary">
-              Digital Signage + Retail Media + Trade
+              Digital signage, retail media e trade marketing
             </span>
             <br />
             em uma única plataforma
           </motion.h1>
 
-          <motion.p variants={itemVariants} className="text-xl text-muted-foreground mb-8 max-w-xl leading-relaxed">
-            Monetize TVs e Terminais de Consulta com campanhas segmentadas, dados estratégicos e gestão centralizada para o varejo moderno.
+          <motion.p variants={itemVariants} className="text-lg sm:text-xl text-white/75 mb-10 max-w-3xl mx-auto leading-relaxed">
+            Monetize TVs no ponto de venda, gerencie campanhas e transforme telas em canais de comunicação e receita — da loja ao corporativo.
           </motion.p>
 
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4">
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 items-center justify-center">
             <Button
               size="lg"
               onClick={() => setLeadFormType("general")}
-              className="w-full sm:w-auto min-h-[3.5rem] h-auto py-4 px-6 sm:px-8 text-base sm:text-lg rounded-full bg-primary hover:bg-primary/90 border-0 shadow-lg shadow-accent/20 whitespace-normal leading-tight text-primary-foreground"
+              className="w-full sm:w-auto min-h-[3.5rem] h-auto py-4 px-6 sm:px-10 text-base sm:text-lg rounded-full bg-primary hover:bg-primary/90 border-0 shadow-lg shadow-black/30 whitespace-normal leading-tight text-primary-foreground"
             >
               <Zap className="mr-2 h-5 w-5 fill-current shrink-0" />
               <span>Começar Agora</span>
@@ -254,7 +302,7 @@ const Hero = () => {
               size="lg"
               variant="outline"
               onClick={() => setLeadFormType("demo")}
-              className="w-full sm:w-auto min-h-[3.5rem] h-auto py-4 px-6 sm:px-8 text-base sm:text-lg rounded-full border-border/50 bg-card/20 hover:bg-card/30 text-foreground backdrop-blur-sm whitespace-normal leading-tight"
+              className="w-full sm:w-auto min-h-[3.5rem] h-auto py-4 px-6 sm:px-10 text-base sm:text-lg rounded-full border-white/30 bg-black/20 hover:bg-black/30 text-white backdrop-blur-sm whitespace-normal leading-tight"
             >
               <Play className="mr-2 h-5 w-5 shrink-0" />
               <span>Ver demo</span>
@@ -274,15 +322,15 @@ const Hero = () => {
               }
             }}
           >
-            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors font-medium tracking-widest uppercase">
+            <span className="text-xs text-white/70 group-hover:text-white transition-colors font-medium tracking-widest uppercase">
               Descubra Mais
             </span>
             <motion.div
               animate={{ y: [0, 10, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="p-2 rounded-full bg-card/20 border border-border/40 group-hover:bg-card/30 group-hover:border-border/60 transition-all"
+              className="p-2 rounded-full bg-black/30 border border-white/15 group-hover:bg-black/40 group-hover:border-white/25 transition-all backdrop-blur-sm"
             >
-              <ChevronsDown className="w-5 h-5 text-accent" />
+              <ChevronsDown className="w-5 h-5 text-white" />
             </motion.div>
           </motion.div>
         </motion.div>
@@ -292,7 +340,7 @@ const Hero = () => {
           initial={{ opacity: 0, scale: 0.8, rotateY: -20 }}
           animate={{ opacity: 1, scale: 1, rotateY: 0 }}
           transition={{ duration: 1, delay: 0.2, type: "spring" }}
-          className="relative hidden lg:block perspective-1000"
+          className="hidden"
         >
           <motion.div
             animate={{ y: [0, -15, 0] }}
@@ -701,8 +749,7 @@ const AISection = () => {
 };
 
 const Index = () => {
-  const { resolvedTheme } = useTheme();
-  const logoSrc = resolvedTheme === "dark" ? "/Artboard%2016.svg" : "/Artboard%201.svg";
+  const logoSrc = "/Artboard%2016.svg";
   const whatsappPhoneE164 = "5551995643344";
   const whatsappHref = `https://wa.me/${whatsappPhoneE164}?text=${encodeURIComponent(
     "Olá! Gostaria de saber mais sobre a Mupa."
@@ -713,7 +760,7 @@ const Index = () => {
   const year = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen bg-sidebar text-foreground selection:bg-accent/30">
+    <div className="dark min-h-screen bg-sidebar text-foreground selection:bg-accent/30">
       <Navbar />
       <main>
         <Hero />
