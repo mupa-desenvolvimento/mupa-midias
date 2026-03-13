@@ -278,7 +278,7 @@ const Hero = () => {
             variants={itemVariants}
             className="text-4xl sm:text-6xl md:text-7xl font-semibold mb-6 leading-[1.05] tracking-tight text-white"
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary via-accent to-primary">
+            <span className="text-[#AFE9FD]">
               Digital signage, retail media e trade marketing
             </span>
             <br />
