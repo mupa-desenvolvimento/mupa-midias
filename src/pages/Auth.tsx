@@ -83,7 +83,7 @@ export default function Auth() {
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
               <img 
-                src={resolvedTheme === "dark" ? "/Artboard%2017.svg" : "/Artboard%203.svg"} 
+                src={resolvedTheme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"} 
                 alt="MupaMídias" 
                 className="h-12 scale-[1.15]" 
               />

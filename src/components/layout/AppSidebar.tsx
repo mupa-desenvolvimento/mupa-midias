@@ -95,7 +95,7 @@ const AppSidebar = () => {
         <div className="flex items-center gap-3">
           <SidebarTrigger className="h-9 w-9" />
           <img 
-            src={resolvedTheme === "dark" ? "/Artboard%2017.svg" : "/Artboard%203.svg"} 
+            src={resolvedTheme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"} 
             alt="MupaMídias" 
             className="h-10 scale-[1.3] group-data-[collapsible=icon]:hidden" 
           />

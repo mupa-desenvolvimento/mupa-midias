@@ -98,7 +98,7 @@ const Navbar = () => {
   const backgroundOpacity = useTransform(scrollY, [0, 100], [0, 0.9]);
   const backdropBlur = useTransform(scrollY, [0, 100], ["0px", "10px"]);
   const borderOpacity = useTransform(scrollY, [0, 100], [0, 0.1]);
-  const logoSrc = "/Artboard%2016.svg";
+  const logoSrc = "/logo-landing.svg";
 
   return (
     <motion.header
@@ -749,7 +749,7 @@ const AISection = () => {
 };
 
 const Index = () => {
-  const logoSrc = "/Artboard%2016.svg";
+  const logoSrc = "/logo-landing.svg";
   const whatsappPhoneE164 = "5551995643344";
   const whatsappHref = `https://wa.me/${whatsappPhoneE164}?text=${encodeURIComponent(
     "Olá! Gostaria de saber mais sobre a Mupa."

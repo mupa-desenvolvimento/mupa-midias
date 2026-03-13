@@ -202,7 +202,7 @@ export default function Presentation() {
   
   const slide = slides[currentSlide];
   const theme = themes[currentThemeId];
-  const logoSrc = currentThemeId === "light" ? "/Artboard%203.svg" : "/Artboard%2017.svg";
+  const logoSrc = currentThemeId === "light" ? "/logo-light.svg" : "/logo-dark.svg";
 
   const handleUpdateSlide = (updatedSlide: Slide) => {
     const newSlides = [...slides];
