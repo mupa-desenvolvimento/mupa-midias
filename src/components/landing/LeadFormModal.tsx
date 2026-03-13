@@ -172,9 +172,20 @@ export function LeadFormModal({ isOpen, onClose, type }: LeadFormModalProps) {
 
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log("Form submitted:", { type, data });
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-lead-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, data }),
+      });
+      const result = await res.json();
+      if (!result.success) {
+        console.error("Lead email error:", result.error);
+      }
+    } catch (err) {
+      console.error("Failed to send lead email:", err);
+    }
     setIsSubmitting(false);
     setIsSuccess(true);
     
