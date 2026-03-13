@@ -38,13 +38,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 100%; /* #FFFFFF */
-    --sidebar-foreground: 234 82% 11%; /* #050A34 */
-    --sidebar-primary: 224 86% 25%; /* #092676 */
+    --sidebar-background: 224 86% 25%; /* #092676 */
+    --sidebar-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-primary: 218 94% 49%; /* #085CF0 */
     --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-accent: 190 80% 94%; /* #E4F8FC */
-    --sidebar-accent-foreground: 234 82% 11%; /* #050A34 */
-    --sidebar-border: 0 0% 84%; /* #D5D5D5 */
+    --sidebar-accent: 218 94% 49%; /* #085CF0 */
+    --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-border: 224 86% 35%; /* tom mais claro do primary */
     --sidebar-ring: 218 94% 49%; /* #085CF0 */
 
     /* Custom tokens */
@@ -85,13 +85,13 @@
     --input: 224 86% 25%; /* #092676 */
     --ring: 218 94% 49%; /* #085CF0 */
 
-    --sidebar-background: 234 82% 11%; /* #050A34 */
+    --sidebar-background: 234 82% 8%; /* mais escuro que o background */
     --sidebar-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-primary: 224 86% 25%; /* #092676 */
+    --sidebar-primary: 218 94% 49%; /* #085CF0 */
     --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-accent: 218 94% 49%; /* #085CF0 */
+    --sidebar-accent: 218 94% 35%; /* azul mais escuro */
     --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-border: 224 86% 25%; /* #092676 */
+    --sidebar-border: 234 82% 15%; /* borda sutil */
     --sidebar-ring: 218 94% 49%; /* #085CF0 */
   }
 }

@@ -90,7 +90,7 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border bg-sidebar/95 backdrop-blur-md" collapsible="icon">
+    <Sidebar className="border-r border-sidebar-border" collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <SidebarTrigger className="h-9 w-9" />
