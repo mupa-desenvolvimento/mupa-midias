@@ -749,7 +749,7 @@ const AISection = () => {
 };
 
 const Index = () => {
-  const logoSrc = "/Artboard%2016.svg";
+  const logoSrc = "/logo-landing.svg";
   const whatsappPhoneE164 = "5551995643344";
   const whatsappHref = `https://wa.me/${whatsappPhoneE164}?text=${encodeURIComponent(
     "Olá! Gostaria de saber mais sobre a Mupa."
