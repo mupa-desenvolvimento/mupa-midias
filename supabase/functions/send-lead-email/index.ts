@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: "Mupa Leads <onboarding@resend.dev>",
-        to: ["antunes@mupa.app"],
+        to: ["appmupa@gmail.com"],
         subject: `[Mupa] Novo Lead — ${typeLabel} — ${data.name || ""}`,
         html,
       }),

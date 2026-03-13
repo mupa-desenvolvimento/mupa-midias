@@ -2358,6 +2358,10 @@ export type Database = {
         Returns: undefined
       }
       get_device_config: { Args: { p_device_token: string }; Returns: Json }
+      get_device_weather_settings: {
+        Args: { p_device_code: string }
+        Returns: Json
+      }
       get_public_device_info: {
         Args: { p_device_code: string }
         Returns: {
