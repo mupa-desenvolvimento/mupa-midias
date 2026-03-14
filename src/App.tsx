@@ -154,6 +154,16 @@ function AppContent() {
             }
           />
 
+          {/* Fullscreen Graphic Editor - No Layout/Sidebar */}
+          <Route
+            path="/admin/graphic-editor"
+            element={
+              <ProtectedRoute>
+                <GraphicEditor />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/admin/*"
             element={
