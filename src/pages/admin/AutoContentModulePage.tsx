@@ -19,7 +19,7 @@ import { BirthdaySlideDialog } from "@/components/birthday-layouts/BirthdaySlide
 import { BirthdayPeriod, BirthdayLayoutType } from "@/components/birthday-layouts/types";
 import {
   Upload, Cake, CalendarDays, CalendarRange, Calendar,
-  CreditCard, LayoutList, Grid3x3, Monitor,
+  CreditCard, LayoutList, Grid3x3, Monitor, PartyPopper, Plus,
 } from "lucide-react";
 import { WeatherSettings } from "./weather/WeatherSettings";
 import { NewsModule } from "./news/NewsModule";
