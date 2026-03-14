@@ -360,20 +360,7 @@ const AutoContentModulePage = () => {
       </div>
 
       {moduleType === "birthday" && (
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">Importar aniversariantes via CSV</span>
-            <span className="text-xs text-muted-foreground">
-              O arquivo será usado para gerar cards automáticos de parabéns.
-            </span>
-          </div>
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleUploadCsv}
-            className="text-sm"
-          />
-        </div>
+        <BirthdayModuleSection />
       )}
     </div>
   );
