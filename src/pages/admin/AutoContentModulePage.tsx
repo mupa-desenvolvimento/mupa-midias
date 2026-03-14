@@ -68,12 +68,17 @@ const isValidModuleType = (value: string | undefined): value is AutoContentType 
 /* ─── Birthday Module (standalone) ─── */
 function BirthdayModulePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [period, setPeriod] = useState<BirthdayPeriod>("month");
+  const [slidePeriod, setSlidePeriod] = useState<BirthdaySlidePeriod>("month");
   const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
   const [slideDialogOpen, setSlideDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [slideCreated, setSlideCreated] = useState(false);
   const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
 
-  const filteredPeople = useMemo(() => filterByPeriod(period), [allPeople, period, filterByPeriod]);
+  const getPeopleForPeriod = (p: BirthdayPeriod) => filterByPeriod(p);
+  const dayPeople = useMemo(() => getPeopleForPeriod("day"), [allPeople, filterByPeriod]);
+  const weekPeople = useMemo(() => getPeopleForPeriod("week"), [allPeople, filterByPeriod]);
+  const monthPeople = useMemo(() => getPeopleForPeriod("month"), [allPeople, filterByPeriod]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
