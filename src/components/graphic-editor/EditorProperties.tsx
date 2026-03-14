@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Palette, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Strikethrough } from "lucide-react";
+import { Palette, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Strikethrough, Monitor } from "lucide-react";
 
 const PRESET_COLORS = [
   "#000000", "#ffffff", "#ef4444", "#f59e0b", "#22c55e",
@@ -21,20 +21,37 @@ const FONTS = [
   "Poppins", "Lato", "Playfair Display", "Oswald",
 ];
 
+const CANVAS_PRESETS = [
+  { label: "Full HD (1920×1080)", w: 1920, h: 1080 },
+  { label: "HD (1280×720)", w: 1280, h: 720 },
+  { label: "Instagram Post (1080×1080)", w: 1080, h: 1080 },
+  { label: "Instagram Story (1080×1920)", w: 1080, h: 1920 },
+  { label: "Facebook Cover (820×312)", w: 820, h: 312 },
+  { label: "YouTube Thumb (1280×720)", w: 1280, h: 720 },
+  { label: "TV Portrait (1080×1920)", w: 1080, h: 1920 },
+  { label: "TV Landscape (1920×1080)", w: 1920, h: 1080 },
+  { label: "Banner (728×90)", w: 728, h: 90 },
+  { label: "A4 (2480×3508)", w: 2480, h: 3508 },
+  { label: "Personalizado", w: 0, h: 0 },
+];
+
 interface Props {
   selected: SelectedObjectProps | null;
   onUpdate: (prop: string, value: any) => void;
   canvasBgColor: string;
   onCanvasBgChange: (color: string) => void;
+  canvasWidth: number;
+  canvasHeight: number;
+  onCanvasResize: (w: number, h: number) => void;
 }
 
-export function EditorProperties({ selected, onUpdate, canvasBgColor, onCanvasBgChange }: Props) {
+export function EditorProperties({ selected, onUpdate, canvasBgColor, onCanvasBgChange, canvasWidth, canvasHeight, onCanvasResize }: Props) {
   if (!selected) {
     return (
       <div className="w-[260px] border-l border-border bg-card flex flex-col shrink-0 h-full">
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-5">
-            <div className="flex flex-col items-center justify-center py-8">
+            <div className="flex flex-col items-center justify-center py-6">
               <Palette className="h-8 w-8 text-muted-foreground/40 mb-3" />
               <p className="text-sm text-muted-foreground">Selecione um objeto</p>
               <p className="text-xs text-muted-foreground/60">para editar propriedades</p>
@@ -42,7 +59,69 @@ export function EditorProperties({ selected, onUpdate, canvasBgColor, onCanvasBg
 
             <Separator />
 
-            {/* Canvas background when nothing selected */}
+            {/* Canvas Size */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5">
+                <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tamanho do Canvas</Label>
+              </div>
+
+              <Select
+                value={CANVAS_PRESETS.find(p => p.w === canvasWidth && p.h === canvasHeight)?.label || "Personalizado"}
+                onValueChange={(label) => {
+                  const preset = CANVAS_PRESETS.find(p => p.label === label);
+                  if (preset && preset.w > 0) onCanvasResize(preset.w, preset.h);
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CANVAS_PRESETS.map((p) => (
+                    <SelectItem key={p.label} value={p.label} className="text-xs">
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px]">Largura</Label>
+                  <Input
+                    type="number"
+                    value={canvasWidth}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value);
+                      if (v > 0 && v <= 4096) onCanvasResize(v, canvasHeight);
+                    }}
+                    className="h-7 text-xs"
+                    min={100}
+                    max={4096}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[10px]">Altura</Label>
+                  <Input
+                    type="number"
+                    value={canvasHeight}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value);
+                      if (v > 0 && v <= 4096) onCanvasResize(canvasWidth, v);
+                    }}
+                    className="h-7 text-xs"
+                    min={100}
+                    max={4096}
+                  />
+                </div>
+              </div>
+
+              <p className="text-[10px] text-muted-foreground/60">{canvasWidth} × {canvasHeight} px</p>
+            </div>
+
+            <Separator />
+
+            {/* Canvas background */}
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fundo do Canvas</Label>
               <div className="flex flex-wrap gap-1.5">

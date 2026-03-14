@@ -25,7 +25,6 @@ export interface SelectedObjectProps {
 
 const MAX_HISTORY = 50;
 
-// Create a star polygon points
 function createStarPoints(spikes: number, outerR: number, innerR: number): { x: number; y: number }[] {
   const pts: { x: number; y: number }[] = [];
   const step = Math.PI / spikes;
@@ -54,6 +53,8 @@ export function useFabricCanvas() {
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(false);
   const [canvasBgColor, setCanvasBgColor] = useState("#ffffff");
+  const [canvasWidth, setCanvasWidth] = useState(900);
+  const [canvasHeight, setCanvasHeight] = useState(600);
 
   // History
   const historyRef = useRef<string[]>([]);
@@ -102,6 +103,11 @@ export function useFabricCanvas() {
           setCanvasBgColor(data.bgColor);
           canvas.backgroundColor = data.bgColor;
         }
+        if (data.width && data.height) {
+          setCanvasWidth(data.width);
+          setCanvasHeight(data.height);
+          canvas.setDimensions({ width: data.width, height: data.height });
+        }
         if (data.canvas) {
           canvas.loadFromJSON(data.canvas).then(() => {
             canvas.renderAll();
@@ -144,6 +150,16 @@ export function useFabricCanvas() {
     }
     setSelectedObject(props);
   };
+
+  // Canvas resize
+  const resizeCanvas = useCallback((w: number, h: number) => {
+    const c = canvasRef.current;
+    if (!c) return;
+    c.setDimensions({ width: w, height: h });
+    setCanvasWidth(w);
+    setCanvasHeight(h);
+    c.renderAll();
+  }, []);
 
   // ---- Actions ----
 
@@ -244,7 +260,7 @@ export function useFabricCanvas() {
       imgEl.crossOrigin = "anonymous";
       imgEl.onload = () => {
         const fImg = new FabricImage(imgEl, { left: 50, top: 50 });
-        const maxW = 400;
+        const maxW = Math.min(400, c.width! * 0.6);
         if (fImg.width && fImg.width > maxW) fImg.scaleToWidth(maxW);
         c.add(fImg);
         c.setActiveObject(fImg);
@@ -262,11 +278,14 @@ export function useFabricCanvas() {
     imgEl.crossOrigin = "anonymous";
     imgEl.onload = () => {
       const fImg = new FabricImage(imgEl, { left: 50, top: 50 });
-      const maxW = 400;
+      const maxW = Math.min(400, c.width! * 0.6);
       if (fImg.width && fImg.width > maxW) fImg.scaleToWidth(maxW);
       c.add(fImg);
       c.setActiveObject(fImg);
       c.renderAll();
+    };
+    imgEl.onerror = () => {
+      console.error("Failed to load image from URL:", url);
     };
     imgEl.src = url;
   }, []);
@@ -392,16 +411,22 @@ export function useFabricCanvas() {
   const saveProject = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
-    const data = { name: projectName, canvas: c.toJSON(), bgColor: canvasBgColor };
+    const data = {
+      name: projectName,
+      canvas: c.toJSON(),
+      bgColor: canvasBgColor,
+      width: canvasWidth,
+      height: canvasHeight,
+    };
     localStorage.setItem("graphic-editor-project", JSON.stringify(data));
-  }, [projectName, canvasBgColor]);
+  }, [projectName, canvasBgColor, canvasWidth, canvasHeight]);
 
   // Zoom
   const handleZoom = useCallback((delta: number) => {
     const c = canvasRef.current;
     if (!c) return;
     let z = c.getZoom() + delta;
-    z = Math.min(Math.max(z, 0.3), 3);
+    z = Math.min(Math.max(z, 0.1), 3);
     c.setZoom(z);
     setZoom(z);
     c.renderAll();
@@ -426,6 +451,7 @@ export function useFabricCanvas() {
     canvasRef, canvasElRef, initCanvas,
     selectedObject, projectName, setProjectName, zoom,
     showGrid, toggleGrid, canvasBgColor, changeCanvasBg,
+    canvasWidth, canvasHeight, resizeCanvas,
     addText, addRect, addCircle, addLine, addTriangle, addStar, addPolygon,
     addImage, addImageFromUrl,
     deleteSelected, duplicateSelected, bringToFront, sendToBack,

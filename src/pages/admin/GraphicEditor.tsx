@@ -20,6 +20,7 @@ export default function GraphicEditor() {
     initCanvas, canvasElRef,
     selectedObject, projectName, setProjectName, zoom,
     showGrid, toggleGrid, canvasBgColor, changeCanvasBg,
+    canvasWidth, canvasHeight, resizeCanvas,
     addText, addRect, addCircle, addLine, addTriangle, addStar, addPolygon,
     addImage, addImageFromUrl,
     deleteSelected, duplicateSelected, bringToFront, sendToBack,
@@ -28,7 +29,6 @@ export default function GraphicEditor() {
     getCanvasDataUrl,
   } = useFabricCanvas();
 
-  // Fetch all gallery items (no folder filter)
   const { mediaItems, isLoading: galleryLoading } = useMediaItems(undefined);
 
   useEffect(() => {
@@ -54,12 +54,10 @@ export default function GraphicEditor() {
     const dataUrl = getCanvasDataUrl();
     if (!dataUrl) throw new Error("Falha ao capturar canvas");
 
-    // Convert data URL to Blob
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     const file = new File([blob], `${fileName}.png`, { type: "image/png" });
 
-    // Upload via edge function
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error("Não autenticado");
 
@@ -83,7 +81,6 @@ export default function GraphicEditor() {
       throw new Error(err.error || "Erro ao salvar");
     }
 
-    // Also save project locally
     saveProject();
     toast.success("Imagem salva na galeria!");
   }, [getCanvasDataUrl, saveProject]);
@@ -152,7 +149,6 @@ export default function GraphicEditor() {
           ref={canvasContainerRef}
           className="flex-1 overflow-auto bg-muted/30 flex items-center justify-center p-8 relative"
         >
-          {/* Grid overlay */}
           {showGrid && (
             <div
               className="absolute inset-0 pointer-events-none"
@@ -173,6 +169,9 @@ export default function GraphicEditor() {
           onUpdate={updateObjectProp}
           canvasBgColor={canvasBgColor}
           onCanvasBgChange={changeCanvasBg}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
+          onCanvasResize={resizeCanvas}
         />
       </div>
 
