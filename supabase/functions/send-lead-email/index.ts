@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
       console.error("Resend error:", result);
-      throw new Error(`Resend API error: ${JSON.stringify(result)}`);
+      throw new Error("Falha ao enviar email. Tente novamente mais tarde.");
     }
 
     return new Response(JSON.stringify({ success: true, id: result.id }), {

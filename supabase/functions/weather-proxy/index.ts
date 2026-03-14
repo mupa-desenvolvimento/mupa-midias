@@ -287,9 +287,11 @@ serve(async (req: Request) => {
     }
 
     throw new Error("Invalid action");
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Erro desconhecido";
+    console.error("weather-proxy error:", msg);
+    return new Response(JSON.stringify({ error: "Erro ao buscar dados meteorológicos" }), {
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

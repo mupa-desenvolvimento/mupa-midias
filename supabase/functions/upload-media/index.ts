@@ -305,15 +305,13 @@ Deno.serve(async (req) => {
     )
 
  } catch (error: unknown) {
-   console.error('Upload error:', error)
-   const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-   const errorStack = error instanceof Error ? error.stack : undefined
-   return new Response(
-     JSON.stringify({ 
-       error: 'Internal server error', 
-       details: errorMessage,
-       stack: errorStack
-     }),
+    console.error('Upload error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return new Response(
+      JSON.stringify({ 
+        error: 'Erro ao processar upload. Tente novamente.',
+        code: 'UPLOAD_FAILED'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
