@@ -119,15 +119,16 @@ Deno.serve(async (req) => {
      }
      
      // Action: Exchange code for tokens
-     if (action === 'exchange_code') {
-       const body = await req.json();
-       const { code, state, redirect_uri, user_id } = body;
-       
-       if (!code || !state || !redirect_uri || !user_id) {
-         return new Response(
-           JSON.stringify({ error: 'code, state, redirect_uri, and user_id are required' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
+    if (action === 'exchange_code') {
+        const body = await req.json();
+        const { code, state, redirect_uri } = body;
+        const user_id = authedUser.id; // Use verified JWT user
+        
+        if (!code || !state || !redirect_uri) {
+          return new Response(
+            JSON.stringify({ error: 'code, state, and redirect_uri are required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
        }
        
        // Get stored verifier
