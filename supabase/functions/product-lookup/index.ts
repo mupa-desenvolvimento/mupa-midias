@@ -342,7 +342,7 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     console.error('[Lookup] Erro fatal:', err);
     return new Response(
-      JSON.stringify({ success: false, error: 'Erro interno no servidor' } as ProductResponse),
+      JSON.stringify({ success: false, error: 'Erro ao consultar produto. Tente novamente.' } as ProductResponse),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
