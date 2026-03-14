@@ -61,24 +61,87 @@ interface FolderBreadcrumb {
     setSelectedDesigns(new Set());
   }, []);
  
-   const callCanvaApi = useCallback(async (action: string, body: Record<string, unknown>) => {
-     const { data: { session } } = await supabase.auth.getSession();
-     if (!session) throw new Error('Not authenticated');
- 
-     const response = await fetch(
-       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/canva-auth?action=${action}`,
-       {
-         method: 'POST',
-         headers: {
-           'Authorization': `Bearer ${session.access_token}`,
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({ ...body, user_id: session.user.id }),
-       }
-     );
- 
-     return response.json();
-   }, []);
+  const getValidSession = useCallback(async (forceRefresh = false): Promise<Session> => {
+    let session: Session | null = null;
+
+    if (forceRefresh) {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data.session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+      session = data.session;
+    } else {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        throw new Error('Sessão inválida. Faça login novamente.');
+      }
+      session = data.session;
+    }
+
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
+    const expiresAtMs = (session.expires_at ?? 0) * 1000;
+    if (expiresAtMs > 0 && expiresAtMs <= Date.now() + 60_000) {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data.session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+      session = data.session;
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data.session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+      session = data.session;
+    }
+
+    return session;
+  }, []);
+
+  const callCanvaApi = useCallback(async (action: string, body: Record<string, unknown>) => {
+    const parseJsonSafe = async (response: Response) => {
+      try {
+        return await response.json();
+      } catch {
+        return {};
+      }
+    };
+
+    const request = async (accessToken: string) => {
+      return fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/canva-auth?action=${action}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+    };
+
+    let session = await getValidSession();
+    let response = await request(session.access_token);
+    let result = await parseJsonSafe(response);
+
+    if (response.status === 401) {
+      session = await getValidSession(true);
+      response = await request(session.access_token);
+      result = await parseJsonSafe(response);
+    }
+
+    if (!response.ok) {
+      const message = typeof (result as { error?: unknown })?.error === 'string'
+        ? (result as { error: string }).error
+        : `Falha na integração do Canva (${response.status})`;
+      throw new Error(message);
+    }
+
+    return result;
+  }, [getValidSession]);
  
    const checkConnection = useCallback(async () => {
      try {
