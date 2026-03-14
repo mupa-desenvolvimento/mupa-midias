@@ -15,10 +15,11 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoContent, AutoContentType, AutoContentItem } from "@/hooks/useAutoContent";
 import { useBirthdayPeople } from "@/hooks/useBirthdayPeople";
 import { BirthdayContainer } from "@/components/birthday-layouts/BirthdayContainer";
+import { BirthdaySlideDialog } from "@/components/birthday-layouts/BirthdaySlideDialog";
 import { BirthdayPeriod, BirthdayLayoutType } from "@/components/birthday-layouts/types";
 import {
   Upload, Cake, CalendarDays, CalendarRange, Calendar,
-  CreditCard, LayoutList, Grid3x3, Monitor,
+  CreditCard, LayoutList, Grid3x3, Monitor, PartyPopper, Plus,
 } from "lucide-react";
 import { WeatherSettings } from "./weather/WeatherSettings";
 import { NewsModule } from "./news/NewsModule";
@@ -50,6 +51,7 @@ const BIRTHDAY_LAYOUTS: { value: BirthdayLayoutType; label: string; icon: typeof
   { value: "list", label: "Lista", icon: LayoutList },
   { value: "grid", label: "Grid", icon: Grid3x3 },
   { value: "banner", label: "Banner TV", icon: Monitor },
+  { value: "celebration", label: "Celebração", icon: PartyPopper },
 ];
 
 const BIRTHDAY_PERIODS: { value: BirthdayPeriod; label: string; icon: typeof Calendar }[] = [
@@ -68,6 +70,7 @@ function BirthdayModulePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [period, setPeriod] = useState<BirthdayPeriod>("month");
   const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
+  const [slideDialogOpen, setSlideDialogOpen] = useState(false);
   const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
 
   const filteredPeople = useMemo(() => filterByPeriod(period), [allPeople, period, filterByPeriod]);
@@ -94,6 +97,14 @@ function BirthdayModulePage() {
       {/* Top row: Import + Filters */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setSlideDialogOpen(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Criar Slide
+          </Button>
           <input
             ref={fileInputRef}
             type="file"
@@ -199,9 +210,16 @@ function BirthdayModulePage() {
   }
 
   return (
-    <PageShell header={header} controls={controls} footer={null}>
-      <ListViewport>{content}</ListViewport>
-    </PageShell>
+    <>
+      <PageShell header={header} controls={controls} footer={null}>
+        <ListViewport>{content}</ListViewport>
+      </PageShell>
+      <BirthdaySlideDialog
+        open={slideDialogOpen}
+        onOpenChange={setSlideDialogOpen}
+        onSelect={(selectedLayout) => setLayout(selectedLayout)}
+      />
+    </>
   );
 }
 
