@@ -70,6 +70,7 @@ function BirthdayModulePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [period, setPeriod] = useState<BirthdayPeriod>("month");
   const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
+  const [slideDialogOpen, setSlideDialogOpen] = useState(false);
   const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
 
   const filteredPeople = useMemo(() => filterByPeriod(period), [allPeople, period, filterByPeriod]);
