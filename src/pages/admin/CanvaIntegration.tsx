@@ -123,21 +123,22 @@ import { Checkbox } from '@/components/ui/checkbox';
           </Card>
         </div>
        ) : (
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-muted-foreground">
-              Importe designs do Canva para suas playlists
-            </p>
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                Conectado
-              </Badge>
-              <Button variant="outline" onClick={disconnect}>
-                <Link2Off className="h-4 w-4 mr-2" />
-                Desconectar
-              </Button>
-            </div>
-          </div>
+          <div className="space-y-4">
+           <div className="flex items-center justify-between">
+             <p className="text-muted-foreground">
+               Importe designs do Canva para suas playlists
+             </p>
+             <div className="flex items-center gap-3">
+               <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
+                 <CheckCircle2 className="h-4 w-4 text-green-500" />
+                 Conectado
+               </Badge>
+               <Button variant="outline" onClick={disconnect}>
+                 <Link2Off className="h-4 w-4 mr-2" />
+                 Desconectar
+               </Button>
+             </div>
+           </div>
 
             <div className="flex items-center gap-1 text-sm flex-wrap">
               {folderBreadcrumbs.map((crumb, index) => (
