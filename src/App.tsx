@@ -143,6 +143,7 @@ function AppContent() {
            <Route path="/apresentacao" element={<Presentation />} />
           <Route path="/apresentacao-assai" element={<AssaiPresentation />} />
           <Route path="/mobile-demo" element={<MobileDemo />} />
+          <Route path="/motivational-tv" element={<MotivationalTV />} />
           {/* Canva OAuth callback - must be outside ProtectedRoute to handle redirect properly */}
           <Route path="/admin/canva/callback" element={<CanvaCallback />} />
           
