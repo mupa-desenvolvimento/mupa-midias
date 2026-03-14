@@ -241,70 +241,64 @@ interface FolderBreadcrumb {
     try {
       setIsExporting(prev => [...prev, designId]);
       
-      // 1. Export from Canva
-      const result = await callCanvaApi('export-design', {
-        designId,
+      // 1. Export from Canva (uses correct action name: export_design)
+      const result = await callCanvaApi('export_design', {
+        design_id: designId,
         format,
       });
 
-      if (result.success && result.jobId) {
-        // Poll for completion
-        let jobResult = await callCanvaApi('get-job', { jobId: result.jobId });
-        while (jobResult.status === 'in_progress') {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          jobResult = await callCanvaApi('get-job', { jobId: result.jobId });
-        }
-
-        if (jobResult.status !== 'success' || !jobResult.urls || jobResult.urls.length === 0) {
-          throw new Error('Export failed or no URLs returned');
-        }
-
-        const imageUrl = jobResult.urls[0];
-
-        // 2. Upload to Supabase Storage
-        const imageResponse = await fetch(imageUrl);
-        const blob = await imageResponse.blob();
-        const file = new File([blob], `${designTitle}.${format}`, { type: blob.type });
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('title', designTitle);
-        formData.append('description', `Importado do Canva em ${new Date().toLocaleString()}`);
-        formData.append('duration', '10');
-        formData.append('type', blob.type.startsWith('image/') ? 'image' : 'video');
-        formData.append('fileType', blob.type);
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Not authenticated');
-        
-        const uploadResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`,
-          {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${session.access_token}` },
-            body: formData,
-          }
-        );
-        
-        const uploadResult = await uploadResponse.json();
-        
-        if (uploadResponse.ok) {
-          toast({
-            title: 'Importado!',
-            description: `"${designTitle}" foi importado para sua biblioteca de mídia`,
-          });
-          return uploadResult.mediaItem;
-        } else {
-          throw new Error(uploadResult.error || 'Upload failed');
-        }
-      } else {
+      if (!result.success) {
         throw new Error(result.error || 'Export failed');
+      }
+
+      const exportUrls = result.export_urls;
+      if (!exportUrls || exportUrls.length === 0) {
+        throw new Error('Export completed but no URLs returned');
+      }
+
+      const imageUrl = exportUrls[0];
+
+      // 2. Upload to media library
+      const imageResponse = await fetch(imageUrl);
+      const blob = await imageResponse.blob();
+      const file = new File([blob], `${designTitle}.${format}`, { type: blob.type });
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', designTitle);
+      formData.append('description', `Importado do Canva em ${new Date().toLocaleString()}`);
+      formData.append('duration', '10');
+      formData.append('type', blob.type.startsWith('image/') ? 'image' : 'video');
+      formData.append('fileType', blob.type);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      
+      const uploadResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+          body: formData,
+        }
+      );
+      
+      const uploadResult = await uploadResponse.json();
+      
+      if (uploadResponse.ok) {
+        toast({
+          title: 'Importado!',
+          description: `"${designTitle}" foi importado para sua biblioteca de mídia`,
+        });
+        return uploadResult.mediaItem;
+      } else {
+        throw new Error(uploadResult.error || 'Upload failed');
       }
     } catch (error) {
       console.error('Error exporting design:', error);
       toast({
         title: 'Erro ao importar',
-        description: 'Não foi possível importar o design do Canva',
+        description: error instanceof Error ? error.message : 'Não foi possível importar o design do Canva',
         variant: 'destructive',
       });
       return null;

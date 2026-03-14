@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
     if (action === 'export_design') {
         const body = await req.json();
         const { design_id, format = 'png' } = body;
-        const user_id = authedUser.id; // Use verified JWT user
+        const user_id = authedUser.id;
         
         if (!design_id) {
           return new Response(
@@ -414,7 +414,7 @@ Deno.serve(async (req) => {
        
        const { data: connection } = await supabase
          .from('canva_connections')
-         .select('access_token')
+         .select('access_token, refresh_token, expires_at')
          .eq('user_id', user_id)
          .single();
        
@@ -425,13 +425,52 @@ Deno.serve(async (req) => {
          );
        }
        
+       let accessToken = connection.access_token;
+       
+       // Check if token needs refresh
+       if (new Date(connection.expires_at) <= new Date()) {
+         console.log('[Canva Auth] Token expired for export, refreshing...');
+         
+         const refreshResponse = await fetch(CANVA_TOKEN_URL, {
+           method: 'POST',
+           headers: { 
+             'Content-Type': 'application/x-www-form-urlencoded',
+             'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+           },
+           body: new URLSearchParams({
+             grant_type: 'refresh_token',
+             refresh_token: connection.refresh_token,
+           }).toString(),
+         });
+         
+         const refreshData = await refreshResponse.json();
+         
+         if (!refreshResponse.ok) {
+           console.error('[Canva Auth] Token refresh failed:', refreshData);
+           await supabase.from('canva_connections').delete().eq('user_id', user_id);
+           return new Response(
+             JSON.stringify({ error: 'Token expired, please reconnect', connected: false }),
+             { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+           );
+         }
+         
+         accessToken = refreshData.access_token;
+         const newExpiresAt = new Date(Date.now() + (refreshData.expires_in || 3600) * 1000).toISOString();
+         
+         await supabase.from('canva_connections').update({
+           access_token: accessToken,
+           refresh_token: refreshData.refresh_token || connection.refresh_token,
+           expires_at: newExpiresAt,
+         }).eq('user_id', user_id);
+       }
+       
        // Create export job
        console.log('[Canva API] Creating export job for design:', design_id);
        
        const exportResponse = await fetch(`${CANVA_API_BASE}/exports`, {
          method: 'POST',
          headers: {
-           'Authorization': `Bearer ${connection.access_token}`,
+           'Authorization': `Bearer ${accessToken}`,
            'Content-Type': 'application/json',
          },
          body: JSON.stringify({
@@ -462,7 +501,7 @@ Deno.serve(async (req) => {
          await new Promise(r => setTimeout(r, 2000));
          
          const statusResponse = await fetch(`${CANVA_API_BASE}/exports/${jobId}`, {
-           headers: { 'Authorization': `Bearer ${connection.access_token}` },
+           headers: { 'Authorization': `Bearer ${accessToken}` },
          });
          
          if (!statusResponse.ok) {

@@ -38,6 +38,7 @@ import { Checkbox } from '@/components/ui/checkbox';
     selectAll,
     clearSelection,
     exportSelectedDesigns,
+    exportDesign,
   } = useCanvaIntegration();
  
   // Load designs when connected
@@ -224,6 +225,7 @@ import { Checkbox } from '@/components/ui/checkbox';
                           isExporting={isExporting.includes(design.id)}
                           isSelected={selectedDesigns.has(design.id)}
                           onToggle={() => toggleSelection(design.id)}
+                          onImport={exportDesign}
                         />
                       ))}
                     </div>
@@ -253,7 +255,7 @@ import { Checkbox } from '@/components/ui/checkbox';
    );
  }
  
- interface DesignCardProps {
+interface DesignCardProps {
   design: {
     id: string;
     title: string;
@@ -264,15 +266,15 @@ import { Checkbox } from '@/components/ui/checkbox';
   isExporting: boolean;
   isSelected: boolean;
   onToggle: () => void;
+  onImport: (designId: string, designTitle: string) => Promise<any>;
 }
 
-function DesignCard({ design, isExporting, isSelected, onToggle }: DesignCardProps) {
-  const { exportDesign } = useCanvaIntegration();
+function DesignCard({ design, isExporting, isSelected, onToggle, onImport }: DesignCardProps) {
   const [importedId, setImportedId] = useState<string | null>(null);
   
   const handleImport = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const result = await exportDesign(design.id, design.title);
+    const result = await onImport(design.id, design.title);
     if (result?.id) {
       setImportedId(result.id);
     }
