@@ -42,6 +42,7 @@ import ProductDisplayConfig from "./pages/admin/ProductDisplayConfig";
 import ProductAnalytics from "./pages/admin/ProductAnalytics";
 import CanvaIntegration from "./pages/admin/CanvaIntegration";
 import CanvaEditor from "./pages/admin/CanvaEditor";
+import GraphicEditor from "./pages/admin/GraphicEditor";
 import InkyIntelligence from "./pages/admin/InkyIntelligence";
 import PriceCheckIntegrationsList from "./pages/admin/integrations/PriceCheckIntegrationsList";
 import PriceCheckIntegrationForm from "./pages/admin/integrations/PriceCheckIntegrationForm";
