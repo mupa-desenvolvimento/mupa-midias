@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Search, ListVideo, Edit, Trash2, Calendar, Clock, AlertTriangle, Layers } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, ListVideo, Edit, Trash2, Calendar, Clock, AlertTriangle, Layers, Loader2 } from "lucide-react";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PageShell } from "@/components/layout/PageShell";
@@ -422,153 +423,196 @@ const PlaylistsPage = () => {
         />
       }
     >
-      <ListViewport
-        contentClassName={
-          state.view === "grid"
-            ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
-            : "flex flex-col gap-4"
-        }
-      >
+      <ListViewport>
         {isLoading ? (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
+          <div className="flex h-40 items-center justify-center text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
             Carregando...
           </div>
         ) : totalPlaylists === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Nenhuma playlist encontrada
-            </CardContent>
-          </Card>
-        ) : (
-          paginatedPlaylists.map((playlist) => {
-            const status = getPlaylistStatus(playlist);
-            const schedule = playlist.schedule as Record<string, unknown> | null;
-
-            return (
-              <Card key={playlist.id} className="relative">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2">
-                      <ListVideo className="w-5 h-5 text-primary" />
-                      <CardTitle className="text-lg">{playlist.name}</CardTitle>
-                    </div>
-                    <Badge
-                      variant={
-                        status.color as
-                          | "default"
-                          | "secondary"
-                          | "destructive"
-                          | "outline"
-                      }
-                      className={status.status === "expiring" ? "bg-yellow-500 text-white" : ""}
-                    >
-                      {status.message}
-                    </Badge>
-                  </div>
-                  <CardDescription>{playlist.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {playlist.channel && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Canal:</span>
-                      <Badge variant="outline">{playlist.channel.name}</Badge>
-                    </div>
-                  )}
-
-                  {schedule && (
-                    <>
-                      {schedule.start_date && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Período:</span>
-                          <span>
-                            {format(
-                              parseISO(schedule.start_date as string),
-                              "dd/MM/yyyy",
-                              { locale: ptBR }
-                            )}
-                            {schedule.end_date &&
-                              ` - ${format(
-                                parseISO(schedule.end_date as string),
-                                "dd/MM/yyyy",
-                                { locale: ptBR }
-                              )}`}
-                          </span>
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+            <ListVideo className="h-12 w-12 opacity-40" />
+            <p>Nenhuma playlist encontrada</p>
+            <Button variant="outline" size="sm" onClick={() => navigate("/admin/playlists/new")}>
+              <Plus className="w-4 h-4 mr-2" />
+              Criar Playlist
+            </Button>
+          </div>
+        ) : state.view === "list" ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Canal</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Horário</TableHead>
+                <TableHead>Dias</TableHead>
+                <TableHead>Prioridade</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedPlaylists.map((playlist) => {
+                const status = getPlaylistStatus(playlist);
+                const schedule = playlist.schedule as Record<string, unknown> | null;
+                return (
+                  <TableRow key={playlist.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <ListVideo className="w-4 h-4 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{playlist.name}</p>
+                          {playlist.description && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">{playlist.description}</p>
+                          )}
                         </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {playlist.channel ? (
+                        <Badge variant="outline" className="text-xs">{playlist.channel.name}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
                       )}
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Horário:</span>
-                        <span>
-                          {schedule.start_time as string} -{" "}
-                          {schedule.end_time as string}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={status.color as "default" | "secondary" | "destructive" | "outline"}
+                        className={status.status === "expiring" ? "bg-yellow-500 text-white" : ""}
+                      >
+                        {status.message}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {schedule?.start_time ? `${schedule.start_time} - ${schedule.end_time}` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-0.5">
+                        {DAYS_OF_WEEK.map((day) => (
+                          <span
+                            key={day.value}
+                            className={`rounded px-1 text-[10px] font-medium ${
+                              (schedule?.days_of_week as number[])?.includes(day.value)
+                                ? "bg-primary/20 text-primary"
+                                : "text-muted-foreground/40"
+                            }`}
+                          >
+                            {day.label[0]}
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-center">
+                      {(schedule?.priority as number) || 5}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/admin/playlists/${playlist.id}/edit`)} className="gap-1">
+                          <Layers className="h-3.5 w-3.5" />
+                          <span className="hidden xl:inline">Conteúdo</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(playlist)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteId(playlist.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paginatedPlaylists.map((playlist) => {
+              const status = getPlaylistStatus(playlist);
+              const schedule = playlist.schedule as Record<string, unknown> | null;
+              return (
+                <Card key={playlist.id} className="flex flex-col">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ListVideo className="w-5 h-5 text-primary shrink-0" />
+                        <CardTitle className="text-base truncate">{playlist.name}</CardTitle>
+                      </div>
+                      <Badge
+                        variant={status.color as "default" | "secondary" | "destructive" | "outline"}
+                        className={`shrink-0 ${status.status === "expiring" ? "bg-yellow-500 text-white" : ""}`}
+                      >
+                        {status.message}
+                      </Badge>
+                    </div>
+                    {playlist.description && (
+                      <CardDescription className="line-clamp-2 text-xs">{playlist.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-2 text-sm">
+                    {playlist.channel && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground text-xs">Canal</span>
+                        <Badge variant="outline" className="text-xs">{playlist.channel.name}</Badge>
+                      </div>
+                    )}
+                    {schedule?.start_date && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground text-xs">Período</span>
+                        <span className="text-xs">
+                          {format(parseISO(schedule.start_date as string), "dd/MM/yy", { locale: ptBR })}
+                          {schedule.end_date && ` – ${format(parseISO(schedule.end_date as string), "dd/MM/yy", { locale: ptBR })}`}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Dias:</span>
-                        <div className="flex gap-1">
-                          {DAYS_OF_WEEK.map((day) => (
-                            <span
-                              key={day.value}
-                              className={`rounded px-1 text-xs ${
-                                (schedule.days_of_week as number[])?.includes(
-                                  day.value
-                                )
-                                  ? "bg-primary/20 text-primary"
-                                  : "text-muted-foreground/50"
-                              }`}
-                            >
-                              {day.label[0]}
-                            </span>
-                          ))}
-                        </div>
+                    )}
+                    {schedule?.start_time && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground text-xs">Horário</span>
+                        <span className="text-xs">{schedule.start_time as string} – {schedule.end_time as string}</span>
                       </div>
-                    </>
-                  )}
-
-                  {status.status === "expiring" && (
-                    <div className="flex items-center gap-2 rounded bg-yellow-500/10 p-2 text-sm text-yellow-600">
-                      <AlertTriangle className="h-4 w-4" />
-                      Playlist expira em breve
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs">Dias</span>
+                      <div className="flex gap-0.5">
+                        {DAYS_OF_WEEK.map((day) => (
+                          <span
+                            key={day.value}
+                            className={`rounded px-1 text-[10px] font-medium ${
+                              (schedule?.days_of_week as number[])?.includes(day.value)
+                                ? "bg-primary/20 text-primary"
+                                : "text-muted-foreground/40"
+                            }`}
+                          >
+                            {day.label[0]}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  )}
 
-                  {status.status === "expired" && (
-                    <div className="flex items-center gap-2 rounded bg-destructive/10 p-2 text-sm text-destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      Playlist expirada
-                    </div>
-                  )}
-
-                  <div className="flex justify-end space-x-2 border-t pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        navigate(`/admin/playlists/${playlist.id}/edit`)
-                      }
-                      className="gap-1"
-                    >
-                      <Layers className="h-4 w-4" />
+                    {(status.status === "expiring" || status.status === "expired") && (
+                      <div className={`flex items-center gap-2 rounded p-2 text-xs ${
+                        status.status === "expired" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-600"
+                      }`}>
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        {status.status === "expired" ? "Playlist expirada" : "Expira em breve"}
+                      </div>
+                    )}
+                  </CardContent>
+                  <div className="flex justify-end gap-1 p-3 pt-0 border-t mt-auto">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/admin/playlists/${playlist.id}/edit`)} className="gap-1">
+                      <Layers className="h-3.5 w-3.5" />
                       Conteúdo
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEdit(playlist)}
-                    >
-                      <Edit className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(playlist)}>
+                      <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteId(playlist.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteId(playlist.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })
+                </Card>
+              );
+            })}
+          </div>
         )}
       </ListViewport>
 
