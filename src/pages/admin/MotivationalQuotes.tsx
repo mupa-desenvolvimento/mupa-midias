@@ -331,6 +331,6 @@ export default function MotivationalQuotes() {
       <p className="text-[10px] text-muted-foreground text-center mt-8">
         Frases por ZenQuotes.io | Imagens por Pexels / Unsplash
       </p>
-    </PageShell>
+    </div>
   );
 }
