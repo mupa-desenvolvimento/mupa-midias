@@ -98,7 +98,7 @@ export default function MotivationalTV() {
         if (remainingRef.current.length === 0) {
           // Refetch when pool exhausted
           const data = await fetchQuotes();
-          const shuffled = shuffle(data);
+          const shuffled = shuffle(data as MotivationalQuote[]);
           remainingRef.current = shuffled;
           shownIdsRef.current.clear();
         }

@@ -126,7 +126,11 @@ export default function MotivationalQuotes() {
   });
 
   return (
-    <PageShell title="Frases Motivacionais" subtitle="Gerencie frases inspiradoras para exibição nas TVs">
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Frases Motivacionais</h1>
+        <p className="text-sm text-muted-foreground">Gerencie frases inspiradoras para exibição nas TVs</p>
+      </div>
       {/* Stats + Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 flex-wrap">
