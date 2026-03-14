@@ -106,24 +106,32 @@ export default function CanvaCallback() {
         
         console.log('[Canva Callback] Exchanging code for tokens with redirect_uri:', redirectUri);
         
-        const response = await fetch(
-           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/canva-auth?action=exchange_code`,
-           {
-             method: 'POST',
-             headers: {
-               'Authorization': `Bearer ${session.access_token}`,
-               'Content-Type': 'application/json',
-             },
-             body: JSON.stringify({
-               code,
-               state,
-               redirect_uri: redirectUri,
-               user_id: session.user.id,
-             }),
-           }
-         );
- 
-         const result = await response.json();
+        const exchangeRequest = async (accessToken: string) => {
+          return fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/canva-auth?action=exchange_code`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              code,
+              state,
+              redirect_uri: redirectUri,
+              user_id: session.user.id,
+            }),
+          });
+        };
+
+        let response = await exchangeRequest(session.access_token);
+        let result = await response.json();
+
+        if (response.status === 401) {
+          const { data: refreshedSessionData, error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError && refreshedSessionData.session) {
+            response = await exchangeRequest(refreshedSessionData.session.access_token);
+            result = await response.json();
+          }
+        }
  
          if (result.success) {
            console.log('[Canva Callback] Token exchange successful');
