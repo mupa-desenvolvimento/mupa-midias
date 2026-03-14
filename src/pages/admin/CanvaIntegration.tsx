@@ -60,72 +60,68 @@ import { Checkbox } from '@/components/ui/checkbox';
  
    return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-muted-foreground">
-            Conecte sua conta do Canva para importar designs para suas playlists
-          </p>
+      {!isConnected ? (
+        <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+          <Card className="w-full max-w-md shadow-xl border-border/60">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
+                <Image className="h-7 w-7 text-primary" />
+              </div>
+              <CardTitle className="text-xl">Conectar ao Canva</CardTitle>
+              <CardDescription className="text-sm">
+                Importe seus designs diretamente para a biblioteca de mídia
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5 pt-2">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/30">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Image className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Importar designs</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      Exporte como PNG de alta qualidade
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/30">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <FolderOpen className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Navegar por pastas</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      Acesse pastas pessoais e da equipe
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/30">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Download className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Importação em lote</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      Selecione vários designs de uma vez
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={connect} className="w-full" size="lg">
+                <Link2 className="h-4 w-4 mr-2" />
+                Conectar ao Canva
+              </Button>
+              
+              <p className="text-xs text-center text-muted-foreground">
+                Você será redirecionado para o Canva para autorizar o acesso.
+              </p>
+            </CardContent>
+          </Card>
         </div>
-         
-         {isConnected ? (
-           <div className="flex items-center gap-3">
-             <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
-               <CheckCircle2 className="h-4 w-4 text-green-500" />
-               Conectado
-             </Badge>
-             <Button variant="outline" onClick={disconnect}>
-               <Link2Off className="h-4 w-4 mr-2" />
-               Desconectar
-             </Button>
-           </div>
-         ) : (
-           <Button onClick={connect}>
-             <Link2 className="h-4 w-4 mr-2" />
-             Conectar ao Canva
-           </Button>
-         )}
-       </div>
- 
-       {!isConnected ? (
-         <Card className="max-w-2xl">
-           <CardHeader>
-             <CardTitle>Conecte sua conta do Canva</CardTitle>
-             <CardDescription>
-               Ao conectar sua conta, você poderá visualizar e importar seus designs diretamente para a biblioteca de mídia.
-             </CardDescription>
-           </CardHeader>
-           <CardContent className="space-y-4">
-             <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-               <Image className="h-5 w-5 mt-0.5 text-primary" />
-               <div>
-                 <p className="font-medium">Importar designs como imagens</p>
-                 <p className="text-sm text-muted-foreground">
-                   Seus designs serão exportados como imagens PNG de alta qualidade e salvos na biblioteca de mídia.
-                 </p>
-               </div>
-             </div>
-             
-             <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-               <FolderOpen className="h-5 w-5 mt-0.5 text-primary" />
-               <div>
-                 <p className="font-medium">Acesso a pastas e equipe</p>
-                 <p className="text-sm text-muted-foreground">
-                   Navegue por suas pastas pessoais e designs compartilhados da equipe.
-                 </p>
-               </div>
-             </div>
-             
-             <Button onClick={connect} className="w-full" size="lg">
-               <Link2 className="h-4 w-4 mr-2" />
-               Conectar ao Canva
-             </Button>
-             
-             <p className="text-xs text-center text-muted-foreground">
-               Você será redirecionado para o Canva para autorizar o acesso.
-             </p>
-           </CardContent>
-         </Card>
        ) : (
          <div className="space-y-4">
             {/* Breadcrumbs */}
