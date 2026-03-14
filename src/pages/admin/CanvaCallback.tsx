@@ -1,4 +1,5 @@
- import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
