@@ -41,13 +41,13 @@ export default function GraphicEditor() {
   }, [handleZoom]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden">
-      {/* Back button + Topbar */}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-background">
+      {/* Topbar */}
       <div className="flex items-center">
         <Button
           variant="ghost" size="icon"
           className="h-14 w-12 rounded-none border-r border-border shrink-0"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/admin/canva")}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>

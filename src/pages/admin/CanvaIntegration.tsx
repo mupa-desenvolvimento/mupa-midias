@@ -174,24 +174,32 @@ import { Checkbox } from '@/components/ui/checkbox';
               ))}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {selectedDesigns.size > 0 && (
-                <Button onClick={() => exportSelectedDesigns()}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Importar ({selectedDesigns.size})
-                </Button>
-              )}
+             {/* Actions */}
+             <div className="flex items-center gap-3">
+               {selectedDesigns.size > 0 && (
+                 <Button onClick={() => exportSelectedDesigns()}>
+                   <Download className="h-4 w-4 mr-2" />
+                   Importar ({selectedDesigns.size})
+                 </Button>
+               )}
 
-              <Button 
-                variant="outline" 
-                onClick={() => loadFolderItems(currentFolderId)} 
-                disabled={isLoadingDesigns}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingDesigns ? 'animate-spin' : ''}`} />
-                Atualizar
-              </Button>
-            </div>
+               <Button 
+                 variant="outline" 
+                 onClick={() => navigate('/admin/graphic-editor')}
+               >
+                 <Paintbrush className="h-4 w-4 mr-2" />
+                 Editor Gráfico
+               </Button>
+
+               <Button 
+                 variant="outline" 
+                 onClick={() => loadFolderItems(currentFolderId)} 
+                 disabled={isLoadingDesigns}
+               >
+                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingDesigns ? 'animate-spin' : ''}`} />
+                 Atualizar
+               </Button>
+             </div>
 
           {/* Designs Grid */}
           <ScrollArea className="h-[calc(100vh-300px)]">
