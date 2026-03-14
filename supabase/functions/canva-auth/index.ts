@@ -72,15 +72,16 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
  
      // Action: Get authorization URL
-     if (action === 'get_auth_url') {
-       const body = await req.json();
-       const { redirect_uri, user_id } = body;
-       
-       if (!redirect_uri || !user_id) {
-         return new Response(
-           JSON.stringify({ error: 'redirect_uri and user_id are required' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
+    if (action === 'get_auth_url') {
+        const body = await req.json();
+        const { redirect_uri } = body;
+        const user_id = authedUser.id; // Use verified JWT user
+        
+        if (!redirect_uri) {
+          return new Response(
+            JSON.stringify({ error: 'redirect_uri is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
        }
        
        const codeVerifier = generateCodeVerifier();
