@@ -70,7 +70,7 @@ export default function MotivationalTV() {
   useEffect(() => {
     (async () => {
       const data = await fetchQuotes();
-      const shuffled = shuffle(data);
+      const shuffled = shuffle(data as MotivationalQuote[]);
       setQuotes(shuffled);
       remainingRef.current = shuffled.slice(1);
       shownIdsRef.current = new Set(shuffled.length > 0 ? [shuffled[0].id] : []);
