@@ -50,21 +50,44 @@ export default function CanvaCallback() {
          return;
        }
  
-       // Retry getting session for up to 5 seconds
-       let session = null;
-       let attempts = 0;
-       const maxAttempts = 10;
- 
-       while (!session && attempts < maxAttempts) {
-         const { data } = await supabase.auth.getSession();
-         session = data.session;
-         
-         if (!session) {
-           attempts++;
-           console.log(`[Canva Callback] Waiting for session... attempt ${attempts}/${maxAttempts}`);
-           await new Promise(r => setTimeout(r, 500));
-         }
-       }
+        // Retry getting a valid session for up to 5 seconds
+        let session = null;
+        let attempts = 0;
+        const maxAttempts = 10;
+
+        while (!session && attempts < maxAttempts) {
+          const { data } = await supabase.auth.getSession();
+          let currentSession = data.session;
+
+          if (currentSession?.expires_at && currentSession.expires_at * 1000 <= Date.now() + 60_000) {
+            const { data: refreshedData } = await supabase.auth.refreshSession();
+            currentSession = refreshedData.session;
+          }
+
+          if (currentSession) {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+
+            if (!userError && userData.user) {
+              session = currentSession;
+              break;
+            }
+
+            const { data: refreshedData } = await supabase.auth.refreshSession();
+            currentSession = refreshedData.session;
+
+            if (currentSession) {
+              const { data: refreshedUserData, error: refreshedUserError } = await supabase.auth.getUser();
+              if (!refreshedUserError && refreshedUserData.user) {
+                session = currentSession;
+                break;
+              }
+            }
+          }
+
+          attempts++;
+          console.log(`[Canva Callback] Waiting for valid session... attempt ${attempts}/${maxAttempts}`);
+          await new Promise(r => setTimeout(r, 500));
+        }
  
        if (!session) {
          console.error('[Canva Callback] No session found after retries');
