@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Download } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 export function PWAUpdatePrompt() {
   const { toast } = useToast();
@@ -9,6 +10,19 @@ export function PWAUpdatePrompt() {
   const [offlineReady, setOfflineReady] = useState(false);
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => r.unregister());
+        }).catch(() => {});
+      }
+      if ('caches' in window) {
+        caches.keys().then((keys) => {
+          keys.forEach((k) => caches.delete(k));
+        }).catch(() => {});
+      }
+      return;
+    }
     if (!('serviceWorker' in navigator)) return;
     let cancelled = false;
 

@@ -48,7 +48,7 @@ export function GlassWeatherLayout({ location, orientation, className }: Weather
           <p className="text-xl capitalize opacity-80 font-light mb-6">{location.weather_description}</p>
 
           {/* Stats glass cards */}
-          <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+          <div className="grid grid-cols-2 gap-3 w-full">
             {[
               { icon: Wind, label: "Vento", value: `${location.wind_speed} km/h` },
               { icon: Droplets, label: "Umidade", value: `${location.humidity}%` },

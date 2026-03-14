@@ -10,10 +10,13 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.util.Log;
 import com.getcapacitor.BridgeActivity;
 import io.audient.display.player.NativeVideoPlayerPlugin;
 
@@ -59,6 +62,31 @@ public class MainActivity extends BridgeActivity {
       WebSettings settings = webView.getSettings();
       settings.setMediaPlaybackRequiresUserGesture(false);
       settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+      settings.setUseWideViewPort(true);
+      settings.setLoadWithOverviewMode(false);
+      settings.setSupportZoom(false);
+      settings.setBuiltInZoomControls(false);
+      settings.setDisplayZoomControls(false);
+      settings.setTextZoom(100);
+
+      try {
+        ViewGroup.LayoutParams lp = webView.getLayoutParams();
+        if (lp == null) {
+          webView.setLayoutParams(new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+          ));
+        } else {
+          lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+          lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+          webView.setLayoutParams(lp);
+        }
+        webView.setPadding(0, 0, 0, 0);
+        webView.setInitialScale(100);
+        webView.requestLayout();
+      } catch (Exception e) {
+        Log.w("MainActivity", "Failed to force WebView layout/scale", e);
+      }
       
       webView.setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
         @Override

@@ -66,7 +66,7 @@ export function ForecastGridLayout({ location, orientation, className }: Weather
         </div>
       </div>
       
-      <div className={`grid gap-4 w-full max-w-[1600px] ${isVertical ? 'grid-cols-2' : 'grid-cols-7'}`}>
+      <div className={`grid gap-4 w-full ${isVertical ? 'grid-cols-2' : 'grid-cols-7'}`}>
         {days.map((day: any, idx: number) => (
           <div 
             key={idx} 

@@ -15,6 +15,7 @@ import {
   Video,
   FileText,
   Newspaper,
+  CloudSun,
   Clock,
   Calendar,
   Zap,
@@ -75,6 +76,7 @@ const getMediaIcon = (type: string) => {
     case "video": return Video;
     case "image": return Image;
     case "news": return Newspaper;
+    case "weather": return CloudSun;
     default: return FileText;
   }
 };
@@ -135,6 +137,7 @@ const MediaLibraryPanel = ({ onAddMedia, itemsLength }: {
             { value: "image", label: "Imagens" },
             { value: "video", label: "Vídeos" },
             { value: "news", label: "Notícias" },
+            { value: "weather", label: "Clima" },
           ].map((filter) => (
             <button
               key={filter.value}
@@ -292,6 +295,20 @@ const AutoContentPanel = ({
       });
   }, [mediaItems, search, typeFilter]);
 
+  const filteredWeatherSlides = useMemo(() => {
+    const q = search.toLowerCase();
+    const matchesType = typeFilter === "all" || typeFilter === "weather";
+
+    if (!matchesType) return [];
+
+    return mediaItems
+      .filter((m) => m.status === "active" && m.type === "weather")
+      .filter((m) => {
+        if (!q) return true;
+        return (m.name || "").toLowerCase().includes(q);
+      });
+  }, [mediaItems, search, typeFilter]);
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="p-3 space-y-2 border-b border-border">
@@ -337,12 +354,54 @@ const AutoContentPanel = ({
           <div className="p-4 text-center text-muted-foreground text-sm">
             Carregando...
           </div>
-        ) : filteredItems.length === 0 && filteredNewsSlides.length === 0 ? (
+        ) : filteredItems.length === 0 && filteredNewsSlides.length === 0 && filteredWeatherSlides.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
             Nenhum conteúdo automático
           </div>
         ) : (
           <div className="flex flex-col gap-2 p-3">
+            {filteredWeatherSlides.length > 0 && (
+              <div className="pt-1 pb-1">
+                <p className="text-[10px] text-muted-foreground">Slides de Clima</p>
+              </div>
+            )}
+            {filteredWeatherSlides.map((media) => {
+              const meta = media.metadata as any;
+              const subtitle = meta?.weather_location_id ? "Clima (local configurado)" : null;
+
+              return (
+                <div
+                  key={media.id}
+                  className="flex items-start gap-3 p-2 rounded-lg border border-border bg-muted/60"
+                >
+                  <div className="w-12 h-12 rounded-md bg-background flex items-center justify-center text-primary flex-shrink-0">
+                    <CloudSun className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium truncate">{media.name}</p>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                        Clima
+                      </span>
+                    </div>
+                    {subtitle ? (
+                      <p className="text-[10px] text-muted-foreground line-clamp-2">
+                        {subtitle}
+                      </p>
+                    ) : null}
+                    <div className="flex items-center justify-end pt-1">
+                      <button
+                        onClick={() => onAddMedia(media, itemsLength)}
+                        className="inline-flex items-center justify-center h-7 px-2 rounded-md text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Adicionar na playlist
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
             {filteredNewsSlides.length > 0 && (
               <div className="pt-1 pb-1">
                 <p className="text-[10px] text-muted-foreground">Slides de Notícias</p>

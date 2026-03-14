@@ -362,19 +362,13 @@ const WebViewPlayer = () => {
     );
   }
 
-  const getObjectFit = (): "cover" | "contain" | "fill" => {
-    switch (activePlaylist?.content_scale) {
-      case "contain": return "contain";
-      case "fill": return "fill";
-      case "cover": default: return "cover";
-    }
-  };
+  const getObjectFit = (): "cover" | "contain" | "fill" => "fill";
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden select-none">
       {Capacitor.isNativePlatform() && (
         <div className="absolute top-2 left-2 z-50 px-2 py-1 rounded bg-black/70 text-[10px] text-white/70">
-          <span>WebViewPlayer • rota: {deviceCode ? `/webview/${deviceCode}` : "/android-player"}</span>
+          <span>WebViewPlayer • build: {__BUILD_ID__} • rota: {deviceCode ? `/webview/${deviceCode}` : "/android-player"}</span>
         </div>
       )}
       {/* Update notification */}

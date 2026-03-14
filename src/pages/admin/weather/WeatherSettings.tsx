@@ -8,16 +8,52 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, RefreshCw, CloudSun, LayoutGrid, List, Clock } from "lucide-react";
+import { Trash2, RefreshCw, CloudSun, LayoutGrid, List, Clock, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import { WeatherPreview } from "./WeatherPreview";
 import { useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WeatherContainer } from "@/components/weather-layouts/WeatherContainer";
+import { supabase } from "@/integrations/supabase/client";
 
 export function WeatherSettings() {
   const { locations, isLoading, addLocation, removeLocation, toggleActive, setDefault, forceUpdate, updateSettings } = useWeather();
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
+  const [creatingSlideForId, setCreatingSlideForId] = useState<string | null>(null);
+
+  const handleCreateDeviceSlide = async (loc: WeatherLocation) => {
+    if (!loc.is_active) {
+      toast.error("Ative esta cidade para projetar no dispositivo.");
+      return;
+    }
+    setCreatingSlideForId(loc.id);
+    try {
+      const duration = loc.type_view === "slide" ? (loc.display_time || 10) : 10;
+      const name = `Clima - ${loc.city}`;
+
+      const { error } = await supabase
+        .from("media_items")
+        .insert({
+          name,
+          type: "weather",
+          file_url: null,
+          thumbnail_url: null,
+          status: "active",
+          duration,
+          metadata: {
+            weather_location_id: loc.id,
+          } as any,
+        });
+
+      if (error) throw error;
+
+      toast.success("Slide de clima criado. Adicione na playlist para projetar no dispositivo.");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao criar slide de clima");
+    } finally {
+      setCreatingSlideForId(null);
+    }
+  };
 
   const handleAddLocation = (city: any) => {
     addLocation.mutate({
@@ -145,6 +181,7 @@ export function WeatherSettings() {
                             <SelectItem value="grid">Forecast Grid</SelectItem>
                             <SelectItem value="glass">Glassmorphism</SelectItem>
                             <SelectItem value="neon">Neon / Cyber</SelectItem>
+                            <SelectItem value="windows">Windows Clean</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -237,6 +274,15 @@ export function WeatherSettings() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <WeatherPreview location={loc} />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleCreateDeviceSlide(loc)}
+                            title="Criar slide para projetar no dispositivo"
+                            disabled={creatingSlideForId === loc.id}
+                          >
+                            <Monitor className="h-4 w-4" />
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="icon"
@@ -267,6 +313,16 @@ export function WeatherSettings() {
                 <Card key={loc.id} className="overflow-hidden relative group">
                   <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <WeatherPreview location={loc} />
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleCreateDeviceSlide(loc)}
+                      title="Criar slide para projetar no dispositivo"
+                      disabled={creatingSlideForId === loc.id}
+                    >
+                      <Monitor className="h-4 w-4" />
+                    </Button>
                     <Button 
                       variant="secondary" 
                       size="icon" 

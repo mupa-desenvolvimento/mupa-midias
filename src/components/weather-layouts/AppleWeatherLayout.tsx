@@ -56,7 +56,7 @@ export function AppleWeatherLayout({ location, orientation, className }: Weather
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className={`bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 z-10 ${isVertical ? 'w-full' : 'flex-1 max-w-md h-full'}`}
+            className={`bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 z-10 ${isVertical ? 'w-full' : 'flex-1 h-full min-w-0'}`}
           >
             <div className="flex items-center gap-2 mb-4 opacity-70 border-b border-white/10 pb-2">
               <span className="text-xs font-semibold uppercase tracking-wider">Previsão por hora</span>
@@ -86,7 +86,7 @@ export function AppleWeatherLayout({ location, orientation, className }: Weather
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className={`bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10 z-10 ${isVertical ? 'flex-1' : 'flex-1 max-w-md h-full'}`}
+          className={`bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10 z-10 ${isVertical ? 'flex-1' : 'flex-1 h-full min-w-0'}`}
         >
           <div className="flex items-center gap-2 mb-4 opacity-70 border-b border-white/10 pb-2">
              <span className="text-xs font-semibold uppercase tracking-wider">Previsão 5 dias</span>

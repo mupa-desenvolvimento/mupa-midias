@@ -6,8 +6,9 @@ import { ModernCardLayout } from "./ModernCardLayout";
 import { ForecastGridLayout } from "./ForecastGridLayout";
 import { GlassWeatherLayout } from "./GlassWeatherLayout";
 import { NeonWeatherLayout } from "./NeonWeatherLayout";
+import { WindowsWeatherLayout } from "./WindowsWeatherLayout";
 
-export type WeatherLayoutType = "apple" | "minimal" | "card" | "grid" | "glass" | "neon";
+export type WeatherLayoutType = "apple" | "minimal" | "card" | "grid" | "glass" | "neon" | "windows";
 
 interface WeatherContainerProps extends WeatherLayoutProps {
   layoutOverride?: WeatherLayoutType;
@@ -36,6 +37,8 @@ export function WeatherContainer({ location, orientation = "horizontal", classNa
       return <GlassWeatherLayout {...props} />;
     case "neon":
       return <NeonWeatherLayout {...props} />;
+    case "windows":
+      return <WindowsWeatherLayout {...props} />;
     case "apple":
     default:
       return <AppleWeatherLayout {...props} />;

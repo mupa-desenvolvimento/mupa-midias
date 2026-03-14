@@ -196,17 +196,7 @@ const OfflinePlayer = () => {
     setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
   }, [items.length]);
 
-  const getObjectFit = (): "cover" | "contain" | "fill" => {
-    switch (activePlaylist?.content_scale) {
-      case "contain":
-        return "contain";
-      case "fill":
-        return "fill";
-      case "cover":
-      default:
-        return "cover";
-    }
-  };
+  const getObjectFit = (): "cover" | "contain" | "fill" => "fill";
 
   // Track media views
   useEffect(() => {
@@ -599,7 +589,7 @@ const OfflinePlayer = () => {
   const isOverlayActive = terminalMode !== "player" && terminalMode !== "product";
 
   return (
-    <div className="relative min-h-screen bg-black overflow-hidden select-none">
+    <div className="fixed inset-0 bg-black overflow-hidden select-none">
       {/* Barcode scanner - always active in player mode */}
       <EanInput
         isVisible={terminalMode === "player"}
@@ -608,6 +598,11 @@ const OfflinePlayer = () => {
         onReset={handleReset}
         alwaysListenForScanner={true}
       />
+      {Capacitor.isNativePlatform() && (
+        <div className="absolute top-2 left-2 z-50 px-2 py-1 rounded bg-black/70 text-[10px] text-white/70">
+          <span>OfflinePlayer • build: {__BUILD_ID__} • rota: {deviceCode ? `/play/${deviceCode}` : "/play/:deviceCode"}</span>
+        </div>
+      )}
 
       {/* Product lookup overlay */}
       {terminalMode === "product" && (
@@ -636,8 +631,7 @@ const OfflinePlayer = () => {
       {/* Media player background */}
       <div
         className={cn(
-          "relative w-full",
-          isPortrait ? "h-1/2" : "h-screen",
+          "relative w-screen h-screen",
           (terminalMode === "product" || isOverlayActive) ? "opacity-20 pointer-events-none" : "opacity-100"
         )}
       >
