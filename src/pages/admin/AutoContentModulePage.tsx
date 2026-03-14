@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoContent, AutoContentType, AutoContentItem } from "@/hooks/useAutoContent";
 import { useBirthdayPeople } from "@/hooks/useBirthdayPeople";
 import { BirthdayContainer } from "@/components/birthday-layouts/BirthdayContainer";
+import { BirthdaySlideDialog } from "@/components/birthday-layouts/BirthdaySlideDialog";
 import { BirthdayPeriod, BirthdayLayoutType } from "@/components/birthday-layouts/types";
 import {
   Upload, Cake, CalendarDays, CalendarRange, Calendar,
