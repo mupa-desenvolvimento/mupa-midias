@@ -59,6 +59,26 @@ Deno.serve(async (req) => {
         );
       }
 
+      // --- INPUT VALIDATION ---
+      if (payload.detections.length > 100) {
+        return new Response(
+          JSON.stringify({ error: "Máximo de 100 detecções por requisição" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (payload.device_serial.length > 200) {
+        return new Response(
+          JSON.stringify({ error: "device_serial muito longo" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const validGenders = ["male", "female", "unknown"];
+      const validEmotions = ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral", "unknown"];
+      const validAgeGroups = ["child", "teen", "young_adult", "adult", "senior", "unknown"];
+      // --- END INPUT VALIDATION ---
+
       // Buscar dispositivo pelo serial (device_code)
       const { data: device } = await supabase
         .from("devices")
@@ -67,26 +87,51 @@ Deno.serve(async (req) => {
         .single();
 
       // Preparar registros para inserção com novos campos
-      const detectionLogs = payload.detections.map((detection) => ({
-        device_id: device?.id || null,
-        device_serial: payload.device_serial,
-        device_nickname: payload.device_nickname,
-        face_descriptor: detection.face_descriptor || null,
-        confidence: detection.confidence || null,
-        is_facing_camera: detection.is_facing_camera ?? true,
-        detected_at: detection.detected_at || new Date().toISOString(),
-        metadata: detection.metadata || {},
-        // Novos campos de analytics
-        age: detection.age || null,
-        age_group: detection.age_group || null,
-        gender: detection.gender || null,
-        emotion: detection.emotion || null,
-        emotion_confidence: detection.emotion_confidence || null,
-        attention_duration: detection.attention_duration || null,
-        content_id: detection.content_id || null,
-        content_name: detection.content_name || null,
-        playlist_id: detection.playlist_id || null,
-      }));
+      const detectionLogs = payload.detections.map((detection) => {
+        // Validate face_descriptor size
+        const faceDescriptor = Array.isArray(detection.face_descriptor) && detection.face_descriptor.length <= 128
+          ? detection.face_descriptor
+          : null;
+
+        // Validate metadata size (max 10KB serialized)
+        let metadata = detection.metadata || {};
+        try {
+          if (JSON.stringify(metadata).length > 10240) {
+            metadata = {};
+          }
+        } catch {
+          metadata = {};
+        }
+
+        // Sanitize enum fields
+        const gender = detection.gender && validGenders.includes(detection.gender) ? detection.gender : null;
+        const emotion = detection.emotion && validEmotions.includes(detection.emotion) ? detection.emotion : null;
+        const ageGroup = detection.age_group && validAgeGroups.includes(detection.age_group) ? detection.age_group : null;
+
+        // Validate string lengths
+        const contentName = detection.content_name ? String(detection.content_name).slice(0, 500) : null;
+        const deviceNickname = payload.device_nickname ? String(payload.device_nickname).slice(0, 200) : null;
+
+        return {
+          device_id: device?.id || null,
+          device_serial: payload.device_serial,
+          device_nickname: deviceNickname,
+          face_descriptor: faceDescriptor,
+          confidence: typeof detection.confidence === "number" ? Math.min(Math.max(detection.confidence, 0), 1) : null,
+          is_facing_camera: detection.is_facing_camera ?? true,
+          detected_at: detection.detected_at || new Date().toISOString(),
+          metadata,
+          age: typeof detection.age === "number" ? Math.min(Math.max(Math.round(detection.age), 0), 120) : null,
+          age_group: ageGroup,
+          gender,
+          emotion,
+          emotion_confidence: typeof detection.emotion_confidence === "number" ? Math.min(Math.max(detection.emotion_confidence, 0), 1) : null,
+          attention_duration: typeof detection.attention_duration === "number" ? Math.min(Math.max(detection.attention_duration, 0), 3600) : null,
+          content_id: detection.content_id || null,
+          content_name: contentName,
+          playlist_id: detection.playlist_id || null,
+        };
+      });
 
       // Inserir registros
       const { data, error } = await supabase

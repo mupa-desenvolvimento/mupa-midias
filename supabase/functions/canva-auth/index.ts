@@ -25,28 +25,51 @@
    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
  }
  
- Deno.serve(async (req) => {
-   if (req.method === 'OPTIONS') {
-     return new Response('ok', { headers: corsHeaders });
-   }
- 
-   try {
-     const url = new URL(req.url);
-     const action = url.searchParams.get('action');
-     
-     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-     const clientId = Deno.env.get('CANVA_CLIENT_ID');
-     const clientSecret = Deno.env.get('CANVA_CLIENT_SECRET');
-     
-     if (!clientId || !clientSecret) {
-       return new Response(
-         JSON.stringify({ error: 'Canva credentials not configured' }),
-         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-       );
-     }
- 
-     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const action = url.searchParams.get('action');
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const clientId = Deno.env.get('CANVA_CLIENT_ID');
+    const clientSecret = Deno.env.get('CANVA_CLIENT_SECRET');
+    
+    if (!clientId || !clientSecret) {
+      return new Response(
+        JSON.stringify({ error: 'Canva credentials not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --- AUTH CHECK: Verify JWT and enforce user_id match ---
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const anonClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user: authedUser }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !authedUser) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    // --- END AUTH CHECK ---
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
  
      // Action: Get authorization URL
      if (action === 'get_auth_url') {
