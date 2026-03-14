@@ -62,12 +62,25 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours (formerly cacheTime)
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
       retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if ((error as Error)?.message?.includes('4')) return false;
-        return failureCount < 3;
+        const message = (error as Error)?.message ?? "";
+        // Don't retry auth errors, not found, or forbidden
+        if (
+          message.includes("401") ||
+          message.includes("403") ||
+          message.includes("404") ||
+          message.includes("JWT") ||
+          message.includes("Não autenticado")
+        ) {
+          return false;
+        }
+        return failureCount < 2;
       },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    },
+    mutations: {
+      retry: false,
     },
   },
 });
