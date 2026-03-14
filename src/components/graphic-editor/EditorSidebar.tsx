@@ -1,9 +1,8 @@
 import { useRef, useState } from "react";
 import {
-  Type, Square, Circle, Minus, Triangle, Upload, Search, X, Loader2,
+  Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
   Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
-  Layers, GalleryHorizontalEnd, Bold, Italic, Underline, AlignLeft, AlignCenter,
-  AlignRight, Grid3X3,
+  Layers, GalleryHorizontalEnd, Grid3X3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MediaGalleryItem {
   id: string;
@@ -42,13 +42,14 @@ interface Props {
   galleryLoading: boolean;
 }
 
-type SearchSource = "picsum" | "unsplash" | "pexels";
+type SearchSource = "pexels" | "unsplash" | "pixabay";
 
 interface SearchResult {
   id: string;
   url: string;
   thumb: string;
   source: string;
+  photographer?: string;
 }
 
 export function EditorSidebar({
@@ -64,7 +65,7 @@ export function EditorSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [activeSource, setActiveSource] = useState<SearchSource>("picsum");
+  const [activeSource, setActiveSource] = useState<SearchSource>("pexels");
   const [galleryFilter, setGalleryFilter] = useState("");
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,45 +77,31 @@ export function EditorSidebar({
   const searchImages = async () => {
     if (!searchQuery.trim()) return;
     setSearching(true);
+    setSearchResults([]);
     try {
-      const results: SearchResult[] = [];
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (activeSource === "picsum") {
-        for (let i = 0; i < 12; i++) {
-          const seed = `${searchQuery.replace(/\s/g, "")}${i}`;
-          results.push({
-            id: `picsum-${i}`,
-            url: `https://picsum.photos/seed/${seed}/800/600`,
-            thumb: `https://picsum.photos/seed/${seed}/200/150`,
-            source: "Picsum",
-          });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-search`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            query: searchQuery.trim(),
+            source: activeSource,
+            per_page: 12,
+          }),
         }
-      } else if (activeSource === "unsplash") {
-        // Unsplash Source (no API key needed for basic use)
-        const terms = searchQuery.replace(/\s/g, ",");
-        for (let i = 0; i < 12; i++) {
-          results.push({
-            id: `unsplash-${i}`,
-            url: `https://source.unsplash.com/800x600/?${terms}&sig=${i}`,
-            thumb: `https://source.unsplash.com/200x150/?${terms}&sig=${i}`,
-            source: "Unsplash",
-          });
-        }
-      } else if (activeSource === "pexels") {
-        // Use Picsum as fallback for Pexels (same quality, no key needed)
-        for (let i = 0; i < 12; i++) {
-          const seed = `pexels-${searchQuery.replace(/\s/g, "")}${i}`;
-          results.push({
-            id: `pexels-${i}`,
-            url: `https://picsum.photos/seed/${seed}/800/600`,
-            thumb: `https://picsum.photos/seed/${seed}/200/150`,
-            source: "Pexels",
-          });
-        }
-      }
+      );
 
-      setSearchResults(results);
-    } catch {
+      if (!response.ok) throw new Error("Search failed");
+      const data = await response.json();
+      setSearchResults(data.results || []);
+    } catch (err) {
+      console.error("Image search error:", err);
       setSearchResults([]);
     } finally {
       setSearching(false);
@@ -238,14 +225,14 @@ export function EditorSidebar({
           <div className="p-3 space-y-3">
             {/* Source selector */}
             <div className="flex gap-1">
-              {(["picsum", "unsplash", "pexels"] as SearchSource[]).map((src) => (
+              {(["pexels", "unsplash", "pixabay"] as SearchSource[]).map((src) => (
                 <Badge
                   key={src}
                   variant={activeSource === src ? "default" : "outline"}
                   className="cursor-pointer text-[10px] capitalize"
-                  onClick={() => setActiveSource(src)}
+                  onClick={() => { setActiveSource(src); if (searchQuery.trim()) setTimeout(() => searchImages(), 100); }}
                 >
-                  {src === "picsum" ? "Lorem Picsum" : src === "unsplash" ? "Unsplash" : "Pexels"}
+                  {src === "pexels" ? "Pexels" : src === "unsplash" ? "Unsplash" : "Imagens Livres"}
                 </Badge>
               ))}
             </div>
@@ -259,8 +246,8 @@ export function EditorSidebar({
                 onKeyDown={(e) => e.key === "Enter" && searchImages()}
                 className="h-8 text-xs"
               />
-              <Button size="icon" variant="default" className="h-8 w-8 shrink-0" onClick={searchImages}>
-                <Search className="h-3.5 w-3.5" />
+              <Button size="icon" variant="default" className="h-8 w-8 shrink-0" onClick={searchImages} disabled={searching}>
+                {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
               </Button>
             </div>
           </div>
@@ -282,9 +269,9 @@ export function EditorSidebar({
                       className="aspect-[4/3] rounded-md overflow-hidden border border-border hover:border-primary hover:shadow-md transition-all group relative"
                       onClick={() => onAddImageFromUrl(result.url)}
                     >
-                      <img src={result.thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {result.source}
+                      <img src={result.thumb} alt="" className="w-full h-full object-cover" loading="lazy" crossOrigin="anonymous" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                        {result.photographer ? `📷 ${result.photographer}` : result.source}
                       </div>
                     </button>
                   ))}
@@ -294,7 +281,7 @@ export function EditorSidebar({
                 <div className="text-center py-8">
                   <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
                   <p className="text-xs text-muted-foreground">Pesquise imagens gratuitas</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-1">Unsplash, Pexels, Lorem Picsum</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">Pexels, Unsplash e mais</p>
                 </div>
               )}
             </div>
