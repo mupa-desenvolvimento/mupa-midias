@@ -97,6 +97,14 @@ function BirthdayModulePage() {
       {/* Top row: Import + Filters */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setSlideDialogOpen(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Criar Slide
+          </Button>
           <input
             ref={fileInputRef}
             type="file"
