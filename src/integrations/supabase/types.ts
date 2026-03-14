@@ -1206,6 +1206,59 @@ export type Database = {
           },
         ]
       }
+      motivational_quotes: {
+        Row: {
+          author: string
+          created_at: string
+          id: string
+          image_orientation: string | null
+          image_url: string | null
+          is_active: boolean
+          quote: string
+          source: string | null
+          tenant_id: string | null
+          updated_at: string
+          used: boolean
+          used_at: string | null
+        }
+        Insert: {
+          author?: string
+          created_at?: string
+          id?: string
+          image_orientation?: string | null
+          image_url?: string | null
+          is_active?: boolean
+          quote: string
+          source?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Update: {
+          author?: string
+          created_at?: string
+          id?: string
+          image_orientation?: string | null
+          image_url?: string | null
+          is_active?: boolean
+          quote?: string
+          source?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "motivational_quotes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_articles: {
         Row: {
           active: boolean | null
