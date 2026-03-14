@@ -25,39 +25,63 @@
    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
  }
  
- Deno.serve(async (req) => {
-   if (req.method === 'OPTIONS') {
-     return new Response('ok', { headers: corsHeaders });
-   }
- 
-   try {
-     const url = new URL(req.url);
-     const action = url.searchParams.get('action');
-     
-     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-     const clientId = Deno.env.get('CANVA_CLIENT_ID');
-     const clientSecret = Deno.env.get('CANVA_CLIENT_SECRET');
-     
-     if (!clientId || !clientSecret) {
-       return new Response(
-         JSON.stringify({ error: 'Canva credentials not configured' }),
-         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-       );
-     }
- 
-     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const action = url.searchParams.get('action');
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const clientId = Deno.env.get('CANVA_CLIENT_ID');
+    const clientSecret = Deno.env.get('CANVA_CLIENT_SECRET');
+    
+    if (!clientId || !clientSecret) {
+      return new Response(
+        JSON.stringify({ error: 'Canva credentials not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --- AUTH CHECK: Verify JWT and enforce user_id match ---
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const anonClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user: authedUser }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !authedUser) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    // --- END AUTH CHECK ---
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
  
      // Action: Get authorization URL
-     if (action === 'get_auth_url') {
-       const body = await req.json();
-       const { redirect_uri, user_id } = body;
-       
-       if (!redirect_uri || !user_id) {
-         return new Response(
-           JSON.stringify({ error: 'redirect_uri and user_id are required' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
+    if (action === 'get_auth_url') {
+        const body = await req.json();
+        const { redirect_uri } = body;
+        const user_id = authedUser.id; // Use verified JWT user
+        
+        if (!redirect_uri) {
+          return new Response(
+            JSON.stringify({ error: 'redirect_uri is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
        }
        
        const codeVerifier = generateCodeVerifier();
@@ -95,15 +119,16 @@
      }
      
      // Action: Exchange code for tokens
-     if (action === 'exchange_code') {
-       const body = await req.json();
-       const { code, state, redirect_uri, user_id } = body;
-       
-       if (!code || !state || !redirect_uri || !user_id) {
-         return new Response(
-           JSON.stringify({ error: 'code, state, redirect_uri, and user_id are required' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
+    if (action === 'exchange_code') {
+        const body = await req.json();
+        const { code, state, redirect_uri } = body;
+        const user_id = authedUser.id; // Use verified JWT user
+        
+        if (!code || !state || !redirect_uri) {
+          return new Response(
+            JSON.stringify({ error: 'code, state, and redirect_uri are required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
        }
        
        // Get stored verifier
@@ -177,16 +202,10 @@
      }
      
      // Action: List designs
-     if (action === 'list_designs') {
-       const body = await req.json();
-       const { user_id, continuation, folder_id } = body;
-       
-       if (!user_id) {
-         return new Response(
-           JSON.stringify({ error: 'user_id is required' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
-       }
+    if (action === 'list_designs') {
+        const body = await req.json();
+        const { continuation, folder_id } = body;
+        const user_id = authedUser.id; // Use verified JWT user
        
        // Get access token
        const { data: connection, error: connError } = await supabase
@@ -278,15 +297,9 @@
      
       // Action: List folder items (use folder_id='root' for root folder)
       if (action === 'list_folder_items') {
-        const body = await req.json();
-        const { user_id, folder_id = 'root', continuation } = body;
-        
-        if (!user_id) {
-          return new Response(
-            JSON.stringify({ error: 'user_id is required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+         const body = await req.json();
+         const { folder_id = 'root', continuation } = body;
+         const user_id = authedUser.id; // Use verified JWT user
         
         // Get access token with refresh handling
         const { data: connection } = await supabase
@@ -387,15 +400,16 @@
       }
      
      // Action: Export design
-     if (action === 'export_design') {
-       const body = await req.json();
-       const { user_id, design_id, format = 'png' } = body;
-       
-       if (!user_id || !design_id) {
-         return new Response(
-           JSON.stringify({ error: 'user_id and design_id are required' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
+    if (action === 'export_design') {
+        const body = await req.json();
+        const { design_id, format = 'png' } = body;
+        const user_id = authedUser.id; // Use verified JWT user
+        
+        if (!design_id) {
+          return new Response(
+            JSON.stringify({ error: 'design_id is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
        }
        
        const { data: connection } = await supabase
@@ -488,22 +502,14 @@
      }
      
      // Action: Get connection status
-     if (action === 'status') {
-       const body = await req.json();
-       const { user_id } = body;
-       
-       if (!user_id) {
-         return new Response(
-           JSON.stringify({ connected: false }),
-           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
-       }
-       
-       const { data: connection } = await supabase
-         .from('canva_connections')
-         .select('expires_at, scopes')
-         .eq('user_id', user_id)
-         .single();
+    if (action === 'status') {
+        const user_id = authedUser.id; // Use verified JWT user
+        
+        const { data: connection } = await supabase
+          .from('canva_connections')
+          .select('expires_at, scopes')
+          .eq('user_id', user_id)
+          .single();
        
        return new Response(
          JSON.stringify({ 
@@ -516,18 +522,10 @@
      }
      
      // Action: Disconnect
-     if (action === 'disconnect') {
-       const body = await req.json();
-       const { user_id } = body;
-       
-       if (!user_id) {
-         return new Response(
-           JSON.stringify({ error: 'user_id is required' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
-       }
-       
-       await supabase.from('canva_connections').delete().eq('user_id', user_id);
+    if (action === 'disconnect') {
+        const user_id = authedUser.id; // Use verified JWT user
+        
+        await supabase.from('canva_connections').delete().eq('user_id', user_id);
        
        return new Response(
          JSON.stringify({ success: true }),
