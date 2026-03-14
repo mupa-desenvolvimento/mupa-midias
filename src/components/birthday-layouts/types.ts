@@ -13,7 +13,7 @@ export interface BirthdayPerson {
 }
 
 export type BirthdayPeriod = "day" | "week" | "month";
-export type BirthdayLayoutType = "cards" | "list" | "grid" | "banner";
+export type BirthdayLayoutType = "cards" | "list" | "grid" | "banner" | "celebration";
 
 export interface BirthdayLayoutProps {
   people: BirthdayPerson[];
