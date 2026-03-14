@@ -153,12 +153,15 @@ interface FolderBreadcrumb {
        }
        const result = await callCanvaApi('status', {});
        setIsConnected(result.connected);
-     } catch (error) {
-       if (error instanceof Error && error.message === "Not authenticated") {
-         setIsConnected(false);
-         return;
-       }
-       console.error('Error checking Canva connection:', error);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.message === 'Not authenticated' || error.message.toLowerCase().includes('sessão expirada'))
+        ) {
+          setIsConnected(false);
+          return;
+        }
+        console.error('Error checking Canva connection:', error);
        setIsConnected(false);
      } finally {
        setIsLoading(false);
