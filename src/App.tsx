@@ -42,6 +42,7 @@ import ProductDisplayConfig from "./pages/admin/ProductDisplayConfig";
 import ProductAnalytics from "./pages/admin/ProductAnalytics";
 import CanvaIntegration from "./pages/admin/CanvaIntegration";
 import CanvaEditor from "./pages/admin/CanvaEditor";
+import GraphicEditor from "./pages/admin/GraphicEditor";
 import InkyIntelligence from "./pages/admin/InkyIntelligence";
 import PriceCheckIntegrationsList from "./pages/admin/integrations/PriceCheckIntegrationsList";
 import PriceCheckIntegrationForm from "./pages/admin/integrations/PriceCheckIntegrationForm";
@@ -183,6 +184,7 @@ function AppContent() {
                         <Route path="product-analytics" element={<ProductAnalytics />} />
                         <Route path="canva" element={<CanvaIntegration />} />
                         <Route path="integrations/canva/editor" element={<CanvaEditor />} />
+                        <Route path="graphic-editor" element={<GraphicEditor />} />
                         <Route path="integrations" element={<PriceCheckIntegrationsList />} />
                         <Route path="integrations/new" element={<PriceCheckIntegrationForm />} />
                         <Route path="integrations/:id/edit" element={<PriceCheckIntegrationForm />} />
