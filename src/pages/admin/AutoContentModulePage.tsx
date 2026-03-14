@@ -146,6 +146,103 @@ const AutoContentModulePage = () => {
 
   const items = moduleType === "weather" ? weatherItems : fetchedItems;
 
+const BIRTHDAY_LAYOUTS: { value: BirthdayLayoutType; label: string; icon: typeof CreditCard }[] = [
+  { value: "cards", label: "Cards", icon: CreditCard },
+  { value: "list", label: "Lista", icon: LayoutList },
+  { value: "grid", label: "Grid", icon: Grid3x3 },
+  { value: "banner", label: "Banner TV", icon: Monitor },
+];
+
+const BIRTHDAY_PERIODS: { value: BirthdayPeriod; label: string; icon: typeof Calendar }[] = [
+  { value: "day", label: "Hoje", icon: CalendarDays },
+  { value: "week", label: "Semana", icon: CalendarRange },
+  { value: "month", label: "Mês", icon: Calendar },
+];
+
+function BirthdayModuleSection() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [period, setPeriod] = useState<BirthdayPeriod>("month");
+  const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
+  const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
+
+  const filteredPeople = useMemo(() => filterByPeriod(period), [allPeople, period]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const csv = await file.text();
+    uploadCsv.mutate(csv);
+    e.target.value = "";
+  };
+
+  return (
+    <div className="space-y-4 border-t pt-4">
+      {/* Import + Period + Layout controls */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadCsv.isPending}
+            className="gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            {uploadCsv.isPending ? "Importando..." : "Importar CSV"}
+          </Button>
+          <span className="text-[10px] text-muted-foreground hidden md:inline">
+            nome;data_nascimento;departamento;cargo;email;foto_url;ativo
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Period filter */}
+          <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as BirthdayPeriod)} className="bg-muted rounded-md p-0.5">
+            {BIRTHDAY_PERIODS.map((p) => (
+              <ToggleGroupItem key={p.value} value={p.value} size="sm" className="gap-1 text-xs px-2.5">
+                <p.icon className="w-3.5 h-3.5" />
+                {p.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+
+          {/* Layout selector */}
+          <ToggleGroup type="single" value={layout} onValueChange={(v) => v && setLayout(v as BirthdayLayoutType)} className="bg-muted rounded-md p-0.5">
+            {BIRTHDAY_LAYOUTS.map((l) => (
+              <ToggleGroupItem key={l.value} value={l.value} size="sm" className="px-2">
+                <l.icon className="w-3.5 h-3.5" />
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      </div>
+
+      {/* Stats bar */}
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <Cake className="w-3.5 h-3.5" />
+          {filteredPeople.length} aniversariante{filteredPeople.length !== 1 ? "s" : ""}
+        </span>
+        <span>Total cadastrados: {allPeople.length}</span>
+      </div>
+
+      {/* Layout preview */}
+      {isLoading ? (
+        <div className="text-center text-muted-foreground py-8">Carregando aniversariantes...</div>
+      ) : (
+        <BirthdayContainer people={filteredPeople} period={period} layout={layout} />
+      )}
+    </div>
+  );
+}
+
 
   const { state, setView, setPage, setPageSize, setSearch, setFilters, reset } =
     useListState<AutoContentFilters>({
