@@ -206,17 +206,7 @@ function BirthdayModulePage() {
 }
 
 /* ─── Generic Auto-Content Module ─── */
-const AutoContentModulePage = () => {
-  const params = useParams<{ moduleType: string }>();
-  const moduleType: AutoContentType = isValidModuleType(params.moduleType)
-    ? params.moduleType
-    : "weather";
-
-  // Birthday has its own dedicated page
-  if (moduleType === "birthday") {
-    return <BirthdayModulePage />;
-  }
-
+const GenericAutoContentModule = ({ moduleType }: { moduleType: AutoContentType }) => {
   const config = MODULE_CONFIG[moduleType];
 
   const { locations: weatherLocations, isLoading: isLoadingWeather } = useWeather();
