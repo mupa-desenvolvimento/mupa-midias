@@ -455,10 +455,21 @@ Deno.serve(async (req) => {
          }
          
          const statusData = await statusResponse.json();
-         console.log('[Canva API] Export status:', statusData.status);
-         
-         if (statusData.status === 'completed' || statusData.job?.status === 'completed') {
-           const urls = statusData.urls || statusData.job?.urls || [];
+         const job = statusData?.job ?? statusData;
+         const jobStatus = job?.status ?? statusData?.status;
+         console.log('[Canva API] Export status:', jobStatus);
+
+         // Canva returns success/in_progress/failed (not completed)
+         if (jobStatus === 'success' || jobStatus === 'completed') {
+           const urls = job?.urls || job?.result?.urls || statusData?.urls || [];
+
+           if (!Array.isArray(urls) || urls.length === 0) {
+             return new Response(
+               JSON.stringify({ error: 'Export succeeded but no download URL was returned' }),
+               { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+             );
+           }
+
            return new Response(
              JSON.stringify({ 
                success: true, 
@@ -469,7 +480,7 @@ Deno.serve(async (req) => {
            );
          }
          
-         if (statusData.status === 'failed' || statusData.job?.status === 'failed') {
+         if (jobStatus === 'failed') {
            return new Response(
              JSON.stringify({ error: 'Export failed' }),
              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
