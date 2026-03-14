@@ -15,11 +15,11 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoContent, AutoContentType, AutoContentItem } from "@/hooks/useAutoContent";
 import { useBirthdayPeople } from "@/hooks/useBirthdayPeople";
 import { BirthdayContainer } from "@/components/birthday-layouts/BirthdayContainer";
-import { BirthdaySlideDialog } from "@/components/birthday-layouts/BirthdaySlideDialog";
+import { BirthdaySlideDialog, BirthdaySlidePeriod } from "@/components/birthday-layouts/BirthdaySlideDialog";
 import { BirthdayPeriod, BirthdayLayoutType } from "@/components/birthday-layouts/types";
 import {
   Upload, Cake, CalendarDays, CalendarRange, Calendar,
-  CreditCard, LayoutList, Grid3x3, Monitor, PartyPopper, Plus,
+  CreditCard, LayoutList, Grid3x3, Monitor, PartyPopper, Plus, Pencil, Layers,
 } from "lucide-react";
 import { WeatherSettings } from "./weather/WeatherSettings";
 import { NewsModule } from "./news/NewsModule";
@@ -68,12 +68,17 @@ const isValidModuleType = (value: string | undefined): value is AutoContentType 
 /* ─── Birthday Module (standalone) ─── */
 function BirthdayModulePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [period, setPeriod] = useState<BirthdayPeriod>("month");
+  const [slidePeriod, setSlidePeriod] = useState<BirthdaySlidePeriod>("month");
   const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
   const [slideDialogOpen, setSlideDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [slideCreated, setSlideCreated] = useState(false);
   const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
 
-  const filteredPeople = useMemo(() => filterByPeriod(period), [allPeople, period, filterByPeriod]);
+  const getPeopleForPeriod = (p: BirthdayPeriod) => filterByPeriod(p);
+  const dayPeople = useMemo(() => getPeopleForPeriod("day"), [allPeople, filterByPeriod]);
+  const weekPeople = useMemo(() => getPeopleForPeriod("week"), [allPeople, filterByPeriod]);
+  const monthPeople = useMemo(() => getPeopleForPeriod("month"), [allPeople, filterByPeriod]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,19 +97,39 @@ function BirthdayModulePage() {
     </div>
   );
 
+  const handleOpenCreate = () => {
+    setDialogMode("create");
+    setSlideDialogOpen(true);
+  };
+
+  const handleOpenEdit = () => {
+    setDialogMode("edit");
+    setSlideDialogOpen(true);
+  };
+
+  const handleSlideSelect = (selectedLayout: BirthdayLayoutType, selectedPeriod: BirthdaySlidePeriod) => {
+    setLayout(selectedLayout);
+    setSlidePeriod(selectedPeriod);
+    setSlideCreated(true);
+  };
+
+  const periodLabel = slidePeriod === "all" ? "todos os períodos" : slidePeriod === "day" ? "hoje" : slidePeriod === "week" ? "esta semana" : "este mês";
+
   const controls = (
     <div className="px-4 pb-2 space-y-4">
-      {/* Top row: Import + Filters */}
+      {/* Top row: Actions */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={() => setSlideDialogOpen(true)}
-            className="gap-2"
-          >
+          <Button size="sm" onClick={handleOpenCreate} className="gap-2">
             <Plus className="w-4 h-4" />
             Criar Slide
           </Button>
+          {slideCreated && (
+            <Button variant="outline" size="sm" onClick={handleOpenEdit} className="gap-2">
+              <Pencil className="w-4 h-4" />
+              Alterar Layout
+            </Button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -122,54 +147,51 @@ function BirthdayModulePage() {
             <Upload className="w-4 h-4" />
             {uploadCsv.isPending ? "Importando..." : "Importar CSV"}
           </Button>
-          <span className="text-[10px] text-muted-foreground hidden md:inline">
-            nome;data_nascimento;departamento;cargo;email;foto_url;ativo
-          </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Period filter */}
-          <ToggleGroup
-            type="single"
-            value={period}
-            onValueChange={(v) => v && setPeriod(v as BirthdayPeriod)}
-            className="bg-muted rounded-md p-0.5"
-          >
-            {BIRTHDAY_PERIODS.map((p) => (
-              <ToggleGroupItem key={p.value} value={p.value} size="sm" className="gap-1 text-xs px-2.5">
-                <p.icon className="w-3.5 h-3.5" />
-                {p.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-
-          {/* Layout selector */}
-          <ToggleGroup
-            type="single"
-            value={layout}
-            onValueChange={(v) => v && setLayout(v as BirthdayLayoutType)}
-            className="bg-muted rounded-md p-0.5"
-          >
-            {BIRTHDAY_LAYOUTS.map((l) => (
-              <ToggleGroupItem key={l.value} value={l.value} size="sm" className="px-2" title={l.label}>
-                <l.icon className="w-3.5 h-3.5" />
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
+        {slideCreated && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+              {BIRTHDAY_LAYOUTS.find((l) => l.value === layout)?.label ?? layout}
+            </span>
+            <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+              {slidePeriod === "all" ? "Todos os períodos" : slidePeriod === "day" ? "Hoje" : slidePeriod === "week" ? "Semana" : "Mês"}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Stats bar */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Cake className="w-3.5 h-3.5" />
-          {filteredPeople.length} aniversariante{filteredPeople.length !== 1 ? "s" : ""}{" "}
-          {period === "day" ? "hoje" : period === "week" ? "esta semana" : "este mês"}
+          Total cadastrados: {allPeople.length}
         </span>
-        <span>Total cadastrados: {allPeople.length}</span>
+        {slidePeriod !== "all" && (
+          <span>
+            {getPeopleForPeriod(slidePeriod as BirthdayPeriod).length} aniversariante(s) {periodLabel}
+          </span>
+        )}
+        {slidePeriod === "all" && (
+          <>
+            <span>{dayPeople.length} hoje</span>
+            <span>{weekPeople.length} semana</span>
+            <span>{monthPeople.length} mês</span>
+          </>
+        )}
       </div>
     </div>
   );
+
+  const renderSection = (title: string, people: typeof allPeople, period: BirthdayPeriod) => {
+    if (people.length === 0) return null;
+    return (
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-muted-foreground px-1">{title} ({people.length})</h3>
+        <BirthdayContainer people={people} period={period} layout={layout} />
+      </div>
+    );
+  };
 
   let content: JSX.Element;
   if (isLoading) {
@@ -191,22 +213,39 @@ function BirthdayModulePage() {
         </Card>
       </div>
     );
-  } else if (filteredPeople.length === 0) {
+  } else if (slidePeriod === "all") {
     content = (
-      <div className="space-y-6">
-        <div className="text-center py-6">
-          <p className="text-muted-foreground text-sm">
-            Nenhum aniversariante {period === "day" ? "hoje" : period === "week" ? "esta semana" : "este mês"}.
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Mostrando todos os {allPeople.length} cadastrados abaixo:
-          </p>
-        </div>
-        <BirthdayContainer people={allPeople} period={period} layout={layout} />
+      <div className="space-y-8">
+        {renderSection("🎂 Aniversariantes de Hoje", dayPeople, "day")}
+        {renderSection("📅 Aniversariantes da Semana", weekPeople, "week")}
+        {renderSection("🗓️ Aniversariantes do Mês", monthPeople, "month")}
+        {dayPeople.length === 0 && weekPeople.length === 0 && monthPeople.length === 0 && (
+          <div className="text-center py-6">
+            <p className="text-muted-foreground text-sm">Nenhum aniversariante nos períodos selecionados.</p>
+            <p className="text-xs text-muted-foreground mt-1">Mostrando todos os {allPeople.length} cadastrados abaixo:</p>
+            <div className="mt-4">
+              <BirthdayContainer people={allPeople} period="month" layout={layout} />
+            </div>
+          </div>
+        )}
       </div>
     );
   } else {
-    content = <BirthdayContainer people={filteredPeople} period={period} layout={layout} />;
+    const currentPeriod = slidePeriod as BirthdayPeriod;
+    const filtered = getPeopleForPeriod(currentPeriod);
+    if (filtered.length === 0) {
+      content = (
+        <div className="space-y-6">
+          <div className="text-center py-6">
+            <p className="text-muted-foreground text-sm">Nenhum aniversariante {periodLabel}.</p>
+            <p className="text-xs text-muted-foreground mt-1">Mostrando todos os {allPeople.length} cadastrados abaixo:</p>
+          </div>
+          <BirthdayContainer people={allPeople} period={currentPeriod} layout={layout} />
+        </div>
+      );
+    } else {
+      content = <BirthdayContainer people={filtered} period={currentPeriod} layout={layout} />;
+    }
   }
 
   return (
@@ -217,7 +256,10 @@ function BirthdayModulePage() {
       <BirthdaySlideDialog
         open={slideDialogOpen}
         onOpenChange={setSlideDialogOpen}
-        onSelect={(selectedLayout) => setLayout(selectedLayout)}
+        onSelect={handleSlideSelect}
+        initialLayout={layout}
+        initialPeriod={slidePeriod}
+        mode={dialogMode}
       />
     </>
   );

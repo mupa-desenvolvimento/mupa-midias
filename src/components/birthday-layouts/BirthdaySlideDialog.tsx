@@ -8,13 +8,22 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BirthdayLayoutType } from "./types";
-import { CreditCard, LayoutList, Grid3x3, Monitor, PartyPopper, Check } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { BirthdayLayoutType, BirthdayPeriod } from "./types";
+import {
+  CreditCard, LayoutList, Grid3x3, Monitor, PartyPopper, Check,
+  Calendar, CalendarRange, CalendarDays, Layers,
+} from "lucide-react";
+
+export type BirthdaySlidePeriod = BirthdayPeriod | "all";
 
 interface BirthdaySlideDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (layout: BirthdayLayoutType) => void;
+  onSelect: (layout: BirthdayLayoutType, period: BirthdaySlidePeriod) => void;
+  initialLayout?: BirthdayLayoutType;
+  initialPeriod?: BirthdaySlidePeriod;
+  mode?: "create" | "edit";
 }
 
 const SLIDE_LAYOUTS: {
@@ -24,6 +33,25 @@ const SLIDE_LAYOUTS: {
   icon: typeof CreditCard;
   preview: () => JSX.Element;
 }[] = [
+  {
+    value: "celebration",
+    label: "Celebração",
+    description: "Card escuro festivo estilo social media com balões e confetti",
+    icon: PartyPopper,
+    preview: () => (
+      <div className="w-full h-full bg-[hsl(220,60%,15%)] rounded-md flex items-center p-2 gap-2 relative overflow-hidden">
+        <div className="absolute top-1 left-2 w-2 h-3 rounded-full bg-pink-400/50" />
+        <div className="absolute top-0.5 right-3 w-2 h-3 rounded-full bg-cyan-400/50" />
+        <div className="absolute top-1.5 left-6 w-1.5 h-2 rounded-full bg-yellow-400/40" />
+        <div className="w-8 h-8 rounded border-2 border-cyan-400/50 bg-[hsl(220,50%,20%)] flex-shrink-0" />
+        <div className="flex-1 space-y-1">
+          <div className="h-1.5 w-3/4 bg-white/30 rounded" />
+          <div className="h-1 w-full bg-white/15 rounded" />
+          <div className="h-0.5 w-1/2 bg-cyan-300/20 rounded" />
+        </div>
+      </div>
+    ),
+  },
   {
     value: "cards",
     label: "Cards com Foto",
@@ -114,35 +142,28 @@ const SLIDE_LAYOUTS: {
       </div>
     ),
   },
-  {
-    value: "celebration",
-    label: "Celebração",
-    description: "Card escuro festivo estilo social media com balões e confetti",
-    icon: PartyPopper,
-    preview: () => (
-      <div className="w-full h-full bg-[hsl(220,60%,15%)] rounded-md flex items-center p-2 gap-2 relative overflow-hidden">
-        {/* Mini balloons */}
-        <div className="absolute top-1 left-2 w-2 h-3 rounded-full bg-pink-400/50" />
-        <div className="absolute top-0.5 right-3 w-2 h-3 rounded-full bg-cyan-400/50" />
-        <div className="absolute top-1.5 left-6 w-1.5 h-2 rounded-full bg-yellow-400/40" />
-        {/* Photo frame */}
-        <div className="w-8 h-8 rounded border-2 border-cyan-400/50 bg-[hsl(220,50%,20%)] flex-shrink-0" />
-        {/* Text lines */}
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-3/4 bg-white/30 rounded" />
-          <div className="h-1 w-full bg-white/15 rounded" />
-          <div className="h-0.5 w-1/2 bg-cyan-300/20 rounded" />
-        </div>
-      </div>
-    ),
-  },
 ];
 
-export function BirthdaySlideDialog({ open, onOpenChange, onSelect }: BirthdaySlideDialogProps) {
-  const [selected, setSelected] = useState<BirthdayLayoutType>("celebration");
+const PERIOD_OPTIONS: { value: BirthdaySlidePeriod; label: string; icon: typeof Calendar }[] = [
+  { value: "day", label: "Hoje", icon: CalendarDays },
+  { value: "week", label: "Semana", icon: CalendarRange },
+  { value: "month", label: "Mês", icon: Calendar },
+  { value: "all", label: "Todos", icon: Layers },
+];
+
+export function BirthdaySlideDialog({
+  open,
+  onOpenChange,
+  onSelect,
+  initialLayout = "celebration",
+  initialPeriod = "month",
+  mode = "create",
+}: BirthdaySlideDialogProps) {
+  const [selectedLayout, setSelectedLayout] = useState<BirthdayLayoutType>(initialLayout);
+  const [selectedPeriod, setSelectedPeriod] = useState<BirthdaySlidePeriod>(initialPeriod);
 
   const handleConfirm = () => {
-    onSelect(selected);
+    onSelect(selectedLayout, selectedPeriod);
     onOpenChange(false);
   };
 
@@ -152,46 +173,78 @@ export function BirthdaySlideDialog({ open, onOpenChange, onSelect }: BirthdaySl
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PartyPopper className="w-5 h-5 text-primary" />
-            Criar Slide de Aniversário
+            {mode === "create" ? "Criar Slide de Aniversário" : "Alterar Layout do Slide"}
           </DialogTitle>
           <DialogDescription>
-            Escolha um layout para exibir os aniversariantes na TV.
+            Escolha o período e o layout para exibir os aniversariantes na TV.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-4">
-          {SLIDE_LAYOUTS.map((layout) => {
-            const isSelected = selected === layout.value;
-            const Icon = layout.icon;
-            return (
-              <button
-                key={layout.value}
-                onClick={() => setSelected(layout.value)}
-                className={`group relative flex flex-col rounded-xl border-2 p-3 text-left transition-all hover:shadow-md ${
-                  isSelected
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-border hover:border-primary/40"
-                }`}
+        {/* Period selector */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Período dos aniversariantes</label>
+          <ToggleGroup
+            type="single"
+            value={selectedPeriod}
+            onValueChange={(v) => v && setSelectedPeriod(v as BirthdaySlidePeriod)}
+            className="bg-muted rounded-lg p-1 w-full justify-start"
+          >
+            {PERIOD_OPTIONS.map((p) => (
+              <ToggleGroupItem
+                key={p.value}
+                value={p.value}
+                size="sm"
+                className="gap-1.5 text-xs px-3 flex-1"
               >
-                {isSelected && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <Check className="w-3 h-3 text-primary-foreground" />
+                <p.icon className="w-3.5 h-3.5" />
+                {p.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <p className="text-[11px] text-muted-foreground">
+            {selectedPeriod === "day" && "Exibe apenas os aniversariantes do dia atual."}
+            {selectedPeriod === "week" && "Exibe os aniversariantes da semana atual."}
+            {selectedPeriod === "month" && "Exibe os aniversariantes do mês atual."}
+            {selectedPeriod === "all" && "Exibe aniversariantes do dia, semana e mês juntos em seções separadas."}
+          </p>
+        </div>
+
+        {/* Layout selector */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Layout de exibição</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {SLIDE_LAYOUTS.map((layout) => {
+              const isSelected = selectedLayout === layout.value;
+              const Icon = layout.icon;
+              return (
+                <button
+                  key={layout.value}
+                  onClick={() => setSelectedLayout(layout.value)}
+                  className={`group relative flex flex-col rounded-xl border-2 p-3 text-left transition-all hover:shadow-md ${
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="w-3 h-3 text-primary-foreground" />
+                    </div>
+                  )}
+                  <div className="w-full aspect-video rounded-md border bg-muted/30 overflow-hidden mb-2">
+                    {layout.preview()}
                   </div>
-                )}
-                {/* Preview thumbnail */}
-                <div className="w-full aspect-video rounded-md border bg-muted/30 overflow-hidden mb-2">
-                  {layout.preview()}
-                </div>
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{layout.label}</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-tight">
-                  {layout.description}
-                </p>
-              </button>
-            );
-          })}
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium">{layout.label}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-tight">
+                    {layout.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <DialogFooter>
@@ -200,7 +253,7 @@ export function BirthdaySlideDialog({ open, onOpenChange, onSelect }: BirthdaySl
           </Button>
           <Button onClick={handleConfirm} className="gap-2">
             <PartyPopper className="w-4 h-4" />
-            Aplicar Layout
+            {mode === "create" ? "Criar Slide" : "Aplicar Alterações"}
           </Button>
         </DialogFooter>
       </DialogContent>
