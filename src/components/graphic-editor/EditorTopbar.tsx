@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Download, FileImage, Save, ZoomIn, ZoomOut, Upload } from "lucide-react";
+import { Undo2, Redo2, Download, FileImage, Save, ZoomIn, ZoomOut, Upload, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,11 +15,13 @@ interface Props {
   onSave: () => void;
   onSaveToGallery: () => void;
   onZoom: (d: number) => void;
+  onOpenTemplates: () => void;
 }
 
 export function EditorTopbar({
   projectName, setProjectName, zoom,
   onUndo, onRedo, onExportPNG, onExportSVG, onSave, onSaveToGallery, onZoom,
+  onOpenTemplates,
 }: Props) {
   return (
     <div className="h-14 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
@@ -56,6 +58,10 @@ export function EditorTopbar({
       <div className="flex-1" />
 
       <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onOpenTemplates}>
+          <LayoutTemplate className="h-3.5 w-3.5" /> Templates
+        </Button>
+
         {/* Export dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

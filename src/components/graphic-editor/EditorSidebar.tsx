@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import {
   Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
   Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
-  Layers, GalleryHorizontalEnd, Grid3X3,
+  Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import type { LayerItem } from "@/components/graphic-editor/useFabricCanvas";
 
 interface MediaGalleryItem {
   id: string;
@@ -38,6 +39,13 @@ interface Props {
   onToggleGrid: () => void;
   hasSelection: boolean;
   showGrid: boolean;
+  layers: LayerItem[];
+  onSelectLayer: (layerId: string) => void;
+  onToggleLayerVisible: (layerId: string) => void;
+  onToggleLayerLocked: (layerId: string) => void;
+  onMoveLayerForward: (layerId: string) => void;
+  onMoveLayerBackward: (layerId: string) => void;
+  onRenameLayer: (layerId: string, name: string) => void;
   galleryItems: MediaGalleryItem[];
   galleryLoading: boolean;
 }
@@ -59,6 +67,13 @@ export function EditorSidebar({
   onDelete, onDuplicate, onBringToFront, onSendToBack,
   onToggleGrid,
   hasSelection, showGrid,
+  layers,
+  onSelectLayer,
+  onToggleLayerVisible,
+  onToggleLayerLocked,
+  onMoveLayerForward,
+  onMoveLayerBackward,
+  onRenameLayer,
   galleryItems, galleryLoading,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -67,6 +82,8 @@ export function EditorSidebar({
   const [searching, setSearching] = useState(false);
   const [activeSource, setActiveSource] = useState<SearchSource>("pexels");
   const [galleryFilter, setGalleryFilter] = useState("");
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [editingLayerName, setEditingLayerName] = useState("");
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,12 +145,15 @@ export function EditorSidebar({
   return (
     <div className="w-[300px] border-r border-border bg-card flex flex-col shrink-0 h-full">
       <Tabs defaultValue="tools" className="flex flex-col h-full">
-        <TabsList className="mx-2 mt-2 grid grid-cols-3 h-9">
+        <TabsList className="mx-2 mt-2 grid grid-cols-4 h-9">
           <TabsTrigger value="tools" className="text-xs gap-1">
-            <Layers className="h-3 w-3" /> Ferramentas
+            <Wrench className="h-3 w-3" /> Ferramentas
           </TabsTrigger>
           <TabsTrigger value="search" className="text-xs gap-1">
             <Search className="h-3 w-3" /> Buscar
+          </TabsTrigger>
+          <TabsTrigger value="layers" className="text-xs gap-1">
+            <Layers className="h-3 w-3" /> Camadas
           </TabsTrigger>
           <TabsTrigger value="gallery" className="text-xs gap-1">
             <GalleryHorizontalEnd className="h-3 w-3" /> Galeria
@@ -282,6 +302,106 @@ export function EditorSidebar({
                   <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
                   <p className="text-xs text-muted-foreground">Pesquise imagens gratuitas</p>
                   <p className="text-[10px] text-muted-foreground/60 mt-1">Pexels, Unsplash e mais</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        {/* Layers Tab */}
+        <TabsContent value="layers" className="flex-1 overflow-hidden m-0">
+          <ScrollArea className="h-full">
+            <div className="p-3 space-y-2">
+              {layers.length === 0 ? (
+                <div className="text-center py-8">
+                  <Layers className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                  <p className="text-xs text-muted-foreground">Sem camadas</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">Adicione elementos para aparecer aqui</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {layers.map((layer) => {
+                    const isEditing = editingLayerId === layer.id;
+                    return (
+                      <button
+                        key={layer.id}
+                        className={`w-full flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors ${
+                          layer.active ? "bg-accent border-accent-foreground/10" : "border-border hover:bg-accent/60"
+                        }`}
+                        onClick={() => onSelectLayer(layer.id)}
+                        onDoubleClick={() => { setEditingLayerId(layer.id); setEditingLayerName(layer.name); }}
+                      >
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {layer.type}
+                        </Badge>
+
+                        <div className="flex-1 min-w-0">
+                          {isEditing ? (
+                            <Input
+                              value={editingLayerName}
+                              autoFocus
+                              className="h-7 text-xs"
+                              onChange={(e) => setEditingLayerName(e.target.value)}
+                              onBlur={() => {
+                                onRenameLayer(layer.id, editingLayerName);
+                                setEditingLayerId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  onRenameLayer(layer.id, editingLayerName);
+                                  setEditingLayerId(null);
+                                }
+                                if (e.key === "Escape") {
+                                  setEditingLayerId(null);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="text-xs truncate">{layer.name}</div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={(e) => { e.stopPropagation(); onMoveLayerForward(layer.id); }}
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={(e) => { e.stopPropagation(); onMoveLayerBackward(layer.id); }}
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={(e) => { e.stopPropagation(); onToggleLayerVisible(layer.id); }}
+                          >
+                            {layer.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={(e) => { e.stopPropagation(); onToggleLayerLocked(layer.id); }}
+                          >
+                            {layer.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                          </Button>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

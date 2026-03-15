@@ -43,7 +43,9 @@ export function SaveToFolderDialog({ open, onClose, projectName, onSave }: Props
       setSelectedFolderId(result.id);
       setShowNewFolder(false);
       setNewFolderName("");
-    } catch {}
+    } catch {
+      return;
+    }
   };
 
   // Organize: root folders only for simplicity

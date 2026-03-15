@@ -35,11 +35,26 @@ const ALLOWED_DOCUMENT_TYPES = [
   'text/markdown'
 ]
 
+const ALLOWED_FONT_TYPES = [
+  'font/ttf',
+  'font/otf',
+  'font/woff',
+  'font/woff2',
+  'application/font-woff',
+  'application/font-woff2',
+  'application/x-font-ttf',
+  'application/x-font-opentype',
+  'application/x-font-woff',
+  'application/x-font-woff2',
+  'application/vnd.ms-fontobject'
+]
+
 const ALL_ALLOWED_TYPES = [
   ...ALLOWED_IMAGE_TYPES,
   ...ALLOWED_VIDEO_TYPES,
   ...ALLOWED_AUDIO_TYPES,
-  ...ALLOWED_DOCUMENT_TYPES
+  ...ALLOWED_DOCUMENT_TYPES,
+  ...ALLOWED_FONT_TYPES
 ]
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
@@ -53,6 +68,7 @@ function getMediaType(mimeType: string): string {
   if (ALLOWED_IMAGE_TYPES.includes(mimeType)) return 'image'
   if (ALLOWED_VIDEO_TYPES.includes(mimeType)) return 'video'
   if (ALLOWED_AUDIO_TYPES.includes(mimeType)) return 'audio'
+  if (ALLOWED_FONT_TYPES.includes(mimeType)) return 'font'
   return 'document'
 }
 
@@ -64,8 +80,75 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const mediaId = url.searchParams.get('mediaId') || url.searchParams.get('id')
+      if (!mediaId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing mediaId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (!serviceRole) {
+        return new Response(
+          JSON.stringify({ error: 'Service role not configured' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const supabaseAdmin = createClient(supabaseUrl, serviceRole, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      })
+
+      const { data: mediaItem, error: mediaError } = await supabaseAdmin
+        .from('media_items')
+        .select('id,type,file_url,metadata')
+        .eq('id', mediaId)
+        .single()
+
+      if (mediaError || !mediaItem?.file_url) {
+        return new Response(
+          JSON.stringify({ error: 'Media not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (mediaItem.type !== 'font') {
+        return new Response(
+          JSON.stringify({ error: 'Unsupported media type' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const range = req.headers.get('Range')
+      const upstream = await fetch(mediaItem.file_url, {
+        method: req.method,
+        headers: range ? { Range: range } : undefined,
+      })
+
+      const headers = new Headers(corsHeaders)
+      const meta = (mediaItem as any)?.metadata as any
+      const contentType =
+        (typeof meta?.content_type === 'string' && meta.content_type.trim()) ||
+        upstream.headers.get('content-type') ||
+        'application/octet-stream'
+
+      headers.set('Content-Type', contentType)
+      headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+
+      const passthrough = ['accept-ranges', 'content-range', 'content-length', 'etag', 'last-modified']
+      for (const h of passthrough) {
+        const v = upstream.headers.get(h)
+        if (v) headers.set(h, v)
+      }
+
+      return new Response(upstream.body, { status: upstream.status, headers })
+    }
     
     // Step 1: Verify authentication
     console.log('Step 1: Verifying authentication...')
@@ -113,6 +196,7 @@ Deno.serve(async (req) => {
     const fileName = formData.get('fileName') as string || file.name
     const fileType = formData.get('fileType') as string || file.type
     const folderId = formData.get('folderId') as string || null
+    const fontFamily = (formData.get('fontFamily') as string | null)?.trim() || null
 
     if (!file) {
       return new Response(
@@ -125,21 +209,44 @@ Deno.serve(async (req) => {
     console.log('Step 2: Validating file...')
     console.log('File details:', { name: fileName, type: fileType, size: file.size })
 
+    const inferMimeFromName = (name: string): string | null => {
+      const ext = name.split('.').pop()?.toLowerCase() || ''
+      if (ext === 'ttf') return 'font/ttf'
+      if (ext === 'otf') return 'font/otf'
+      if (ext === 'woff') return 'font/woff'
+      if (ext === 'woff2') return 'font/woff2'
+      if (ext === 'eot') return 'application/vnd.ms-fontobject'
+      return null
+    }
+
     // Validate file type
-    const fileTypeLower = fileType.toLowerCase()
-    const isImage = ALLOWED_IMAGE_TYPES.includes(fileTypeLower)
-    const isVideo = ALLOWED_VIDEO_TYPES.includes(fileTypeLower)
-    const isAudio = ALLOWED_AUDIO_TYPES.includes(fileTypeLower)
-    const isDocument = ALLOWED_DOCUMENT_TYPES.includes(fileTypeLower)
-    const isAllowed = ALL_ALLOWED_TYPES.includes(fileTypeLower)
+    const receivedTypeLower = (fileType || '').toLowerCase()
+    const normalizedTypeLower = receivedTypeLower.split(';')[0].trim()
+    const inferredTypeLower = inferMimeFromName(fileName)?.toLowerCase() || null
+
+    const shouldInfer =
+      !normalizedTypeLower ||
+      normalizedTypeLower === 'application/octet-stream' ||
+      normalizedTypeLower === 'binary/octet-stream'
+
+    const effectiveTypeLower = shouldInfer && inferredTypeLower ? inferredTypeLower : normalizedTypeLower
+
+    const isImage = ALLOWED_IMAGE_TYPES.includes(effectiveTypeLower)
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(effectiveTypeLower)
+    const isAudio = ALLOWED_AUDIO_TYPES.includes(effectiveTypeLower)
+    const isDocument = ALLOWED_DOCUMENT_TYPES.includes(effectiveTypeLower)
+    const isFont = ALLOWED_FONT_TYPES.includes(effectiveTypeLower)
+    const isAllowed = ALL_ALLOWED_TYPES.includes(effectiveTypeLower)
     
     if (!isAllowed) {
       console.error('Invalid file type:', fileType)
       return new Response(
         JSON.stringify({ 
           error: 'Tipo de arquivo não permitido', 
-          details: 'Formatos aceitos: imagens, vídeos, áudios, PDFs, documentos e planilhas',
-          received: fileType
+          details: 'Formatos aceitos: imagens, vídeos, áudios, PDFs, documentos, planilhas e fontes',
+          received: fileType,
+          normalized: normalizedTypeLower,
+          inferred: inferredTypeLower
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -158,13 +265,14 @@ Deno.serve(async (req) => {
       )
     }
 
-    const mediaType = getMediaType(fileTypeLower)
+    const mediaType = getMediaType(effectiveTypeLower)
     console.log('File validation passed:', { isImage, isVideo, isAudio, isDocument, mediaType })
 
     // Generate unique file keys
     const timestamp = Date.now()
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const fileKey = `media/${timestamp}-${sanitizedName}`
+    const basePrefix = mediaType === 'font' ? 'fonts' : 'media'
+    const fileKey = `${basePrefix}/${timestamp}-${sanitizedName}`
     const thumbnailKey = `thumbnails/${timestamp}-${sanitizedName.replace(/\.[^.]+$/, '.jpg')}`
 
     // Create AWS client for R2 using aws4fetch
@@ -185,7 +293,7 @@ Deno.serve(async (req) => {
     const uploadResponse = await r2.fetch(uploadUrl, {
       method: 'PUT',
       headers: {
-        'Content-Type': fileType,
+        'Content-Type': effectiveTypeLower || fileType,
         'Content-Length': file.size.toString(),
       },
       body: fileBuffer,
@@ -252,7 +360,7 @@ Deno.serve(async (req) => {
     const { data: mediaItem, error: insertError } = await supabaseAdmin
       .from('media_items')
       .insert({
-        name: fileName,
+        name: mediaType === 'font' && fontFamily ? fontFamily : fileName,
         type: mediaType,
         file_url: publicFileUrl,
         file_size: file.size,
@@ -264,12 +372,14 @@ Deno.serve(async (req) => {
         metadata: {
           r2_key: fileKey,
           thumbnail_key: thumbnailKey,
-          content_type: fileType,
+          content_type: effectiveTypeLower || fileType,
           uploaded_by: user.email,
           thumbnail_generated: thumbnailGenerated,
           validated_at: new Date().toISOString(),
           thumbnail_size: { width: THUMBNAIL_WIDTH, height: THUMBNAIL_HEIGHT },
-          original_signed_url: uploadUrl
+          original_signed_url: uploadUrl,
+          font_family: fontFamily,
+          original_file_name: fileName
         }
       })
       .select()
