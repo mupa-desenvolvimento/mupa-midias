@@ -292,7 +292,7 @@ export function useFabricCanvas() {
     if (!c) return null;
     return {
       name: projectName,
-      canvas: c.toJSON(["data"]),
+      canvas: (c as any).toJSON(["data"]),
       bgColor: canvasBgColor,
       width: canvasWidth,
       height: canvasHeight,
