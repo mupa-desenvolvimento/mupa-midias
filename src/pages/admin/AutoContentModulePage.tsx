@@ -89,6 +89,41 @@ function BirthdayModulePage() {
     e.target.value = "";
   };
 
+  const handleCreateSlide = useCallback(async (selectedLayout: BirthdayLayoutType, selectedPeriod: BirthdaySlidePeriod) => {
+    setCreatingSlide(true);
+    try {
+      const layoutLabels: Record<BirthdayLayoutType, string> = {
+        cards: "Cards", list: "Lista", grid: "Grid", banner: "Banner TV", celebration: "Celebração",
+      };
+      const periodLabels: Record<BirthdaySlidePeriod, string> = {
+        day: "Hoje", week: "Semana", month: "Mês", all: "Todos",
+      };
+      const name = `Aniversariantes - ${layoutLabels[selectedLayout]} (${periodLabels[selectedPeriod]})`;
+
+      const { error } = await (supabase as any).from("media_items").insert({
+        name,
+        type: "birthday_slide",
+        status: "active",
+        duration: 15,
+        metadata: {
+          birthday_layout: selectedLayout,
+          birthday_period: selectedPeriod,
+          auto_content: true,
+        },
+      });
+
+      if (error) throw error;
+
+      setLayout(selectedLayout);
+      setPeriod(selectedPeriod);
+      toast({ title: "Slide criado com sucesso!", description: `"${name}" está disponível para adicionar em playlists.` });
+    } catch (err: any) {
+      toast({ title: "Erro ao criar slide", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingSlide(false);
+    }
+  }, [toast]);
+
   const periodLabel = period === "all" ? "todos os períodos" : period === "day" ? "hoje" : period === "week" ? "esta semana" : "este mês";
 
   const renderSection = (title: string, people: typeof allPeople, p: BirthdayPeriod) => {
