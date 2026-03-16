@@ -166,7 +166,8 @@ const Navbar = () => {
                     Inteligência Artificial
                   </a>
                   <a href="#inky" className="text-xl font-medium hover:text-accent transition-colors">
-                    Inky 
+                    Inky
+                  </a>
                   <a href="#analytics" className="text-xl font-medium hover:text-accent transition-colors">
                     Analytics
                   </a>
