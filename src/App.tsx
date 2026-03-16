@@ -57,6 +57,7 @@ import NutritionTipsManager from "./pages/admin/NutritionTipsManager";
 import InstagramFeedManager from "./pages/admin/InstagramFeedManager";
 import InstagramCallback from "./pages/admin/InstagramCallback";
 import QRCodeCampaigns from "./pages/admin/QRCodeCampaigns";
+import PlatformLogs from "./pages/admin/PlatformLogs";
 import MotivationalTV from "./pages/MotivationalTV";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
