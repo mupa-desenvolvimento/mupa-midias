@@ -351,6 +351,32 @@ export default function GraphicEditor() {
     if (el) initCanvas(el, canvasContainerRef.current);
   }, [canvasElRef, initCanvas]);
 
+  // Auto-load preset template from URL param
+  const templateAppliedRef = useRef(false);
+  useEffect(() => {
+    if (templateAppliedRef.current) return;
+    const templateId = searchParams.get("template");
+    if (!templateId) return;
+    const preset = PRESET_TEMPLATES.find((t) => t.id === templateId);
+    if (!preset) return;
+    templateAppliedRef.current = true;
+    // Small delay to ensure canvas is initialized
+    const timer = setTimeout(() => {
+      loadProjectData({
+        name: preset.name,
+        canvas: preset.canvas,
+        bgColor: preset.bgColor,
+        width: preset.width,
+        height: preset.height,
+      }).then(() => {
+        toast.success(`Template "${preset.name}" carregado!`);
+      }).catch(() => {
+        toast.error("Falha ao carregar template");
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchParams, loadProjectData]);
+
   useEffect(() => {
     const container = canvasContainerRef.current;
     if (!container) return;
