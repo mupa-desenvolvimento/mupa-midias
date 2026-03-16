@@ -1887,6 +1887,192 @@ export type Database = {
           },
         ]
       }
+      price_check_integrations: {
+        Row: {
+          auth_body_json: Json
+          auth_body_text: string | null
+          auth_config: Json
+          auth_curl: string | null
+          auth_headers_json: Json
+          auth_method: string | null
+          auth_query_params_json: Json
+          auth_token_path: string | null
+          auth_type: string
+          auth_url: string | null
+          barcode_param_name: string | null
+          barcode_param_type: string
+          company_id: string | null
+          created_at: string
+          endpoint_url: string
+          environment: string
+          headers: Json
+          id: string
+          mapping_config: Json
+          method: string
+          name: string
+          request_body_json: Json
+          request_body_text: string | null
+          request_curl: string | null
+          request_headers_json: Json
+          request_method: string | null
+          request_query_params_json: Json
+          request_url: string | null
+          request_variables_json: Json
+          status: string
+          tenant_id: string | null
+          token_cache: Json
+          token_expiration_seconds: number | null
+          updated_at: string
+        }
+        Insert: {
+          auth_body_json?: Json
+          auth_body_text?: string | null
+          auth_config?: Json
+          auth_curl?: string | null
+          auth_headers_json?: Json
+          auth_method?: string | null
+          auth_query_params_json?: Json
+          auth_token_path?: string | null
+          auth_type?: string
+          auth_url?: string | null
+          barcode_param_name?: string | null
+          barcode_param_type?: string
+          company_id?: string | null
+          created_at?: string
+          endpoint_url?: string
+          environment?: string
+          headers?: Json
+          id?: string
+          mapping_config?: Json
+          method?: string
+          name: string
+          request_body_json?: Json
+          request_body_text?: string | null
+          request_curl?: string | null
+          request_headers_json?: Json
+          request_method?: string | null
+          request_query_params_json?: Json
+          request_url?: string | null
+          request_variables_json?: Json
+          status?: string
+          tenant_id?: string | null
+          token_cache?: Json
+          token_expiration_seconds?: number | null
+          updated_at?: string
+        }
+        Update: {
+          auth_body_json?: Json
+          auth_body_text?: string | null
+          auth_config?: Json
+          auth_curl?: string | null
+          auth_headers_json?: Json
+          auth_method?: string | null
+          auth_query_params_json?: Json
+          auth_token_path?: string | null
+          auth_type?: string
+          auth_url?: string | null
+          barcode_param_name?: string | null
+          barcode_param_type?: string
+          company_id?: string | null
+          created_at?: string
+          endpoint_url?: string
+          environment?: string
+          headers?: Json
+          id?: string
+          mapping_config?: Json
+          method?: string
+          name?: string
+          request_body_json?: Json
+          request_body_text?: string | null
+          request_curl?: string | null
+          request_headers_json?: Json
+          request_method?: string | null
+          request_query_params_json?: Json
+          request_url?: string | null
+          request_variables_json?: Json
+          status?: string
+          tenant_id?: string | null
+          token_cache?: Json
+          token_expiration_seconds?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_check_integrations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_check_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_check_logs: {
+        Row: {
+          barcode: string
+          created_at: string
+          device_id: string | null
+          error_message: string | null
+          id: string
+          integration_id: string | null
+          mapped_product: Json | null
+          request_snapshot: Json | null
+          response_snapshot: Json | null
+          response_time_ms: number | null
+          status_code: number | null
+          store_code: string | null
+        }
+        Insert: {
+          barcode: string
+          created_at?: string
+          device_id?: string | null
+          error_message?: string | null
+          id?: string
+          integration_id?: string | null
+          mapped_product?: Json | null
+          request_snapshot?: Json | null
+          response_snapshot?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          store_code?: string | null
+        }
+        Update: {
+          barcode?: string
+          created_at?: string
+          device_id?: string | null
+          error_message?: string | null
+          id?: string
+          integration_id?: string | null
+          mapped_product?: Json | null
+          request_snapshot?: Json | null
+          response_snapshot?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          store_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_check_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_check_logs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "price_check_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       processing_jobs: {
         Row: {
           created_at: string
