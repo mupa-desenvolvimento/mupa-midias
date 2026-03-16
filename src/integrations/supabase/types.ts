@@ -489,6 +489,56 @@ export type Database = {
           },
         ]
       }
+      curiosities: {
+        Row: {
+          category: string
+          content: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          tenant_id: string | null
+          title: string
+          updated_at: string
+          used: boolean
+          used_at: string | null
+        }
+        Insert: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curiosities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_detection_logs: {
         Row: {
           age: number | null
@@ -1686,6 +1736,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      processing_jobs: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          metadata: Json | null
+          progress: number
+          result: string | null
+          status: string
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          metadata?: Json | null
+          progress?: number
+          result?: string | null
+          status?: string
+          task_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          metadata?: Json | null
+          progress?: number
+          result?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       product_cache: {
         Row: {
