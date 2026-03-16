@@ -644,6 +644,7 @@ const OfflinePlayer = () => {
             mediaUrl={displayMediaUrl}
             objectFit={getObjectFit()}
             loop
+            isPortrait={isPortrait}
             onImageError={(e) => {
               const fallbackUrl = overrideMedia?.file_url || activeItem?.media?.file_url;
               if (fallbackUrl && (e.target as HTMLImageElement).src !== fallbackUrl) {
