@@ -73,6 +73,7 @@ export function EditorSidebar({
   onAddText, onAddRect, onAddCircle, onAddLine, onAddTriangle,
   onAddStar, onAddPolygon,
   onAddImage, onAddImageFromUrl,
+  onAddSVGFromString, onAddSVGFromURL,
   onDelete, onDuplicate, onBringToFront, onSendToBack,
   onToggleGrid,
   hasSelection, showGrid,
@@ -86,6 +87,7 @@ export function EditorSidebar({
   galleryItems, galleryLoading,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const svgFileRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
