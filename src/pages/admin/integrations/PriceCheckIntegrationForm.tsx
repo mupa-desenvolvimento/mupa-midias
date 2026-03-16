@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCompanies } from "@/hooks/useCompanies";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { inferCommonVariables, parseCurl, type ParsedCurl } from "@/lib/parseCurl";
 import { IntegrationMapping } from "./components/IntegrationMapping";
