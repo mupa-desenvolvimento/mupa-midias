@@ -21,10 +21,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Shield } from "lucide-react";
 
 export default function PriceCheckIntegrationsList() {
   const navigate = useNavigate();
   const { integrations, isLoading, deleteIntegration } = usePriceCheckIntegrations();
+  const { isSuperAdmin } = useSuperAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
