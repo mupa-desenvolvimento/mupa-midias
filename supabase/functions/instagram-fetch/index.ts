@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
 
         const { error } = await supabaseAdmin
           .from("instagram_posts")
-          .upsert(row, { onConflict: "instagram_posts_ig_id_unique", ignoreDuplicates: true });
+          .upsert(row, { onConflict: "instagram_id", ignoreDuplicates: true });
 
         if (!error) inserted++;
       }

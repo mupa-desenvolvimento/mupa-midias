@@ -113,10 +113,11 @@ export default function InstagramFeedManager() {
   const handleFetchPosts = async () => {
     setFetching(true);
     try {
+      const { data: tenantId } = await supabase.rpc('get_user_tenant_id_strict');
       const { data, error } = await supabase.functions.invoke("instagram-fetch", {
         body: {
           action: "fetch-posts",
-          tenantId: null,
+          tenantId,
           fetchDays: parseInt(fetchDays),
           sinceDate: customSince || undefined,
           untilDate: customUntil || undefined,
