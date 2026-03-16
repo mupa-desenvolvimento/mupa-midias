@@ -56,6 +56,7 @@ import CuriositiesManager from "./pages/admin/CuriositiesManager";
 import NutritionTipsManager from "./pages/admin/NutritionTipsManager";
 import InstagramFeedManager from "./pages/admin/InstagramFeedManager";
 import InstagramCallback from "./pages/admin/InstagramCallback";
+import QRCodeCampaigns from "./pages/admin/QRCodeCampaigns";
 import MotivationalTV from "./pages/MotivationalTV";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
@@ -216,6 +217,7 @@ function AppContent() {
                         <Route path="api-integrations/:id/edit" element={<ApiIntegrationForm />} />
                         <Route path="inky" element={<InkyIntelligence />} />
                         <Route path="list-example" element={<ExampleListPage />} />
+                        <Route path="qrcode-campaigns" element={<QRCodeCampaigns />} />
                       </Routes>
                     </AppLayout>
                   </div>
