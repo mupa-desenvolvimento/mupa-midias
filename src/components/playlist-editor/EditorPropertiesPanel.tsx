@@ -23,8 +23,16 @@ import {
   X,
   GripVertical,
   Sparkles,
+  Globe,
+  Youtube,
+  Code,
+  LayoutGrid,
+  Table,
+  Instagram,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MEDIA_FILTER_OPTIONS } from "@/constants/contentTypes";
 
 interface PlaylistFormData {
   name: string;
