@@ -495,6 +495,28 @@ export function useFabricCanvas() {
     setSelectedObject(props);
   };
 
+  // Zoom-to-fit: scales canvas to fill its container
+  const zoomToFit = useCallback((containerWidth: number, containerHeight: number) => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const cw = c.getWidth();
+    const ch = c.getHeight();
+    if (!cw || !ch) return;
+
+    const padding = 40; // px padding around canvas
+    const availW = containerWidth - padding * 2;
+    const availH = containerHeight - padding * 2;
+    if (availW <= 0 || availH <= 0) return;
+
+    const scale = Math.min(availW / cw, availH / ch, 1);
+    const vpLeft = (containerWidth - cw * scale) / 2;
+    const vpTop = (containerHeight - ch * scale) / 2;
+
+    c.setViewportTransform([scale, 0, 0, scale, vpLeft, vpTop]);
+    setZoom(scale);
+    c.requestRenderAll();
+  }, []);
+
   // Canvas resize
   const resizeCanvas = useCallback((w: number, h: number) => {
     const c = canvasRef.current;
