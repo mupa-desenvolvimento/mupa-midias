@@ -688,7 +688,7 @@ export default function GraphicEditor() {
                   {PRESET_TEMPLATES.map((preset) => (
                     <button
                       key={preset.id}
-                      className="group relative rounded-xl border border-border/60 overflow-hidden hover:border-[#00d4ff]/60 hover:shadow-lg hover:shadow-[#00d4ff]/10 transition-all text-left"
+                      className="group relative rounded-xl border border-border/60 overflow-hidden hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 transition-all text-left"
                       onClick={() => handleApplyPresetTemplate(preset)}
                     >
                       <div
