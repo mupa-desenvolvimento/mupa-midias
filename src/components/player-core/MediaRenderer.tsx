@@ -144,7 +144,7 @@ export const MediaRenderer = ({
 
     return (
       <div className={cn("w-full h-full bg-black", transitionClass, !isReady && "opacity-0")}>
-        <WeatherContainer location={selectedWeatherLocation as any} orientation="horizontal" className="w-full h-full" />
+        <WeatherContainer location={selectedWeatherLocation as any} orientation={isPortrait ? "vertical" : "horizontal"} className="w-full h-full" />
       </div>
     );
   }
