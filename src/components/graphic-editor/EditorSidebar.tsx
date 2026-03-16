@@ -99,11 +99,46 @@ export function EditorSidebar({
   const [galleryFilter, setGalleryFilter] = useState("");
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
+  const [showSvgDialog, setShowSvgDialog] = useState(false);
+  const [svgUrl, setSvgUrl] = useState("");
+  const [svgLoading, setSvgLoading] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) onAddImage(file);
     e.target.value = "";
+  };
+
+  const handleSvgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onAddSVGFromString) return;
+    e.target.value = "";
+    setSvgLoading(true);
+    try {
+      const text = await file.text();
+      await onAddSVGFromString(text, file.name.replace(/\.svg$/i, ""));
+      toast.success("SVG importado!");
+      setShowSvgDialog(false);
+    } catch (err: any) {
+      toast.error(err?.message || "SVG inválido");
+    } finally {
+      setSvgLoading(false);
+    }
+  };
+
+  const handleSvgFromUrl = async () => {
+    if (!svgUrl.trim() || !onAddSVGFromURL) return;
+    setSvgLoading(true);
+    try {
+      await onAddSVGFromURL(svgUrl.trim());
+      toast.success("SVG importado!");
+      setSvgUrl("");
+      setShowSvgDialog(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Falha ao carregar SVG (verifique CORS)");
+    } finally {
+      setSvgLoading(false);
+    }
   };
 
   const searchImages = useCallback(async (page = 1, source?: SearchSource) => {
