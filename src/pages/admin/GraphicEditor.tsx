@@ -705,7 +705,7 @@ export default function GraphicEditor() {
                         </div>
                         <p className="text-[10px] text-muted-foreground/70 mt-1 line-clamp-2">{preset.description}</p>
                       </div>
-                      <div className="absolute inset-0 bg-[#00d4ff]/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     </button>
                   ))}
                 </div>
