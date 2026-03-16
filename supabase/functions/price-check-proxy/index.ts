@@ -392,6 +392,7 @@ serve(async (req: Request) => {
         status: response.status,
         response_time_ms: responseTimeMs,
         response: json ? sanitizeForUi(json) : text,
+        raw_response: json || text,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
