@@ -396,7 +396,7 @@ const WebViewPlayer = () => {
   const getObjectFit = (): "cover" | "contain" | "fill" => "fill";
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden select-none">
+    <div className="fixed inset-0 bg-black overflow-hidden select-none" style={{ width: '100vw', height: '100vh', margin: 0, padding: 0 }}>
       {Capacitor.isNativePlatform() && (
         <div className="absolute top-2 left-2 z-50 px-2 py-1 rounded bg-black/70 text-[10px] text-white/70">
           <span>WebViewPlayer • build: {__BUILD_ID__} • rota: {deviceCode ? `/webview/${deviceCode}` : "/android-player"}</span>

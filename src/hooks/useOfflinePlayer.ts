@@ -785,6 +785,11 @@ export const useOfflinePlayer = (deviceCode: string) => {
           { event: '*', schema: 'public', table: 'playlist_channel_items' },
           () => { syncWithServerRef.current(); }
         )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'playlist_channels' },
+          () => { syncWithServerRef.current(); }
+        )
         .subscribe((status, err) => {
           console.log("[useOfflinePlayer] Realtime subscription status:", status);
           if (err) console.error("[useOfflinePlayer] Realtime error:", err);
