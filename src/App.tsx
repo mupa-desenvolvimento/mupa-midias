@@ -56,6 +56,7 @@ import CuriositiesManager from "./pages/admin/CuriositiesManager";
 import NutritionTipsManager from "./pages/admin/NutritionTipsManager";
 import InstagramFeedManager from "./pages/admin/InstagramFeedManager";
 import InstagramCallback from "./pages/admin/InstagramCallback";
+import QRCodeCampaigns from "./pages/admin/QRCodeCampaigns";
 import MotivationalTV from "./pages/MotivationalTV";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";

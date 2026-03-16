@@ -76,7 +76,7 @@ const autoContentItems = [
 { title: "Aniversariantes", url: "/admin/auto-content/birthday", icon: ShoppingBag },
 { title: "Nutrição", url: "/admin/auto-content/nutrition", icon: Store },
 { title: "Instagram", url: "/admin/auto-content/instagram", icon: Camera },
-{ title: "QR Code Campanhas", url: "/admin/auto-content/qr_campaign", icon: QrCode }];
+{ title: "QR Code Campanhas", url: "/admin/qrcode-campaigns", icon: QrCode }];
 
 
 const superAdminItems = [
