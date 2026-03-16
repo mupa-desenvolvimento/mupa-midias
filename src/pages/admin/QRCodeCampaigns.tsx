@@ -150,6 +150,7 @@ export default function QRCodeCampaigns() {
         onSave={handleSave}
         saving={createCampaign.isPending}
       />
+      </div>
     </PageShell>
   );
 }
