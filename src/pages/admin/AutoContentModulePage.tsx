@@ -183,6 +183,10 @@ function BirthdayModulePage() {
           <p className="text-muted-foreground text-sm mt-0.5">Gerencie e visualize os layouts para exibição.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setSlideDialogOpen(true)} disabled={creatingSlide} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Criar Slide
+          </Button>
           <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadCsv.isPending} className="gap-2">
             <Upload className="w-4 h-4" />
