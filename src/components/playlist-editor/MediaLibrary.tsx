@@ -4,23 +4,28 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Image, Video, FileText, Grip, Clock, Newspaper } from "lucide-react";
+import { Search, Image, Video, FileText, Grip, Clock, Newspaper, Globe, Youtube, Code, CloudSun, LayoutGrid, Table, Instagram, Megaphone } from "lucide-react";
+import { MEDIA_FILTER_OPTIONS } from "@/constants/contentTypes";
 
 interface MediaLibraryProps {
   onDragStart: (media: MediaItem) => void;
 }
 
 const getMediaIcon = (type: string) => {
-  switch (type) {
-    case "video":
-      return <Video className="w-4 h-4" />;
-    case "image":
-      return <Image className="w-4 h-4" />;
-    case "news":
-      return <Newspaper className="w-4 h-4" />;
-    default:
-      return <FileText className="w-4 h-4" />;
-  }
+  const iconMap: Record<string, React.ReactNode> = {
+    video: <Video className="w-4 h-4" />,
+    image: <Image className="w-4 h-4" />,
+    news: <Newspaper className="w-4 h-4" />,
+    url: <Globe className="w-4 h-4" />,
+    youtube: <Youtube className="w-4 h-4" />,
+    html: <Code className="w-4 h-4" />,
+    weather: <CloudSun className="w-4 h-4" />,
+    widget: <LayoutGrid className="w-4 h-4" />,
+    table: <Table className="w-4 h-4" />,
+    instagram: <Instagram className="w-4 h-4" />,
+    campaign: <Megaphone className="w-4 h-4" />,
+  };
+  return iconMap[type] || <FileText className="w-4 h-4" />;
 };
 
 const formatDuration = (seconds: number | null) => {
