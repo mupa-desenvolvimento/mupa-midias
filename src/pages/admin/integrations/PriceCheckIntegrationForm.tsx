@@ -61,7 +61,17 @@ export default function PriceCheckIntegrationForm() {
   const navigate = useNavigate();
   const { createIntegration, updateIntegration, integrations } = usePriceCheckIntegrations();
   const { companies } = useCompanies();
+  const { isSuperAdmin, isLoading: isSuperAdminLoading } = useSuperAdmin();
   const isEditing = !!id && id !== "new";
+  const existingIntegration = integrations?.find(i => i.id === id);
+
+  // Redirect non-super-admins away from create/edit
+  useEffect(() => {
+    if (!isSuperAdminLoading && !isSuperAdmin) {
+      toast.error("Apenas super administradores podem gerenciar integrações");
+      navigate("/admin/integrations");
+    }
+  }, [isSuperAdmin, isSuperAdminLoading, navigate]);
   const existingIntegration = integrations?.find(i => i.id === id);
 
   const [currentStep, setCurrentStep] = useState(0);
