@@ -306,12 +306,12 @@ export const NEWS_LAYOUTS = [
 
 export type NewsLayoutId = typeof NEWS_LAYOUTS[number]["id"];
 
-export function NewsLayoutRenderer({ layoutId, articles, category }: { layoutId: NewsLayoutId; articles: NewsArticle[]; category: string }) {
+export function NewsLayoutRenderer({ layoutId, articles, category, isPortrait = false }: { layoutId: NewsLayoutId; articles: NewsArticle[]; category: string; isPortrait?: boolean }) {
   switch (layoutId) {
-    case "hero-sidebar": return <LayoutHeroSidebar articles={articles} category={category} />;
-    case "grid": return <LayoutGrid articles={articles} category={category} />;
-    case "ticker": return <LayoutTicker articles={articles} category={category} />;
-    case "minimal": return <LayoutMinimal articles={articles} category={category} />;
-    default: return <LayoutHeroSidebar articles={articles} category={category} />;
+    case "hero-sidebar": return <LayoutHeroSidebar articles={articles} category={category} isPortrait={isPortrait} />;
+    case "grid": return <LayoutGrid articles={articles} category={category} isPortrait={isPortrait} />;
+    case "ticker": return <LayoutTicker articles={articles} category={category} isPortrait={isPortrait} />;
+    case "minimal": return <LayoutMinimal articles={articles} category={category} isPortrait={isPortrait} />;
+    default: return <LayoutHeroSidebar articles={articles} category={category} isPortrait={isPortrait} />;
   }
 }
