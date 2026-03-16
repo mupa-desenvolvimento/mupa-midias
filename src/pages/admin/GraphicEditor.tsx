@@ -324,7 +324,7 @@ export default function GraphicEditor() {
   const [templates, setTemplates] = useState<any[]>([]);
 
   const {
-    initCanvas, canvasElRef,
+    initCanvas, canvasElRef, zoomToFit,
     selectedObject, projectName, setProjectName, zoom,
     showGrid, toggleGrid, canvasBgColor, changeCanvasBg,
     canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
