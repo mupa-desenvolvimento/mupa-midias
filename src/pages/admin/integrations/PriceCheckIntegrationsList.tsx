@@ -21,10 +21,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Shield } from "lucide-react";
 
 export default function PriceCheckIntegrationsList() {
   const navigate = useNavigate();
   const { integrations, isLoading, deleteIntegration } = usePriceCheckIntegrations();
+  const { isSuperAdmin } = useSuperAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -49,9 +52,16 @@ export default function PriceCheckIntegrationsList() {
             Conecte qualquer API de consulta de preço colando a CURL
           </p>
         </div>
-        <Button onClick={() => navigate("new")} className="gap-2">
-          <Plus className="h-4 w-4" /> Nova Integração via CURL
-        </Button>
+        {isSuperAdmin && (
+          <Button onClick={() => navigate("new")} className="gap-2">
+            <Plus className="h-4 w-4" /> Nova Integração via CURL
+          </Button>
+        )}
+        {!isSuperAdmin && (
+          <Badge variant="outline" className="gap-1 text-xs">
+            <Shield className="h-3 w-3" /> Somente visualização
+          </Badge>
+        )}
       </div>
 
       <div className="relative max-w-sm">
@@ -84,9 +94,11 @@ export default function PriceCheckIntegrationsList() {
             <p className="text-sm text-muted-foreground mb-6">
               Crie sua primeira integração colando uma CURL de API de preços
             </p>
-            <Button onClick={() => navigate("new")} className="gap-2">
-              <Plus className="h-4 w-4" /> Nova Integração via CURL
-            </Button>
+            {isSuperAdmin && (
+              <Button onClick={() => navigate("new")} className="gap-2">
+                <Plus className="h-4 w-4" /> Nova Integração via CURL
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -107,21 +119,27 @@ export default function PriceCheckIntegrationsList() {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[160px]">
+                     <DropdownMenuContent align="end" className="w-[160px]">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => navigate(`${integration.id}/edit`)}>
-                        <Edit className="mr-2 h-4 w-4" /> Editar
-                      </DropdownMenuItem>
+                      {isSuperAdmin && (
+                        <DropdownMenuItem onClick={() => navigate(`${integration.id}/edit`)}>
+                          <Edit className="mr-2 h-4 w-4" /> Editar
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => navigate(`${integration.id}/logs`)}>
                         <Activity className="mr-2 h-4 w-4" /> Ver Logs
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => setDeleteId(integration.id)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                      </DropdownMenuItem>
+                      {isSuperAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeleteId(integration.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCompanies } from "@/hooks/useCompanies";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { inferCommonVariables, parseCurl, type ParsedCurl } from "@/lib/parseCurl";
 import { IntegrationMapping } from "./components/IntegrationMapping";
@@ -60,8 +61,17 @@ export default function PriceCheckIntegrationForm() {
   const navigate = useNavigate();
   const { createIntegration, updateIntegration, integrations } = usePriceCheckIntegrations();
   const { companies } = useCompanies();
+  const { isSuperAdmin, isLoading: isSuperAdminLoading } = useSuperAdmin();
   const isEditing = !!id && id !== "new";
   const existingIntegration = integrations?.find(i => i.id === id);
+
+  // Redirect non-super-admins away from create/edit
+  useEffect(() => {
+    if (!isSuperAdminLoading && !isSuperAdmin) {
+      toast.error("Apenas super administradores podem gerenciar integrações");
+      navigate("/admin/integrations");
+    }
+  }, [isSuperAdmin, isSuperAdminLoading, navigate]);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
