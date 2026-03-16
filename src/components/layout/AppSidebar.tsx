@@ -20,13 +20,16 @@ import {
   Brain,
   QrCode,
   Link,
+  ChevronDown,
 } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUserCompany } from "@/hooks/useUserCompany";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import packageJson from "../../../package.json";
 import {
   Sidebar,
@@ -40,7 +43,13 @@ import {
   SidebarGroupLabel,
   SidebarFooter,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
@@ -77,54 +86,85 @@ const superAdminItems = [
   { title: "Price API Integrations", url: "/admin/api-integrations", icon: Link },
 ];
 
+const SidebarNavItem = ({ item }: { item: typeof menuItems[number] }) => {
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
+
+  const link = (
+    <NavLink
+      to={item.url}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+          isActive
+            ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+        }`
+      }
+    >
+      <item.icon className="w-4 h-4 shrink-0" />
+      {!collapsed && <span className="truncate">{item.title}</span>}
+    </NavLink>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="font-medium">
+          {item.title}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return link;
+};
+
 const AppSidebar = () => {
   const { user, signOut } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const { company } = useUserCompany();
   const { resolvedTheme } = useTheme();
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
   };
 
+  const userInitials = user?.email?.slice(0, 2).toUpperCase() || "U";
+
+  const isAutoContentActive = location.pathname.startsWith("/admin/auto-content");
+  const isSuperAdminActive = superAdminItems.some(i => location.pathname.startsWith(i.url));
+
   return (
-    <Sidebar className="border-r border-sidebar-border" collapsible="icon">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <SidebarTrigger className="h-9 w-9" />
-          <img 
-            src={resolvedTheme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"} 
-            alt="MupaMídias" 
-            className="h-10 scale-[1.3] group-data-[collapsible=icon]:hidden" 
+    <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
+      <SidebarHeader className="p-3">
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="h-8 w-8 shrink-0" />
+          <img
+            src={resolvedTheme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"}
+            alt="MupaMídias"
+            className="h-8 group-data-[collapsible=icon]:hidden transition-opacity duration-200"
           />
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="custom-scrollbar px-2">
+        {/* Main navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-3 py-2">
-            GERENCIAMENTO
+          <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1">
+            Gerenciamento
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-0.5">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        `flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-md"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        }`
-                      }
-                    >
-                      <item.icon className="w-4 h-4" />
-                      <span className="font-medium">{item.title}</span>
-                    </NavLink>
+                  <SidebarMenuButton asChild className="p-0">
+                    <SidebarNavItem item={item} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -132,75 +172,47 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Auto Content — collapsible */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-3 py-2">
-            CONTEÚDO AUTOMÁTICO
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {autoContentItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        `flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-md"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        }`
-                      }
-                    >
-                      <item.icon className="w-4 h-4" />
-                      <span className="font-medium">{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
+          <Collapsible defaultOpen={isAutoContentActive}>
+            <CollapsibleTrigger className="w-full">
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1 flex items-center justify-between cursor-pointer hover:text-sidebar-foreground/60 transition-colors">
+                Conteúdo Automático
+                {!collapsed && <ChevronDown className="w-3 h-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-0.5">
+                  {autoContentItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="p-0">
+                        <SidebarNavItem item={item} />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
         </SidebarGroup>
 
-        {/* Tenant Admin Section - Display Config */}
+        {/* Company settings */}
         {company && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-3 py-2">
-              CONFIGURAÇÕES DA EMPRESA
+            <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1">
+              Empresa
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-0.5">
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={`/admin/companies/${company.id}/display-config`}
-                      className={({ isActive }) =>
-                        `flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-md"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        }`
-                      }
-                    >
-                      <Palette className="w-4 h-4" />
-                      <span className="font-medium">Tela de Consulta</span>
-                    </NavLink>
+                  <SidebarMenuButton asChild className="p-0">
+                    <SidebarNavItem item={{ title: "Tela de Consulta", url: `/admin/companies/${company.id}/display-config`, icon: Palette }} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to="/admin/product-analytics"
-                      className={({ isActive }) =>
-                        `flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-md"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        }`
-                      }
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      <span className="font-medium">Consultas de Produtos</span>
-                    </NavLink>
+                  <SidebarMenuButton asChild className="p-0">
+                    <SidebarNavItem item={{ title: "Consultas de Produtos", url: "/admin/product-analytics", icon: ShoppingBag }} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -208,50 +220,65 @@ const AppSidebar = () => {
           </SidebarGroup>
         )}
 
-        {/* Super Admin Section */}
+        {/* Super Admin */}
         {isSuperAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-3 py-2">
-              SUPER ADMIN
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {superAdminItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        className={({ isActive }) =>
-                          `flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                            isActive
-                              ? "bg-primary text-primary-foreground shadow-md"
-                              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                          }`
-                        }
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span className="font-medium">{item.title}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            <Collapsible defaultOpen={isSuperAdminActive}>
+              <CollapsibleTrigger className="w-full">
+                <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1 flex items-center justify-between cursor-pointer hover:text-sidebar-foreground/60 transition-colors">
+                  Super Admin
+                  {!collapsed && <ChevronDown className="w-3 h-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />}
+                </SidebarGroupLabel>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu className="space-y-0.5">
+                    {superAdminItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild className="p-0">
+                          <SidebarNavItem item={item} />
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
           </SidebarGroup>
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border">
-        <div className="flex items-center justify-between">
-          <div className="text-sm truncate">
-            <p className="font-medium truncate">{user?.email}</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="mt-2 text-xs text-center text-muted-foreground">
-          v{packageJson.version}
+      <SidebarFooter className="p-3 border-t border-sidebar-border/30">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
+              {userInitials}
+            </AvatarFallback>
+          </Avatar>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">
+                {user?.email}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/50">
+                v{packageJson.version}
+              </p>
+            </div>
+          )}
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/30"
+                aria-label="Sair"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Sair</TooltipContent>
+          </Tooltip>
         </div>
       </SidebarFooter>
     </Sidebar>
