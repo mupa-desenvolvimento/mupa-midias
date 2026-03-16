@@ -248,10 +248,10 @@ export function useNews() {
     mutationFn: async () => {
       const [rss, newsdata] = await Promise.all([
         supabase.functions.invoke('rss-collector', {
-          body: { maxFeeds: 50, maxItems: 5, batchSize: 20, force: true },
+          body: { maxFeeds: 50, maxItems: 8, force: true },
         }),
         supabase.functions.invoke('newsdata-collector', {
-          body: { maxFeeds: 50, maxItems: 5, batchSize: 50, force: true, timeframe: 1, country: "br", language: "pt" },
+          body: { maxFeeds: 50, maxItems: 10, batchSize: 30, force: true, timeframe: 1, country: "br", language: "pt" },
         }),
       ]);
 
