@@ -6,6 +6,10 @@ import { usePlayerFaceDetection } from "@/hooks/usePlayerFaceDetection";
 import { setupKioskMode } from "@/utils/nativeBridge";
 import { Capacitor } from "@capacitor/core";
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
+import { useProductLookup } from "@/hooks/useProductLookup";
+import { useProductDisplaySettingsBySlug } from "@/hooks/useProductDisplaySettings";
+import { ProductLookupContainer } from "@/components/player/ProductLookupContainer";
+import { EanInput } from "@/components/player/EanInput";
 import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useMediaRotation, useClock } from "@/hooks/player";
 import { MediaRenderer, PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen } from "@/components/player-core";
 import {
@@ -41,6 +45,33 @@ const WebViewPlayer = () => {
 
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   const [updateMessage, setUpdateMessage] = useState("");
+  const [showProductOverlay, setShowProductOverlay] = useState(false);
+
+  // Price lookup
+  const {
+    product,
+    isLoading: isProductLoading,
+    error: productError,
+    lookupProduct,
+    clearProduct,
+  } = useProductLookup({
+    deviceCode: deviceCode || "",
+    deviceId: deviceState?.device_id || undefined,
+    onLookupStart: () => {
+      setShowProductOverlay(true);
+    },
+  });
+
+  const { data: displaySettings } = useProductDisplaySettingsBySlug(deviceState?.company_slug);
+
+  const handleDismissProduct = useCallback(() => {
+    setShowProductOverlay(false);
+    clearProduct();
+  }, [clearProduct]);
+
+  const handleEanSubmit = useCallback((ean: string) => {
+    lookupProduct(ean);
+  }, [lookupProduct]);
 
   const cameraPreviewRef = useRef<HTMLVideoElement>(null);
   const [showCameraPreview, setShowCameraPreview] = useState(false);
@@ -382,8 +413,31 @@ const WebViewPlayer = () => {
         </div>
       </div>
 
+      {/* EAN Scanner Input (always listening) */}
+      <EanInput
+        isVisible={!showProductOverlay}
+        onSubmit={handleEanSubmit}
+        disabled={false}
+        alwaysListenForScanner={true}
+      />
+
+      {/* Product lookup overlay */}
+      {showProductOverlay && (
+        <ProductLookupContainer
+          product={product}
+          isLoading={isProductLoading}
+          error={productError}
+          onDismiss={handleDismissProduct}
+          timeout={15}
+          displaySettings={displaySettings || undefined}
+        />
+      )}
+
       {/* Media */}
-      <div className="absolute inset-0">
+      <div className={cn(
+        "absolute inset-0",
+        showProductOverlay ? "opacity-20 pointer-events-none" : "opacity-100"
+      )}>
         {(activeMedia.type === "news" || activeMedia.type === "weather") && (
           <div className="absolute inset-0 z-10">
             <MediaRenderer media={activeMedia as any} mediaUrl={activeMedia.file_url || ""} objectFit={getObjectFit()} />

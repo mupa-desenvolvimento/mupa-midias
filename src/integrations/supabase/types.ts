@@ -783,6 +783,7 @@ export type Database = {
           override_media_expires_at: string | null
           override_media_id: string | null
           price_integration_enabled: boolean
+          price_integration_id: string | null
           region_id: string | null
           resolution: string | null
           status: string
@@ -812,6 +813,7 @@ export type Database = {
           override_media_expires_at?: string | null
           override_media_id?: string | null
           price_integration_enabled?: boolean
+          price_integration_id?: string | null
           region_id?: string | null
           resolution?: string | null
           status?: string
@@ -841,6 +843,7 @@ export type Database = {
           override_media_expires_at?: string | null
           override_media_id?: string | null
           price_integration_enabled?: boolean
+          price_integration_id?: string | null
           region_id?: string | null
           resolution?: string | null
           status?: string
@@ -896,6 +899,13 @@ export type Database = {
             columns: ["override_media_id"]
             isOneToOne: false
             referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devices_price_integration_id_fkey"
+            columns: ["price_integration_id"]
+            isOneToOne: false
+            referencedRelation: "price_check_integrations"
             referencedColumns: ["id"]
           },
           {
