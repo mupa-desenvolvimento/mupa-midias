@@ -178,6 +178,7 @@ import { PRESET_TEMPLATES } from '@/components/graphic-editor/presetTemplates';
             ))}
           </div>
         </div>
+        </>
        ) : (
           <div className="space-y-4">
            <div className="flex items-center justify-between">
