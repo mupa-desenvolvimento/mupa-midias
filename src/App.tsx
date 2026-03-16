@@ -54,6 +54,7 @@ import AutoContentModulePage from "./pages/admin/AutoContentModulePage";
 import MotivationalQuotes from "./pages/admin/MotivationalQuotes";
 import CuriositiesManager from "./pages/admin/CuriositiesManager";
 import NutritionTipsManager from "./pages/admin/NutritionTipsManager";
+import InstagramFeedManager from "./pages/admin/InstagramFeedManager";
 import MotivationalTV from "./pages/MotivationalTV";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
