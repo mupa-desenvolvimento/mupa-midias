@@ -72,6 +72,9 @@ function BirthdayModulePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [period, setPeriod] = useState<BirthdaySlidePeriod>("month");
   const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
+  const [slideDialogOpen, setSlideDialogOpen] = useState(false);
+  const [creatingSlide, setCreatingSlide] = useState(false);
+  const { toast } = useToast();
   const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
 
   const dayPeople = useMemo(() => filterByPeriod("day"), [allPeople, filterByPeriod]);
