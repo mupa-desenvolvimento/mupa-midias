@@ -22,19 +22,18 @@ import { inferCommonVariables, parseCurl, type ParsedCurl } from "@/lib/parseCur
 import { IntegrationMapping } from "./components/IntegrationMapping";
 import { Json } from "@/integrations/supabase/types";
 
-const EXAMPLE_CURL = `curl --location 'https://api.erp.com/v1/produtos?loja=8&ean=7891234567890' \\
---header 'Content-Type: application/json' \\
---header 'Authorization: Bearer eyJhbGci...'`;
-
 const EXAMPLE_AUTH_CURL = `curl --location --request POST 'https://api.erp.com/auth/login' \\
 --header 'Content-Type: application/json' \\
 --data '{"usuario": "admin", "senha": "123456"}'`;
 
+const EXAMPLE_REQUEST_CURL = `curl --location 'https://api.erp.com/v1/produtos?loja=8&ean={{barcode}}' \\
+--header 'Content-Type: application/json' \\
+--header 'Authorization: Bearer {{token}}'`;
+
 const steps = [
-  { id: "curl", label: "Cole a CURL", icon: Terminal },
-  { id: "review", label: "Revisão", icon: Code2 },
-  { id: "auth", label: "Autenticação", icon: Key },
-  { id: "mapping", label: "Mapeamento", icon: Braces },
+  { id: "auth", label: "1. Autenticação", icon: Key },
+  { id: "request", label: "2. Consulta (CURL)", icon: Terminal },
+  { id: "mapping", label: "3. Mapeamento", icon: Braces },
 ];
 
 export default function PriceCheckIntegrationForm() {
@@ -54,26 +53,29 @@ export default function PriceCheckIntegrationForm() {
   const [status, setStatus] = useState<"active" | "inactive">("active");
   const [environment, setEnvironment] = useState<"production" | "staging">("production");
 
-  // CURL state
-  const [requestCurl, setRequestCurl] = useState("");
-  const [parsedRequest, setParsedRequest] = useState<ParsedCurl | null>(null);
-  const [parseError, setParseError] = useState<string | null>(null);
-
   // Auth state
   const [hasAuth, setHasAuth] = useState(false);
   const [authCurl, setAuthCurl] = useState("");
   const [parsedAuth, setParsedAuth] = useState<ParsedCurl | null>(null);
+  const [authParseError, setAuthParseError] = useState<string | null>(null);
   const [authTokenPath, setAuthTokenPath] = useState("token");
   const [tokenExpiration, setTokenExpiration] = useState(3600);
+  const [isTestingAuth, setIsTestingAuth] = useState(false);
+  const [authTestResult, setAuthTestResult] = useState<any>(null);
 
-  // Mapping
-  const [mappingConfig, setMappingConfig] = useState<any>({});
+  // Request CURL state
+  const [requestCurl, setRequestCurl] = useState("");
+  const [parsedRequest, setParsedRequest] = useState<ParsedCurl | null>(null);
+  const [requestParseError, setRequestParseError] = useState<string | null>(null);
 
   // Test state
   const [isTestingRequest, setIsTestingRequest] = useState(false);
   const [testBarcode, setTestBarcode] = useState("");
   const [testStoreCode, setTestStoreCode] = useState("");
   const [lastTestResult, setLastTestResult] = useState<any>(null);
+
+  // Mapping
+  const [mappingConfig, setMappingConfig] = useState<any>({});
 
   // Load existing integration
   useEffect(() => {
@@ -88,47 +90,56 @@ export default function PriceCheckIntegrationForm() {
       setAuthTokenPath((existingIntegration as any).auth_token_path || "token");
       setTokenExpiration((existingIntegration as any).token_expiration_seconds || 3600);
       setMappingConfig(existingIntegration.mapping_config || {});
-      setCurrentStep(1); // Go to review on edit
     }
   }, [existingIntegration]);
-
-  // Parse request CURL
-  useEffect(() => {
-    const raw = requestCurl.trim();
-    if (!raw) { setParsedRequest(null); setParseError(null); return; }
-    try {
-      const parsed = inferCommonVariables(parseCurl(raw));
-      setParsedRequest(parsed);
-      setParseError(null);
-    } catch (e: any) {
-      setParsedRequest(null);
-      setParseError(e?.message || "Erro ao interpretar CURL");
-    }
-  }, [requestCurl]);
 
   // Parse auth CURL
   useEffect(() => {
     const raw = authCurl.trim();
-    if (!raw) { setParsedAuth(null); return; }
+    if (!raw) { setParsedAuth(null); setAuthParseError(null); return; }
     try {
       setParsedAuth(inferCommonVariables(parseCurl(raw)));
-    } catch { setParsedAuth(null); }
+      setAuthParseError(null);
+    } catch (e: any) {
+      setParsedAuth(null);
+      setAuthParseError(e?.message || "Erro ao interpretar CURL de auth");
+    }
   }, [authCurl]);
 
-  const handleAnalyze = () => {
-    if (!requestCurl.trim()) {
-      toast.error("Cole uma CURL antes de analisar");
+  // Parse request CURL
+  useEffect(() => {
+    const raw = requestCurl.trim();
+    if (!raw) { setParsedRequest(null); setRequestParseError(null); return; }
+    try {
+      const parsed = inferCommonVariables(parseCurl(raw));
+      setParsedRequest(parsed);
+      setRequestParseError(null);
+    } catch (e: any) {
+      setParsedRequest(null);
+      setRequestParseError(e?.message || "Erro ao interpretar CURL");
+    }
+  }, [requestCurl]);
+
+  const handleTestAuth = async () => {
+    if (!isEditing || !id) {
+      toast.error("Salve a integração antes de testar a autenticação");
       return;
     }
-    if (!parsedRequest) {
-      toast.error("CURL inválida. Verifique o formato.");
-      return;
+    setIsTestingAuth(true);
+    setAuthTestResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("price-check-proxy", {
+        body: { action: "auth_test", integration_id: id },
+      });
+      if (error) throw error;
+      setAuthTestResult(data);
+      if (data?.success) toast.success("Autenticação executada com sucesso!");
+      else toast.error("Falha na autenticação");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao testar autenticação");
+    } finally {
+      setIsTestingAuth(false);
     }
-    if (!name.trim()) {
-      setName(`Integração ${parsedRequest.origin || "Nova"}`);
-    }
-    setCurrentStep(1);
-    toast.success("CURL analisada com sucesso!");
   };
 
   const handleTestRequest = async () => {
@@ -146,8 +157,8 @@ export default function PriceCheckIntegrationForm() {
       });
       if (error) throw error;
       setLastTestResult(data);
-      if (data?.success) toast.success("Request executado com sucesso");
-      else toast.error("Request executado com falha");
+      if (data?.success) toast.success("Consulta executada com sucesso!");
+      else toast.error("Consulta executada com falha");
     } catch (err: any) {
       toast.error(err?.message || "Erro ao testar");
     } finally {
@@ -157,7 +168,6 @@ export default function PriceCheckIntegrationForm() {
 
   const handleSave = async () => {
     if (!name.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!parsedRequest && !requestCurl.trim()) { toast.error("Cole a CURL de consulta"); return; }
 
     setIsLoading(true);
     try {
@@ -216,8 +226,9 @@ export default function PriceCheckIntegrationForm() {
     }
   };
 
-  const headersEntries = useMemo(() => Object.entries(parsedRequest?.headers || {}), [parsedRequest]);
-  const queryEntries = useMemo(() => Object.entries(parsedRequest?.query || {}), [parsedRequest]);
+  const requestHeadersEntries = useMemo(() => Object.entries(parsedRequest?.headers || {}), [parsedRequest]);
+  const requestQueryEntries = useMemo(() => Object.entries(parsedRequest?.query || {}), [parsedRequest]);
+  const authHeadersEntries = useMemo(() => Object.entries(parsedAuth?.headers || {}), [parsedAuth]);
 
   return (
     <div className="space-y-6 p-6 pb-24 max-w-6xl mx-auto">
@@ -231,13 +242,43 @@ export default function PriceCheckIntegrationForm() {
             {isEditing ? "Editar Integração" : "Nova Integração via CURL"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Cole a CURL real da API e o sistema configura tudo automaticamente
+            Configure autenticação primeiro (se necessário), depois a consulta de preço
           </p>
         </div>
         <Button onClick={handleSave} disabled={isLoading} className="gap-2">
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Salvar Integração
         </Button>
+      </div>
+
+      {/* Name & Company & Settings — always visible */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="space-y-2 md:col-span-2">
+          <Label>Nome da Integração</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: API ERP Zaffari — Consulta Preço" />
+        </div>
+        <div className="space-y-2">
+          <Label>Empresa (Opcional)</Label>
+          <Select onValueChange={(v) => setCompanyId(v === "global" ? null : v)} value={companyId || "global"}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Todas (Global)</SelectItem>
+              {companies?.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Ambiente</Label>
+          <Select value={environment} onValueChange={(v: any) => setEnvironment(v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="production">Produção</SelectItem>
+              <SelectItem value="staging">Homologação</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Step indicators */}
@@ -265,56 +306,205 @@ export default function PriceCheckIntegrationForm() {
         })}
       </div>
 
-      {/* STEP 0: Cole a CURL */}
+      {/* ========== STEP 0: Autenticação ========== */}
       {currentStep === 0 && (
         <div className="space-y-6">
-          {/* Name & Company */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2 md:col-span-2">
-              <Label>Nome da Integração</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: API ERP Zaffari — Consulta Preço"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Empresa (Opcional)</Label>
-              <Select onValueChange={(v) => setCompanyId(v === "global" ? null : v)} value={companyId || "global"}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="global">Todas (Global)</SelectItem>
-                  {companies?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="h-5 w-5 text-primary" />
+                    Autenticação (Login / Token)
+                  </CardTitle>
+                  <CardDescription>
+                    Se a API requer autenticação antes da consulta, habilite e cole a CURL de login.
+                    O token obtido será usado automaticamente na CURL de consulta via {"{{token}}"}.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Requer auth</Label>
+                  <Switch checked={hasAuth} onCheckedChange={setHasAuth} />
+                </div>
+              </div>
+            </CardHeader>
 
-          {/* CURL textarea */}
+            {hasAuth && (
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>CURL de Autenticação (Login)</Label>
+                  <Textarea
+                    value={authCurl}
+                    onChange={(e) => setAuthCurl(e.target.value)}
+                    placeholder={EXAMPLE_AUTH_CURL}
+                    className="font-mono text-sm min-h-[180px] bg-muted/20"
+                  />
+                </div>
+
+                {authParseError && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" /> {authParseError}
+                  </div>
+                )}
+
+                {parsedAuth && (
+                  <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      Auth CURL interpretada com sucesso
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Método</span>
+                        <div className="font-mono font-bold">{parsedAuth.method}</div>
+                      </div>
+                      <div className="col-span-3">
+                        <span className="text-muted-foreground text-xs">URL</span>
+                        <div className="font-mono text-xs truncate">{parsedAuth.urlWithoutQuery}</div>
+                      </div>
+                    </div>
+                    {authHeadersEntries.length > 0 && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">Headers ({authHeadersEntries.length})</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {authHeadersEntries.map(([k]) => (
+                            <Badge key={k} variant="outline" className="text-xs font-mono">{k}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(parsedAuth.bodyJson || parsedAuth.bodyText) && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">Body</span>
+                        <pre className="font-mono text-xs bg-muted/20 p-3 rounded mt-1 overflow-auto max-h-[200px]">
+                          {parsedAuth.bodyJson ? JSON.stringify(parsedAuth.bodyJson, null, 2) : parsedAuth.bodyText}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>JSON Path do Token na resposta</Label>
+                    <Input
+                      value={authTokenPath}
+                      onChange={(e) => setAuthTokenPath(e.target.value)}
+                      placeholder="data.token | token | access_token"
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Caminho no JSON de resposta para extrair o token (ex: data.access_token)
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Expiração do Token (segundos)</Label>
+                    <Input
+                      type="number"
+                      value={tokenExpiration}
+                      onChange={(e) => setTokenExpiration(Number(e.target.value) || 3600)}
+                      placeholder="3600"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tempo máximo para reutilizar o token obtido
+                    </p>
+                  </div>
+                </div>
+
+                {/* Test Auth */}
+                <Card className="border-dashed">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Play className="h-4 w-4 text-primary" /> Testar Autenticação
+                    </CardTitle>
+                    <CardDescription>
+                      {isEditing
+                        ? "Execute a CURL de login para validar e ver o token retornado"
+                        : "Salve a integração primeiro para poder testar a autenticação"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      onClick={handleTestAuth}
+                      disabled={!isEditing || isTestingAuth || !parsedAuth}
+                      className="gap-2"
+                    >
+                      {isTestingAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                      Executar Login
+                    </Button>
+
+                    {authTestResult && (
+                      <div className="rounded-lg border bg-muted/10 p-4 space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          {authTestResult.success ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-destructive" />
+                          )}
+                          <span className="font-medium">
+                            {authTestResult.success ? "Token obtido com sucesso!" : "Falha na autenticação"}
+                          </span>
+                        </div>
+                        <pre className="font-mono text-xs bg-muted/20 p-3 rounded overflow-auto max-h-[300px]">
+                          {typeof authTestResult.response === "string"
+                            ? authTestResult.response
+                            : JSON.stringify(authTestResult.response, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </CardContent>
+            )}
+
+            {!hasAuth && (
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Autenticação desabilitada. Se a API não requer login, avance para a CURL de consulta.
+                </p>
+              </CardContent>
+            )}
+          </Card>
+
+          <div className="flex justify-end">
+            <Button onClick={() => setCurrentStep(1)} className="gap-2">
+              Próximo: CURL de Consulta <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ========== STEP 1: CURL de Consulta ========== */}
+      {currentStep === 1 && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Terminal className="h-5 w-5 text-primary" />
-                Cole sua CURL completa
+                CURL de Consulta de Preço
               </CardTitle>
               <CardDescription>
-                Copie a requisição CURL do Postman, Chrome DevTools ou da documentação da API.
-                O parser extrai automaticamente: método, URL, headers, body e variáveis dinâmicas.
+                Cole a CURL da consulta de produto/preço. 
+                {hasAuth && (
+                  <span className="text-primary font-medium">
+                    {" "}Use {"{{token}}"} onde o token de autenticação deve ser inserido automaticamente.
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
                 value={requestCurl}
                 onChange={(e) => setRequestCurl(e.target.value)}
-                placeholder={EXAMPLE_CURL}
+                placeholder={EXAMPLE_REQUEST_CURL}
                 className="font-mono text-sm min-h-[200px] bg-muted/20"
               />
 
-              {parseError && (
+              {requestParseError && (
                 <div className="flex items-center gap-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" /> {parseError}
+                  <AlertCircle className="h-4 w-4" /> {requestParseError}
                 </div>
               )}
 
@@ -334,23 +524,48 @@ export default function PriceCheckIntegrationForm() {
                       <div className="font-mono text-xs truncate">{parsedRequest.urlWithoutQuery}</div>
                     </div>
                   </div>
-                  {headersEntries.length > 0 && (
+
+                  {requestHeadersEntries.length > 0 && (
                     <div>
-                      <span className="text-muted-foreground text-xs">Headers ({headersEntries.length})</span>
+                      <span className="text-muted-foreground text-xs">Headers ({requestHeadersEntries.length})</span>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {headersEntries.map(([k]) => (
+                        {requestHeadersEntries.map(([k]) => (
                           <Badge key={k} variant="outline" className="text-xs font-mono">{k}</Badge>
                         ))}
                       </div>
                     </div>
                   )}
+
+                  {requestQueryEntries.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground text-xs">Query Params ({requestQueryEntries.length})</span>
+                      <div className="space-y-1 mt-1">
+                        {requestQueryEntries.map(([k, v]) => (
+                          <div key={k} className="flex items-center gap-2 text-sm font-mono bg-muted/10 px-3 py-1.5 rounded">
+                            <span className="text-muted-foreground">{k}:</span>
+                            <span>{String(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(parsedRequest.bodyJson || parsedRequest.bodyText) && (
+                    <div>
+                      <span className="text-muted-foreground text-xs">Body</span>
+                      <pre className="font-mono text-xs bg-muted/20 p-3 rounded mt-1 overflow-auto max-h-[200px]">
+                        {parsedRequest.bodyJson ? JSON.stringify(parsedRequest.bodyJson, null, 2) : parsedRequest.bodyText}
+                      </pre>
+                    </div>
+                  )}
+
                   {parsedRequest.variables.length > 0 && (
                     <div>
-                      <span className="text-muted-foreground text-xs">Variáveis detectadas</span>
+                      <span className="text-muted-foreground text-xs">Variáveis dinâmicas detectadas</span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {parsedRequest.variables.map((v) => (
                           <Badge key={v.name} className="text-xs font-mono bg-primary/20 text-primary border-primary/30">
-                            {`{${v.name}}`}
+                            {`{{${v.name}}}`}
                           </Badge>
                         ))}
                       </div>
@@ -358,126 +573,19 @@ export default function PriceCheckIntegrationForm() {
                   )}
                 </div>
               )}
-
-              <Button onClick={handleAnalyze} disabled={!requestCurl.trim()} className="gap-2">
-                <Zap className="h-4 w-4" /> Analisar CURL
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* STEP 1: Review */}
-      {currentStep === 1 && parsedRequest && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* URL & Method */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Globe className="h-4 w-4 text-primary" /> URL e Método
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Método</Label>
-                <div className="font-mono text-lg font-bold">{parsedRequest.method}</div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">URL Base</Label>
-                <div className="font-mono text-sm bg-muted/20 p-2 rounded break-all">{parsedRequest.urlWithoutQuery}</div>
-              </div>
-              {queryEntries.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Query Parameters</Label>
-                  <div className="space-y-1">
-                    {queryEntries.map(([k, v]) => (
-                      <div key={k} className="flex items-center gap-2 text-sm font-mono bg-muted/10 px-3 py-1.5 rounded">
-                        <span className="text-muted-foreground">{k}:</span>
-                        <span>{String(v)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
-          {/* Headers */}
-          <Card>
+          {/* Test Request */}
+          <Card className="border-dashed">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
-                <Code2 className="h-4 w-4 text-primary" /> Headers
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {headersEntries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum header detectado</p>
-              ) : (
-                <div className="space-y-1">
-                  {headersEntries.map(([k, v]) => (
-                    <div key={k} className="flex items-start gap-2 text-sm font-mono bg-muted/10 px-3 py-1.5 rounded">
-                      <span className="text-muted-foreground whitespace-nowrap">{k}:</span>
-                      <span className="break-all">{v.length > 60 ? v.slice(0, 60) + "..." : v}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Body */}
-          {(parsedRequest.bodyJson || parsedRequest.bodyText) && (
-            <Card className="lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Braces className="h-4 w-4 text-primary" /> Body
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="font-mono text-xs bg-muted/20 p-4 rounded overflow-auto max-h-[300px]">
-                  {parsedRequest.bodyJson
-                    ? JSON.stringify(parsedRequest.bodyJson, null, 2)
-                    : parsedRequest.bodyText}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Variables */}
-          {parsedRequest.variables.length > 0 && (
-            <Card className="lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Variáveis Dinâmicas</CardTitle>
-                <CardDescription>
-                  Estas variáveis serão substituídas em tempo de execução (barcode, store, token, etc.)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {parsedRequest.variables.map((v) => (
-                    <div key={v.name} className="flex items-center gap-3 bg-muted/10 rounded-lg px-4 py-3">
-                      <Badge variant="outline" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">
-                        {`{${v.name}}`}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        em: {v.locations.join(", ")}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Test section */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Play className="h-4 w-4 text-primary" /> Testar Integração
+                <Play className="h-4 w-4 text-primary" /> Testar Consulta
               </CardTitle>
               <CardDescription>
-                {isEditing ? "Execute um teste real com um código de barras" : "Salve primeiro para poder testar"}
+                {isEditing
+                  ? `Execute um teste real com um código de barras${hasAuth ? " (autenticação será executada automaticamente antes)" : ""}`
+                  : "Salve a integração primeiro para poder testar"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -493,7 +601,7 @@ export default function PriceCheckIntegrationForm() {
                 <div className="flex items-end">
                   <Button onClick={handleTestRequest} disabled={!isEditing || isTestingRequest || !testBarcode.trim()} className="gap-2 w-full">
                     {isTestingRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                    Testar
+                    Testar Consulta
                   </Button>
                 </div>
               </div>
@@ -521,162 +629,43 @@ export default function PriceCheckIntegrationForm() {
             </CardContent>
           </Card>
 
-          {/* Navigation */}
-          <div className="lg:col-span-2 flex justify-between">
+          <div className="flex justify-between">
             <Button variant="ghost" onClick={() => setCurrentStep(0)} className="gap-2">
-              <ArrowLeft className="h-4 w-4" /> Voltar à CURL
+              <ArrowLeft className="h-4 w-4" /> Autenticação
             </Button>
             <Button onClick={() => setCurrentStep(2)} className="gap-2">
-              Configurar Autenticação <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {currentStep === 1 && !parsedRequest && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Terminal className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Volte ao passo anterior e cole uma CURL válida</p>
-            <Button variant="outline" onClick={() => setCurrentStep(0)} className="mt-4">
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* STEP 2: Auth */}
-      {currentStep === 2 && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Key className="h-5 w-5 text-primary" />
-                    Autenticação Automática
-                  </CardTitle>
-                  <CardDescription>
-                    Se a API requer login antes da consulta, cole a CURL de autenticação
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Requer auth</Label>
-                  <Switch checked={hasAuth} onCheckedChange={setHasAuth} />
-                </div>
-              </div>
-            </CardHeader>
-
-            {hasAuth && (
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>CURL de Login / Token</Label>
-                  <Textarea
-                    value={authCurl}
-                    onChange={(e) => setAuthCurl(e.target.value)}
-                    placeholder={EXAMPLE_AUTH_CURL}
-                    className="font-mono text-sm min-h-[160px] bg-muted/20"
-                  />
-                </div>
-
-                {parsedAuth && (
-                  <div className="rounded-lg border bg-muted/10 p-3 space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      Auth CURL interpretada: <span className="font-mono">{parsedAuth.method} {parsedAuth.urlWithoutQuery}</span>
-                    </div>
-                    {parsedAuth.variables.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {parsedAuth.variables.map((v) => (
-                          <Badge key={v.name} variant="outline" className="text-xs font-mono">{`{${v.name}}`}</Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>JSON Path do Token</Label>
-                    <Input
-                      value={authTokenPath}
-                      onChange={(e) => setAuthTokenPath(e.target.value)}
-                      placeholder="data.token | token | access_token"
-                      className="font-mono"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Caminho no JSON de resposta para extrair o token
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Expiração (segundos)</Label>
-                    <Input
-                      type="number"
-                      value={tokenExpiration}
-                      onChange={(e) => setTokenExpiration(Number(e.target.value) || 3600)}
-                      placeholder="3600"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Tempo máximo para reutilizar o token obtido
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* Status & Environment */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Configurações Gerais</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Ambiente</Label>
-                  <Select value={environment} onValueChange={(v: any) => setEnvironment(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="production">Produção</SelectItem>
-                      <SelectItem value="staging">Homologação</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <Label>Status Ativo</Label>
-                    <p className="text-xs text-muted-foreground">Disponível para uso nos terminais</p>
-                  </div>
-                  <Switch checked={status === "active"} onCheckedChange={(c) => setStatus(c ? "active" : "inactive")} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-between">
-            <Button variant="ghost" onClick={() => setCurrentStep(1)} className="gap-2">
-              <ArrowLeft className="h-4 w-4" /> Revisão
-            </Button>
-            <Button onClick={() => setCurrentStep(3)} className="gap-2">
               Mapeamento de Resposta <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: Mapping */}
-      {currentStep === 3 && (
+      {/* ========== STEP 2: Mapeamento ========== */}
+      {currentStep === 2 && (
         <div className="space-y-6">
           <IntegrationMapping
             value={mappingConfig}
             onChange={setMappingConfig}
           />
 
+          {/* Status toggle */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Status Ativo</Label>
+                  <p className="text-xs text-muted-foreground">Disponível para uso nos terminais</p>
+                </div>
+                <Switch checked={status === "active"} onCheckedChange={(c) => setStatus(c ? "active" : "inactive")} />
+              </div>
+            </CardContent>
+          </Card>
+
           <Separator />
 
           <div className="flex justify-between">
-            <Button variant="ghost" onClick={() => setCurrentStep(2)} className="gap-2">
-              <ArrowLeft className="h-4 w-4" /> Autenticação
+            <Button variant="ghost" onClick={() => setCurrentStep(1)} className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> CURL de Consulta
             </Button>
             <Button onClick={handleSave} disabled={isLoading} className="gap-2">
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
