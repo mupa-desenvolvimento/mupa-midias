@@ -594,7 +594,7 @@ Deno.serve(async (req: Request) => {
                 playlist_items(
                   id, media_id, position, duration_override,
                   start_date, end_date, start_time, end_time, days_of_week,
-                  media:media_items(id, name, type, file_url, duration)
+                  media:media_items(id, name, type, file_url, duration, metadata)
                 ),
                 playlist_channels(
                   id, name, is_active, is_fallback, position,
@@ -602,7 +602,7 @@ Deno.serve(async (req: Request) => {
                   playlist_channel_items(
                     id, media_id, position, duration_override,
                     start_date, end_date, start_time, end_time, days_of_week,
-                    media:media_items(id, name, type, file_url, duration)
+                    media:media_items(id, name, type, file_url, duration, metadata)
                   )
                 )
               `)
