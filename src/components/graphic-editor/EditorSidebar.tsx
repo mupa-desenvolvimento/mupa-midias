@@ -85,6 +85,10 @@ export function EditorSidebar({
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeSource, setActiveSource] = useState<SearchSource>("pexels");
+  const [orientation, setOrientation] = useState<SearchOrientation>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalResults, setTotalResults] = useState(0);
   const [galleryFilter, setGalleryFilter] = useState("");
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
@@ -95,10 +99,10 @@ export function EditorSidebar({
     e.target.value = "";
   };
 
-  const searchImages = async () => {
+  const searchImages = useCallback(async (page = 1, source?: SearchSource) => {
     if (!searchQuery.trim()) return;
     setSearching(true);
-    setSearchResults([]);
+    if (page === 1) setSearchResults([]);
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -112,22 +116,33 @@ export function EditorSidebar({
           },
           body: JSON.stringify({
             query: searchQuery.trim(),
-            source: activeSource,
-            per_page: 12,
+            source: source || activeSource,
+            per_page: 20,
+            page,
+            orientation: orientation || undefined,
           }),
         }
       );
 
       if (!response.ok) throw new Error("Search failed");
       const data = await response.json();
-      setSearchResults(data.results || []);
+      const newResults = data.results || [];
+      
+      if (page === 1) {
+        setSearchResults(newResults);
+      } else {
+        setSearchResults(prev => [...prev, ...newResults]);
+      }
+      setCurrentPage(page);
+      setHasMore(data.hasMore || false);
+      setTotalResults(data.total || 0);
     } catch (err) {
       console.error("Image search error:", err);
-      setSearchResults([]);
+      if (page === 1) setSearchResults([]);
     } finally {
       setSearching(false);
     }
-  };
+  }, [searchQuery, activeSource, orientation]);
 
   const tools = [
     { icon: Type, label: "Texto", action: onAddText, color: "text-blue-500" },
