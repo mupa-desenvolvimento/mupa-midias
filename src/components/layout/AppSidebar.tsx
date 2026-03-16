@@ -20,8 +20,8 @@ import {
   Brain,
   QrCode,
   Link,
-  ChevronDown,
-} from "lucide-react";
+  ChevronDown } from
+"lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -43,68 +43,68 @@ import {
   SidebarGroupLabel,
   SidebarFooter,
   SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
+  useSidebar } from
+"@/components/ui/sidebar";
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  CollapsibleTrigger } from
+"@/components/ui/collapsible";
 
 const menuItems = [
-  { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
-  { title: "Lojas", url: "/admin/stores", icon: Store },
-  { title: "Regiões", url: "/admin/regions", icon: MapPin },
-  { title: "Dispositivos", url: "/admin/devices", icon: Monitor },
-  { title: "Grupos", url: "/admin/device-groups", icon: Layers },
-  { title: "Canais", url: "/admin/channels", icon: Tv },
-  { title: "Playlists", url: "/admin/playlists", icon: ListVideo },
-  { title: "Galeria", url: "/admin/media", icon: Image },
-  { title: "Canva", url: "/admin/canva", icon: Brush },
-  { title: "Câmera", url: "/admin/camera", icon: Camera },
-  { title: "Monitoramento", url: "/admin/monitoring", icon: Eye },
-  { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
-  { title: "Inky Intelligence", url: "/admin/inky", icon: Brain },
-  { title: "Configurações", url: "/admin/settings", icon: Settings },
-];
+{ title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
+{ title: "Lojas", url: "/admin/stores", icon: Store },
+{ title: "Regiões", url: "/admin/regions", icon: MapPin },
+{ title: "Dispositivos", url: "/admin/devices", icon: Monitor },
+{ title: "Grupos", url: "/admin/device-groups", icon: Layers },
+{ title: "Canais", url: "/admin/channels", icon: Tv },
+{ title: "Playlists", url: "/admin/playlists", icon: ListVideo },
+{ title: "Galeria", url: "/admin/media", icon: Image },
+{ title: "Canva", url: "/admin/canva", icon: Brush },
+{ title: "Câmera", url: "/admin/camera", icon: Camera },
+{ title: "Monitoramento", url: "/admin/monitoring", icon: Eye },
+{ title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
+{ title: "Inky Intelligence", url: "/admin/inky", icon: Brain },
+{ title: "Configurações", url: "/admin/settings", icon: Settings }];
+
 
 const autoContentItems = [
-  { title: "Clima", url: "/admin/auto-content/weather", icon: Tv },
-  { title: "Notícias", url: "/admin/auto-content/news", icon: BarChart3 },
-  { title: "Frases Motivacionais", url: "/admin/auto-content/quote", icon: Brain },
-  { title: "Curiosidades", url: "/admin/auto-content/curiosity", icon: Layers },
-  { title: "Aniversariantes", url: "/admin/auto-content/birthday", icon: ShoppingBag },
-  { title: "Nutrição", url: "/admin/auto-content/nutrition", icon: Store },
-  { title: "Instagram", url: "/admin/auto-content/instagram", icon: Camera },
-  { title: "QR Code Campanhas", url: "/admin/auto-content/qr_campaign", icon: QrCode },
-];
+{ title: "Clima", url: "/admin/auto-content/weather", icon: Tv },
+{ title: "Notícias", url: "/admin/auto-content/news", icon: BarChart3 },
+{ title: "Frases Motivacionais", url: "/admin/auto-content/quote", icon: Brain },
+{ title: "Curiosidades", url: "/admin/auto-content/curiosity", icon: Layers },
+{ title: "Aniversariantes", url: "/admin/auto-content/birthday", icon: ShoppingBag },
+{ title: "Nutrição", url: "/admin/auto-content/nutrition", icon: Store },
+{ title: "Instagram", url: "/admin/auto-content/instagram", icon: Camera },
+{ title: "QR Code Campanhas", url: "/admin/auto-content/qr_campaign", icon: QrCode }];
+
 
 const superAdminItems = [
-  { title: "Clientes", url: "/admin/tenants", icon: Building2 },
-  { title: "Empresas", url: "/admin/companies", icon: Plug2 },
-  { title: "Integrações", url: "/admin/integrations", icon: Link },
-  { title: "Price API Integrations", url: "/admin/api-integrations", icon: Link },
-];
+{ title: "Clientes", url: "/admin/tenants", icon: Building2 },
+{ title: "Empresas", url: "/admin/companies", icon: Plug2 },
+{ title: "Integrações", url: "/admin/integrations", icon: Link },
+{ title: "Price API Integrations", url: "/admin/api-integrations", icon: Link }];
 
-const SidebarNavItem = ({ item }: { item: typeof menuItems[number] }) => {
+
+const SidebarNavItem = ({ item }: {item: typeof menuItems[number];}) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
-  const link = (
-    <NavLink
-      to={item.url}
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-          isActive
-            ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm"
-            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-        }`
-      }
-    >
+  const link =
+  <NavLink
+    to={item.url}
+    className={({ isActive }) =>
+    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+    isActive ?
+    "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm" :
+    "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`
+
+    }>
+    
       <item.icon className="w-4 h-4 shrink-0" />
       {!collapsed && <span className="truncate">{item.title}</span>}
-    </NavLink>
-  );
+    </NavLink>;
+
 
   if (collapsed) {
     return (
@@ -113,8 +113,8 @@ const SidebarNavItem = ({ item }: { item: typeof menuItems[number] }) => {
         <TooltipContent side="right" className="font-medium">
           {item.title}
         </TooltipContent>
-      </Tooltip>
-    );
+      </Tooltip>);
+
   }
 
   return link;
@@ -138,18 +138,18 @@ const AppSidebar = () => {
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || "U";
 
   const isAutoContentActive = location.pathname.startsWith("/admin/auto-content");
-  const isSuperAdminActive = superAdminItems.some(i => location.pathname.startsWith(i.url));
+  const isSuperAdminActive = superAdminItems.some((i) => location.pathname.startsWith(i.url));
 
   return (
     <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
       <SidebarHeader className="p-3">
-        <div className="flex items-center gap-2">
+        <div className="gap-2 flex items-center justify-center">
           <SidebarTrigger className="h-8 w-8 shrink-0" />
           <img
             src={resolvedTheme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"}
             alt="MupaMídias"
-            className="h-8 group-data-[collapsible=icon]:hidden transition-opacity duration-200"
-          />
+            className="h-8 group-data-[collapsible=icon]:hidden transition-opacity duration-200" />
+          
         </div>
       </SidebarHeader>
 
@@ -161,13 +161,13 @@ const AppSidebar = () => {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+              {menuItems.map((item) =>
+              <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="p-0">
                     <SidebarNavItem item={item} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -184,13 +184,13 @@ const AppSidebar = () => {
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-0.5">
-                  {autoContentItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
+                  {autoContentItems.map((item) =>
+                  <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild className="p-0">
                         <SidebarNavItem item={item} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  ))}
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
@@ -198,8 +198,8 @@ const AppSidebar = () => {
         </SidebarGroup>
 
         {/* Company settings */}
-        {company && (
-          <SidebarGroup>
+        {company &&
+        <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1">
               Empresa
             </SidebarGroupLabel>
@@ -218,11 +218,11 @@ const AppSidebar = () => {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        }
 
         {/* Super Admin */}
-        {isSuperAdmin && (
-          <SidebarGroup>
+        {isSuperAdmin &&
+        <SidebarGroup>
             <Collapsible defaultOpen={isSuperAdminActive}>
               <CollapsibleTrigger className="w-full">
                 <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1 flex items-center justify-between cursor-pointer hover:text-sidebar-foreground/60 transition-colors">
@@ -233,19 +233,19 @@ const AppSidebar = () => {
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu className="space-y-0.5">
-                    {superAdminItems.map((item) => (
-                      <SidebarMenuItem key={item.title}>
+                    {superAdminItems.map((item) =>
+                  <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton asChild className="p-0">
                           <SidebarNavItem item={item} />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    ))}
+                  )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </CollapsibleContent>
             </Collapsible>
           </SidebarGroup>
-        )}
+        }
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border/30">
@@ -255,8 +255,8 @@ const AppSidebar = () => {
               {userInitials}
             </AvatarFallback>
           </Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
+          {!collapsed &&
+          <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-sidebar-foreground truncate">
                 {user?.email}
               </p>
@@ -264,7 +264,7 @@ const AppSidebar = () => {
                 v{packageJson.version}
               </p>
             </div>
-          )}
+          }
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button
@@ -272,8 +272,8 @@ const AppSidebar = () => {
                 size="icon"
                 onClick={handleSignOut}
                 className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/30"
-                aria-label="Sair"
-              >
+                aria-label="Sair">
+                
                 <LogOut className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -281,8 +281,8 @@ const AppSidebar = () => {
           </Tooltip>
         </div>
       </SidebarFooter>
-    </Sidebar>
-  );
+    </Sidebar>);
+
 };
 
 export default AppSidebar;
