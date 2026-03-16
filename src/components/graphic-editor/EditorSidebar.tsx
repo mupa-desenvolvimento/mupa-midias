@@ -51,7 +51,8 @@ interface Props {
   galleryLoading: boolean;
 }
 
-type SearchSource = "pexels" | "unsplash" | "pixabay";
+type SearchSource = "pexels" | "unsplash";
+type SearchOrientation = "" | "landscape" | "portrait" | "square";
 
 interface SearchResult {
   id: string;
@@ -59,6 +60,8 @@ interface SearchResult {
   thumb: string;
   source: string;
   photographer?: string;
+  width?: number;
+  height?: number;
 }
 
 export function EditorSidebar({
