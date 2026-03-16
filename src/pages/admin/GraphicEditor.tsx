@@ -343,8 +343,33 @@ export default function GraphicEditor() {
 
   useEffect(() => {
     const el = canvasElRef.current;
-    if (el) initCanvas(el);
-  }, [canvasElRef, initCanvas]);
+    if (el) {
+      initCanvas(el);
+      // Initial zoom-to-fit after a short delay to let layout settle
+      requestAnimationFrame(() => {
+        const container = canvasContainerRef.current;
+        if (container) {
+          zoomToFit(container.clientWidth, container.clientHeight);
+        }
+      });
+    }
+  }, [canvasElRef, initCanvas, zoomToFit]);
+
+  // Re-fit on container resize
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          zoomToFit(width, height);
+        }
+      }
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [zoomToFit]);
 
   useEffect(() => {
     const raw = localStorage.getItem("graphic-editor-templates");
