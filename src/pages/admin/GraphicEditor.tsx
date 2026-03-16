@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronDown, ChevronUp, Circle, Eye, EyeOff, GripVertical, Image as ImageIcon, Lock, Minus, Square, Star, Triangle, Type, Unlock } from "lucide-react";
 import { useFabricCanvas } from "@/components/graphic-editor/useFabricCanvas";
@@ -319,6 +319,7 @@ function FloatingLayersPanel({
 
 export default function GraphicEditor() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -349,6 +350,32 @@ export default function GraphicEditor() {
     const el = canvasElRef.current;
     if (el) initCanvas(el, canvasContainerRef.current);
   }, [canvasElRef, initCanvas]);
+
+  // Auto-load preset template from URL param
+  const templateAppliedRef = useRef(false);
+  useEffect(() => {
+    if (templateAppliedRef.current) return;
+    const templateId = searchParams.get("template");
+    if (!templateId) return;
+    const preset = PRESET_TEMPLATES.find((t) => t.id === templateId);
+    if (!preset) return;
+    templateAppliedRef.current = true;
+    // Small delay to ensure canvas is initialized
+    const timer = setTimeout(() => {
+      loadProjectData({
+        name: preset.name,
+        canvas: preset.canvas,
+        bgColor: preset.bgColor,
+        width: preset.width,
+        height: preset.height,
+      }).then(() => {
+        toast.success(`Template "${preset.name}" carregado!`);
+      }).catch(() => {
+        toast.error("Falha ao carregar template");
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchParams, loadProjectData]);
 
   useEffect(() => {
     const container = canvasContainerRef.current;
