@@ -73,6 +73,9 @@ const WebViewPlayer = () => {
     lookupProduct(ean);
   }, [lookupProduct]);
 
+  const cameraPreviewRef = useRef<HTMLVideoElement>(null);
+  const [showCameraPreview, setShowCameraPreview] = useState(false);
+
   const mediaElementRef = useRef<HTMLVideoElement | HTMLImageElement | null>(null);
 
   const videoARef = useRef<HTMLVideoElement | null>(null);
