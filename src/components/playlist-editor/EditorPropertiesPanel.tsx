@@ -146,14 +146,8 @@ const MediaLibraryPanel = ({ onAddMedia, itemsLength }: {
           />
         </div>
 
-        <div className="flex gap-1">
-          {[
-            { value: "all", label: "Todos" },
-            { value: "image", label: "Imagens" },
-            { value: "video", label: "Vídeos" },
-            { value: "news", label: "Notícias" },
-            { value: "weather", label: "Clima" },
-          ].map((filter) => (
+        <div className="flex gap-1 flex-wrap">
+          {MEDIA_FILTER_OPTIONS.map((filter) => (
             <button
               key={filter.value}
               onClick={() => setTypeFilter(filter.value)}

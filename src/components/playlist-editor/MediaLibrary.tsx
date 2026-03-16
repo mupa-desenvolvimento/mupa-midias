@@ -78,10 +78,9 @@ export const MediaLibrary = ({ onDragStart }: MediaLibraryProps) => {
             <SelectValue placeholder="Filtrar por tipo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            <SelectItem value="image">Imagens</SelectItem>
-            <SelectItem value="video">Vídeos</SelectItem>
-            <SelectItem value="news">Notícias</SelectItem>
+            {MEDIA_FILTER_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
