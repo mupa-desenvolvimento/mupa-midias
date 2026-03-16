@@ -3,8 +3,7 @@ import { useMediaItems, MediaItem } from "@/hooks/useMediaItems";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Image, Video, FileText, Grip, Clock, Newspaper, Globe, Youtube, Code, CloudSun, LayoutGrid, Table, Instagram, Megaphone } from "lucide-react";
+import { Search, Image, Video, FileText, Grip, Clock, Newspaper, CloudSun, Instagram, QrCode, Lightbulb, Cake, Apple, MessageCircleHeart } from "lucide-react";
 import { MEDIA_FILTER_OPTIONS } from "@/constants/contentTypes";
 
 interface MediaLibraryProps {
@@ -16,14 +15,13 @@ const getMediaIcon = (type: string) => {
     video: <Video className="w-4 h-4" />,
     image: <Image className="w-4 h-4" />,
     news: <Newspaper className="w-4 h-4" />,
-    url: <Globe className="w-4 h-4" />,
-    youtube: <Youtube className="w-4 h-4" />,
-    html: <Code className="w-4 h-4" />,
     weather: <CloudSun className="w-4 h-4" />,
-    widget: <LayoutGrid className="w-4 h-4" />,
-    table: <Table className="w-4 h-4" />,
+    motivational: <MessageCircleHeart className="w-4 h-4" />,
+    curiosity: <Lightbulb className="w-4 h-4" />,
+    birthday: <Cake className="w-4 h-4" />,
+    nutrition: <Apple className="w-4 h-4" />,
     instagram: <Instagram className="w-4 h-4" />,
-    campaign: <Megaphone className="w-4 h-4" />,
+    campaign: <QrCode className="w-4 h-4" />,
   };
   return iconMap[type] || <FileText className="w-4 h-4" />;
 };
@@ -73,16 +71,21 @@ export const MediaLibrary = ({ onDragStart }: MediaLibraryProps) => {
           />
         </div>
 
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Filtrar por tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            {MEDIA_FILTER_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-1 flex-wrap">
+          {MEDIA_FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setTypeFilter(opt.value)}
+              className={`px-2 h-7 text-xs rounded transition-colors ${
+                typeFilter === opt.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <ScrollArea className="flex-1 min-h-0" showScrollbar="always">
