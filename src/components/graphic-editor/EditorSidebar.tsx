@@ -575,6 +575,61 @@ export function EditorSidebar({
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      {/* SVG Import Dialog */}
+      <Dialog open={showSvgDialog} onOpenChange={setShowSvgDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCode className="h-5 w-5" /> Importar SVG
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs mb-2 block">Upload de arquivo .svg</Label>
+              <Button
+                variant="outline"
+                className="w-full h-12 gap-2"
+                onClick={() => svgFileRef.current?.click()}
+                disabled={svgLoading}
+              >
+                {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Selecionar arquivo SVG
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Separator className="flex-1" />
+              <span className="text-xs text-muted-foreground">ou</span>
+              <Separator className="flex-1" />
+            </div>
+
+            <div>
+              <Label className="text-xs mb-2 block">Carregar de URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://example.com/icon.svg"
+                  value={svgUrl}
+                  onChange={(e) => setSvgUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSvgFromUrl()}
+                  className="h-10 text-sm"
+                />
+                <Button
+                  onClick={handleSvgFromUrl}
+                  disabled={!svgUrl.trim() || svgLoading}
+                  className="h-10 shrink-0"
+                >
+                  {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-muted-foreground">
+              O SVG importado aparecerá no painel de layers. Você pode escalar, rotacionar e alterar cores dos paths.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
