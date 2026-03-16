@@ -80,31 +80,40 @@ export default function InstagramFeedManager() {
     },
   });
 
-  const handleSaveSettings = async () => {
-    setSavingSettings(true);
+  const handleConnectInstagram = async () => {
+    setConnecting(true);
     try {
-      const token = tokenInput.startsWith("••") ? undefined : tokenInput;
-      const { data: tenantId } = await supabase.rpc('get_user_tenant_id_strict');
-      const { data, error } = await supabase.functions.invoke("instagram-fetch", {
-        body: {
-          action: "save-settings",
-          tenantId,
-          accessToken: token,
-          fetchDays: parseInt(fetchDays),
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast({
-        title: "Configurações salvas!",
-        description: data?.username ? `Conectado como @${data.username}` : "Token salvo com sucesso.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["instagram-settings"] });
-      setShowSettings(false);
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const redirectUri = `${window.location.origin}/admin/instagram/callback`;
+
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/instagram-oauth?action=authorize&redirect_uri=${encodeURIComponent(redirectUri)}`
+      );
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+      if (data.url) {
+        window.location.href = data.url;
+      }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
-      setSavingSettings(false);
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      if (!settings?.id) return;
+      await (supabase as any).from("instagram_settings").update({
+        access_token: null,
+        is_active: false,
+        username: null,
+        instagram_user_id: null,
+      }).eq("id", settings.id);
+      queryClient.invalidateQueries({ queryKey: ["instagram-settings"] });
+      toast({ title: "Instagram desconectado" });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
   };
 
