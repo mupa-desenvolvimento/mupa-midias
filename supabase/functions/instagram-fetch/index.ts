@@ -123,11 +123,13 @@ Deno.serve(async (req) => {
     // Action: fetch-posts - Fetch posts from Instagram and save
     if (action === "fetch-posts") {
       // Get settings
-      const { data: settings } = await supabaseAdmin
-        .from("instagram_settings")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .single();
+      let settingsQuery = supabaseAdmin.from("instagram_settings").select("*");
+      if (tenantId) {
+        settingsQuery = settingsQuery.eq("tenant_id", tenantId);
+      } else {
+        settingsQuery = settingsQuery.is("tenant_id", null);
+      }
+      const { data: settings } = await settingsQuery.single();
 
       if (!settings?.access_token) {
         return new Response(JSON.stringify({ error: "Token não configurado" }), {
