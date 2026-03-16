@@ -333,6 +333,7 @@ serve(async (req: Request) => {
       action !== "auth_body_test" &&
       action !== "auth_body_test_direct" &&
       action !== "request_test" &&
+      action !== "raw_test" &&
       (!device_id || !barcode)
     ) {
       throw new Error("Missing device_id or barcode");
@@ -343,6 +344,55 @@ serve(async (req: Request) => {
       if (!integration_id && !device_id) {
         throw new Error("Missing integration_id or device_id");
       }
+    }
+
+    // Raw test: execute a parsed CURL directly without needing a saved integration
+    if (action === "raw_test") {
+      const rawUrl = String(reqBody?.url || "");
+      const rawMethod = normalizeMethod(reqBody?.method, "GET");
+      const rawHeaders = normalizeHeaders(reqBody?.headers);
+      const rawBody = reqBody?.body;
+      const variables = reqBody?.variables || {};
+
+      if (!rawUrl) throw new Error("URL é obrigatória");
+
+      // Interpolate variables in URL, headers and body
+      const finalUrl = interpolateString(rawUrl, variables);
+      const finalHeaders: Record<string, string> = {};
+      for (const [k, v] of Object.entries(rawHeaders)) {
+        finalHeaders[k] = interpolateString(String(v), variables);
+      }
+
+      let finalBody: string | undefined = undefined;
+      if (rawMethod !== "GET" && rawBody) {
+        if (typeof rawBody === "string") {
+          finalBody = interpolateString(rawBody, variables);
+        } else if (typeof rawBody === "object") {
+          if (!finalHeaders["Content-Type"] && !finalHeaders["content-type"]) {
+            finalHeaders["Content-Type"] = "application/json";
+          }
+          finalBody = JSON.stringify(interpolateJson(rawBody, variables));
+        }
+      }
+
+      const startTime = Date.now();
+      const response = await fetch(finalUrl, {
+        method: rawMethod,
+        headers: finalHeaders,
+        body: rawMethod === "GET" ? undefined : finalBody,
+      });
+      const responseTimeMs = Date.now() - startTime;
+      const { text, json } = await safeReadResponse(response);
+
+      return new Response(JSON.stringify({
+        success: response.ok,
+        status: response.status,
+        response_time_ms: responseTimeMs,
+        response: json ? sanitizeForUi(json) : text,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     if (action === "auth_body_test_direct") {
