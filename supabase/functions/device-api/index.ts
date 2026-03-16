@@ -635,6 +635,7 @@ Deno.serve(async (req: Request) => {
                   type: item.media.type,
                   file_url: item.media.file_url,
                   duration: item.media.duration,
+                  metadata: item.media.metadata || null,
                 }
               : null,
           })) || []
