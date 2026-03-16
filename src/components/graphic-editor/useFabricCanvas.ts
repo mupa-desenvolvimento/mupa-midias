@@ -1248,7 +1248,7 @@ export function useFabricCanvas() {
   }, [deleteSelected, undo, redo, duplicateSelected]);
 
   return {
-    canvasRef, canvasElRef, initCanvas,
+    canvasRef, canvasElRef, initCanvas, zoomToFit,
     selectedObject, layers, projectName, setProjectName, zoom,
     showGrid, toggleGrid, canvasBgColor, changeCanvasBg,
     canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
