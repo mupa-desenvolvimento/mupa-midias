@@ -70,6 +70,7 @@ function ArticleQR({ url, size = 48 }: { url?: string | null; size?: number }) {
 interface LayoutProps {
   articles: NewsArticle[];
   category: string;
+  isPortrait?: boolean;
 }
 
 function ArticleImage({ url, className }: { url?: string; className?: string }) {
@@ -94,7 +95,7 @@ function ArticleImage({ url, className }: { url?: string; className?: string }) 
 }
 
 // ━━━ LAYOUT 1: Destaque Principal (hero + sidebar) ━━━
-export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
+export function LayoutHeroSidebar({ articles, category, isPortrait }: LayoutProps) {
   const hero = articles[0];
   const side = articles.slice(1, 5);
   if (!hero) return <EmptyState />;
@@ -106,28 +107,33 @@ export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
   return (
     <div className="w-full h-full bg-black text-white overflow-hidden flex flex-col min-h-0">
       <LayoutHeader category={category} />
-      <div className="flex-1 flex min-h-0">
+      <div className={cn("flex-1 flex min-h-0", isPortrait ? "flex-col" : "flex-row")}>
         {/* Hero */}
-        <div className="flex-[3] relative overflow-hidden">
+        <div className={cn("relative overflow-hidden", isPortrait ? "flex-[2]" : "flex-[3]")}>
           <ArticleImage url={hero.image_url} className="absolute inset-0 w-full h-full" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-blue-400 font-semibold">{heroCategory}</span>
-            <h2 className="text-sm md:text-base font-bold leading-tight line-clamp-3">{heroTitle}</h2>
-            <p className="text-[10px] text-white/60 line-clamp-2">{heroDescription}</p>
+            <h2 className={cn("font-bold leading-tight line-clamp-3", isPortrait ? "text-lg" : "text-sm md:text-base")}>{heroTitle}</h2>
+            <p className={cn("text-white/60 line-clamp-2", isPortrait ? "text-xs" : "text-[10px]")}>{heroDescription}</p>
           </div>
           <div className="absolute bottom-3 right-3">
             <ArticleQR url={hero.link} size={40} />
           </div>
         </div>
         {/* Sidebar */}
-        <div className="flex-[2] flex flex-col border-l border-white/10 min-w-0">
+        <div className={cn(
+          "flex min-w-0",
+          isPortrait 
+            ? "flex-[3] flex-col border-t border-white/10" 
+            : "flex-[2] flex-col border-l border-white/10"
+        )}>
           {side.map((a, i) => (
             <div key={a.id} className={cn("flex-1 flex gap-2 p-2 min-h-0", i > 0 && "border-t border-white/10")}>
-              <ArticleImage url={a.image_url} className="w-16 h-full rounded shrink-0" />
+              <ArticleImage url={a.image_url} className={cn("rounded shrink-0", isPortrait ? "w-20 h-full" : "w-16 h-full")} />
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <span className="text-[8px] text-blue-400 uppercase">{normalizeDisplayText(a.category).toUpperCase()}</span>
-                <h3 className="text-[10px] font-semibold leading-tight line-clamp-2">{normalizeDisplayText(a.title)}</h3>
+                <h3 className={cn("font-semibold leading-tight line-clamp-2", isPortrait ? "text-xs" : "text-[10px]")}>{normalizeDisplayText(a.title)}</h3>
                 <span className="text-[8px] text-white/40 mt-auto">{normalizeDisplayText(a.source)}</span>
               </div>
               <ArticleQR url={a.link} size={28} />
@@ -140,14 +146,17 @@ export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
 }
 
 // ━━━ LAYOUT 2: Grade de Cards ━━━
-export function LayoutGrid({ articles, category }: LayoutProps) {
+export function LayoutGrid({ articles, category, isPortrait }: LayoutProps) {
   const items = articles.slice(0, 6);
   if (items.length === 0) return <EmptyState />;
 
   return (
     <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden flex flex-col min-h-0">
       <LayoutHeader category={category} />
-      <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-2 p-3 min-h-0">
+      <div className={cn(
+        "flex-1 grid gap-2 p-3 min-h-0",
+        isPortrait ? "grid-cols-2 grid-rows-3" : "grid-cols-3 grid-rows-2"
+      )}>
         {items.map((a) => (
           <div key={a.id} className="relative rounded-lg overflow-hidden group">
             <ArticleImage url={a.image_url} className="absolute inset-0 w-full h-full" />
@@ -157,7 +166,7 @@ export function LayoutGrid({ articles, category }: LayoutProps) {
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-2">
               <span className="text-[8px] uppercase text-emerald-400 font-semibold">{normalizeDisplayText(a.category).toUpperCase()}</span>
-              <h3 className="text-[9px] font-bold leading-tight line-clamp-2 mt-0.5">{normalizeDisplayText(a.title)}</h3>
+              <h3 className={cn("font-bold leading-tight line-clamp-2 mt-0.5", isPortrait ? "text-[10px]" : "text-[9px]")}>{normalizeDisplayText(a.title)}</h3>
             </div>
           </div>
         ))}
@@ -167,7 +176,7 @@ export function LayoutGrid({ articles, category }: LayoutProps) {
 }
 
 // ━━━ LAYOUT 3: Ticker / Lista Horizontal ━━━
-export function LayoutTicker({ articles, category }: LayoutProps) {
+export function LayoutTicker({ articles, category, isPortrait }: LayoutProps) {
   const hero = articles[0];
   const ticker = articles.slice(1, 4);
   if (!hero) return <EmptyState />;
@@ -183,11 +192,11 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
       <div className="flex-1 flex items-stretch min-h-0">
         <div className="flex-1 relative overflow-hidden">
           <ArticleImage url={hero.image_url} className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+          <div className={cn("absolute inset-0", isPortrait ? "bg-gradient-to-t from-black/70 via-black/30 to-transparent" : "bg-gradient-to-r from-black/70 via-black/30 to-transparent")} />
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">{heroCategory}</span>
-            <h2 className="text-sm md:text-lg font-extrabold leading-tight line-clamp-3">{heroTitle}</h2>
-            <p className="text-[10px] text-white/60 line-clamp-2">{heroDescription}</p>
+            <h2 className={cn("font-extrabold leading-tight line-clamp-3", isPortrait ? "text-lg" : "text-sm md:text-lg")}>{heroTitle}</h2>
+            <p className={cn("text-white/60 line-clamp-2", isPortrait ? "text-xs" : "text-[10px]")}>{heroDescription}</p>
           </div>
           <div className="absolute bottom-3 right-3">
             <ArticleQR url={hero.link} size={40} />
@@ -195,9 +204,12 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
         </div>
       </div>
       {/* Bottom ticker */}
-      <div className="h-16 bg-black/60 backdrop-blur-sm border-t border-white/10 flex items-stretch divide-x divide-white/10">
+      <div className={cn(
+        "bg-black/60 backdrop-blur-sm border-t border-white/10",
+        isPortrait ? "flex flex-col divide-y divide-white/10" : "h-16 flex items-stretch divide-x divide-white/10"
+      )}>
         {ticker.map((a) => (
-          <div key={a.id} className="flex-1 flex items-center gap-2 px-3 min-w-0">
+          <div key={a.id} className={cn("flex items-center gap-2 px-3 min-w-0", isPortrait ? "py-2" : "flex-1")}>
             <ArticleImage url={a.image_url} className="w-10 h-10 rounded shrink-0" />
             <div className="min-w-0 flex-1">
               <h3 className="text-[9px] font-semibold leading-tight line-clamp-2">{normalizeDisplayText(a.title)}</h3>
@@ -212,8 +224,8 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
 }
 
 // ━━━ LAYOUT 4: Minimalista / Clean ━━━
-export function LayoutMinimal({ articles, category }: LayoutProps) {
-  const items = articles.slice(0, 4);
+export function LayoutMinimal({ articles, category, isPortrait }: LayoutProps) {
+  const items = articles.slice(0, isPortrait ? 6 : 4);
   if (items.length === 0) return <EmptyState />;
 
   return (
@@ -231,16 +243,16 @@ export function LayoutMinimal({ articles, category }: LayoutProps) {
       </div>
       <div className="flex-1 flex flex-col divide-y divide-slate-100 overflow-hidden">
         {items.map((a, i) => (
-          <div key={a.id} className="flex-1 flex items-center gap-4 px-5 min-h-0">
+          <div key={a.id} className={cn("flex-1 flex items-center gap-4 px-5 min-h-0", isPortrait && "flex-row-reverse")}>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-[9px] font-bold text-red-500 uppercase">{normalizeDisplayText(a.category).toUpperCase()}</span>
                 <span className="text-[9px] text-slate-400">{normalizeDisplayText(a.source)}</span>
               </div>
-              <h3 className="text-xs font-semibold leading-tight line-clamp-2">{normalizeDisplayText(a.title)}</h3>
+              <h3 className={cn("font-semibold leading-tight line-clamp-2", isPortrait ? "text-sm" : "text-xs")}>{normalizeDisplayText(a.title)}</h3>
               {i === 0 && <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">{normalizeDisplayText(a.description)}</p>}
             </div>
-            <ArticleImage url={a.image_url} className="w-20 h-14 rounded-lg shrink-0" />
+            <ArticleImage url={a.image_url} className={cn("rounded-lg shrink-0", isPortrait ? "w-24 h-16" : "w-20 h-14")} />
             <ArticleQR url={a.link} size={32} />
           </div>
         ))}
@@ -294,12 +306,12 @@ export const NEWS_LAYOUTS = [
 
 export type NewsLayoutId = typeof NEWS_LAYOUTS[number]["id"];
 
-export function NewsLayoutRenderer({ layoutId, articles, category }: { layoutId: NewsLayoutId; articles: NewsArticle[]; category: string }) {
+export function NewsLayoutRenderer({ layoutId, articles, category, isPortrait = false }: { layoutId: NewsLayoutId; articles: NewsArticle[]; category: string; isPortrait?: boolean }) {
   switch (layoutId) {
-    case "hero-sidebar": return <LayoutHeroSidebar articles={articles} category={category} />;
-    case "grid": return <LayoutGrid articles={articles} category={category} />;
-    case "ticker": return <LayoutTicker articles={articles} category={category} />;
-    case "minimal": return <LayoutMinimal articles={articles} category={category} />;
-    default: return <LayoutHeroSidebar articles={articles} category={category} />;
+    case "hero-sidebar": return <LayoutHeroSidebar articles={articles} category={category} isPortrait={isPortrait} />;
+    case "grid": return <LayoutGrid articles={articles} category={category} isPortrait={isPortrait} />;
+    case "ticker": return <LayoutTicker articles={articles} category={category} isPortrait={isPortrait} />;
+    case "minimal": return <LayoutMinimal articles={articles} category={category} isPortrait={isPortrait} />;
+    default: return <LayoutHeroSidebar articles={articles} category={category} isPortrait={isPortrait} />;
   }
 }

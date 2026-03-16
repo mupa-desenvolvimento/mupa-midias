@@ -27,6 +27,7 @@ interface MediaRendererProps {
   loop?: boolean;
   hideUntilReady?: boolean;
   onElementRef?: (el: HTMLVideoElement | HTMLImageElement | null) => void;
+  isPortrait?: boolean;
 }
 
 export const MediaRenderer = ({
@@ -41,6 +42,7 @@ export const MediaRenderer = ({
   loop = false,
   hideUntilReady = false,
   onElementRef,
+  isPortrait = false,
 }: MediaRendererProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(!hideUntilReady);
@@ -112,7 +114,7 @@ export const MediaRenderer = ({
   }
 
   if (media.type === "news") {
-    return <NewsPlayerSlide key={media.id} onEnded={onEnded} media={media} />;
+    return <NewsPlayerSlide key={media.id} onEnded={onEnded} media={media} isPortrait={isPortrait} />;
   }
 
   if (media.type === "weather") {
@@ -142,7 +144,7 @@ export const MediaRenderer = ({
 
     return (
       <div className={cn("w-full h-full bg-black", transitionClass, !isReady && "opacity-0")}>
-        <WeatherContainer location={selectedWeatherLocation as any} orientation="horizontal" className="w-full h-full" />
+        <WeatherContainer location={selectedWeatherLocation as any} orientation={isPortrait ? "vertical" : "horizontal"} className="w-full h-full" />
       </div>
     );
   }

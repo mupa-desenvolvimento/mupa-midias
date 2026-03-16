@@ -7,9 +7,10 @@ import { useEffect, useMemo, useState } from "react";
 interface NewsPlayerSlideProps {
   onEnded?: () => void;
   media?: { metadata?: any } | null;
+  isPortrait?: boolean;
 }
 
-export const NewsPlayerSlide = ({ media }: NewsPlayerSlideProps) => {
+export const NewsPlayerSlide = ({ media, isPortrait = false }: NewsPlayerSlideProps) => {
   const { deviceCode, deviceId } = useParams();
   const [searchParams] = useSearchParams();
   const queryDeviceId = searchParams.get("device_id");
@@ -86,7 +87,7 @@ export const NewsPlayerSlide = ({ media }: NewsPlayerSlideProps) => {
 
   return (
     <div className="w-full h-full bg-black overflow-hidden">
-      <NewsLayoutRenderer layoutId={layoutId} articles={rotatedArticles} category={category || "all"} />
+      <NewsLayoutRenderer layoutId={layoutId} articles={rotatedArticles} category={category || "all"} isPortrait={isPortrait} />
     </div>
   );
 };
