@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
 import { ListControls } from "@/components/list/ListControls";
@@ -24,6 +24,8 @@ import {
 import { WeatherSettings } from "./weather/WeatherSettings";
 import { NewsModule } from "./news/NewsModule";
 import { useWeather } from "@/hooks/useWeather";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -70,6 +72,9 @@ function BirthdayModulePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [period, setPeriod] = useState<BirthdaySlidePeriod>("month");
   const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
+  const [slideDialogOpen, setSlideDialogOpen] = useState(false);
+  const [creatingSlide, setCreatingSlide] = useState(false);
+  const { toast } = useToast();
   const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
 
   const dayPeople = useMemo(() => filterByPeriod("day"), [allPeople, filterByPeriod]);
@@ -83,6 +88,41 @@ function BirthdayModulePage() {
     uploadCsv.mutate(csv);
     e.target.value = "";
   };
+
+  const handleCreateSlide = useCallback(async (selectedLayout: BirthdayLayoutType, selectedPeriod: BirthdaySlidePeriod) => {
+    setCreatingSlide(true);
+    try {
+      const layoutLabels: Record<BirthdayLayoutType, string> = {
+        cards: "Cards", list: "Lista", grid: "Grid", banner: "Banner TV", celebration: "Celebração",
+      };
+      const periodLabels: Record<BirthdaySlidePeriod, string> = {
+        day: "Hoje", week: "Semana", month: "Mês", all: "Todos",
+      };
+      const name = `Aniversariantes - ${layoutLabels[selectedLayout]} (${periodLabels[selectedPeriod]})`;
+
+      const { error } = await (supabase as any).from("media_items").insert({
+        name,
+        type: "birthday_slide",
+        status: "active",
+        duration: 15,
+        metadata: {
+          birthday_layout: selectedLayout,
+          birthday_period: selectedPeriod,
+          auto_content: true,
+        },
+      });
+
+      if (error) throw error;
+
+      setLayout(selectedLayout);
+      setPeriod(selectedPeriod);
+      toast({ title: "Slide criado com sucesso!", description: `"${name}" está disponível para adicionar em playlists.` });
+    } catch (err: any) {
+      toast({ title: "Erro ao criar slide", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingSlide(false);
+    }
+  }, [toast]);
 
   const periodLabel = period === "all" ? "todos os períodos" : period === "day" ? "hoje" : period === "week" ? "esta semana" : "este mês";
 
@@ -143,6 +183,10 @@ function BirthdayModulePage() {
           <p className="text-muted-foreground text-sm mt-0.5">Gerencie e visualize os layouts para exibição.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setSlideDialogOpen(true)} disabled={creatingSlide} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Criar Slide
+          </Button>
           <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadCsv.isPending} className="gap-2">
             <Upload className="w-4 h-4" />
@@ -265,9 +309,19 @@ function BirthdayModulePage() {
   }
 
   return (
-    <PageShell header={header} controls={controls} footer={null}>
-      <ListViewport>{content}</ListViewport>
-    </PageShell>
+    <>
+      <PageShell header={header} controls={controls} footer={null}>
+        <ListViewport>{content}</ListViewport>
+      </PageShell>
+      <BirthdaySlideDialog
+        open={slideDialogOpen}
+        onOpenChange={setSlideDialogOpen}
+        onSelect={handleCreateSlide}
+        initialLayout={layout}
+        initialPeriod={period}
+        mode="create"
+      />
+    </>
   );
 }
 
