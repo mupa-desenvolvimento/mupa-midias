@@ -324,7 +324,7 @@ export default function GraphicEditor() {
   const [templates, setTemplates] = useState<any[]>([]);
 
   const {
-    initCanvas, canvasElRef, zoomToFit,
+    initCanvas, canvasElRef,
     selectedObject, projectName, setProjectName, zoom,
     showGrid, toggleGrid, canvasBgColor, changeCanvasBg,
     canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
@@ -337,47 +337,25 @@ export default function GraphicEditor() {
     getCanvasDataUrl,
     getProjectData, loadProjectData,
     alignmentSettings, updateAlignmentSettings,
+    setViewportSize,
   } = useFabricCanvas();
 
   const { mediaItems, isLoading: galleryLoading } = useMediaItems(undefined);
 
   useEffect(() => {
     const el = canvasElRef.current;
-    if (el) {
-      initCanvas(el);
-      // Initial zoom-to-fit after a short delay to let layout settle
-      requestAnimationFrame(() => {
-        const container = canvasContainerRef.current;
-        if (container) {
-          zoomToFit(container.clientWidth, container.clientHeight);
-        }
-      });
-    }
-  }, [canvasElRef, initCanvas, zoomToFit]);
+    if (el) initCanvas(el, canvasContainerRef.current);
+  }, [canvasElRef, initCanvas]);
 
-  // Re-fit on container resize
   useEffect(() => {
     const container = canvasContainerRef.current;
     if (!container) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          zoomToFit(width, height);
-        }
-      }
-    });
+    const apply = () => setViewportSize(container.clientWidth, container.clientHeight);
+    apply();
+    const ro = new ResizeObserver(() => apply());
     ro.observe(container);
     return () => ro.disconnect();
-  }, [zoomToFit]);
-
-  // Re-fit when canvas design dimensions change
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (container) {
-      zoomToFit(container.clientWidth, container.clientHeight);
-    }
-  }, [canvasWidth, canvasHeight, zoomToFit]);
+  }, [setViewportSize]);
 
   useEffect(() => {
     const raw = localStorage.getItem("graphic-editor-templates");
@@ -549,7 +527,7 @@ export default function GraphicEditor() {
           <ContextMenuTrigger asChild>
             <div
               ref={canvasContainerRef}
-              className="flex-1 overflow-hidden bg-muted/30 flex items-center justify-center p-8 relative"
+              className="flex-1 overflow-hidden bg-muted/30 relative"
             >
               {showGrid && (
                 <div
@@ -560,7 +538,7 @@ export default function GraphicEditor() {
                   }}
                 />
               )}
-              <canvas ref={canvasElRef} className="rounded-lg" />
+              <canvas ref={canvasElRef} className="block rounded-lg" />
               <FloatingLayersPanel
                 layers={layers}
                 onSelectLayer={selectLayer}

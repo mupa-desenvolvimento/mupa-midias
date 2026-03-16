@@ -541,14 +541,25 @@ export default function Editor() {
     alignmentSettings,
     updateAlignmentSettings,
     newProject,
+    setViewportSize,
   } = useFabricCanvas();
 
   const { mediaItems, isLoading: galleryLoading } = useMediaItems(undefined);
 
   useEffect(() => {
     const el = canvasElRef.current;
-    if (el) initCanvas(el);
+    if (el) initCanvas(el, canvasContainerRef.current);
   }, [canvasElRef, initCanvas]);
+
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    const apply = () => setViewportSize(container.clientWidth, container.clientHeight);
+    apply();
+    const ro = new ResizeObserver(() => apply());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [setViewportSize]);
 
   useEffect(() => {
     const raw = localStorage.getItem("graphic-editor-templates");
@@ -740,7 +751,7 @@ export default function Editor() {
 
         <ContextMenu>
           <ContextMenuTrigger asChild>
-            <div ref={canvasContainerRef} className="flex-1 overflow-hidden bg-[#1a1a1f] flex items-center justify-center p-10 relative">
+            <div ref={canvasContainerRef} className="flex-1 overflow-hidden bg-[#1a1a1f] relative">
               {showGrid && (
                 <div
                   className="absolute inset-0 pointer-events-none opacity-50"
@@ -752,7 +763,7 @@ export default function Editor() {
                 />
               )}
 
-              <canvas ref={canvasElRef} className="rounded-xl" />
+              <canvas ref={canvasElRef} className="block rounded-xl" />
 
               <FloatingLayersPanel
                 layers={layers}
