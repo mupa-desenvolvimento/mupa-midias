@@ -1328,6 +1328,61 @@ export function useFabricCanvas() {
     };
   }, [deleteSelected, undo, redo, duplicateSelected]);
 
+  const addSVGFromString = useCallback(async (svgString: string, fileName?: string) => {
+    const c = canvasRef.current;
+    if (!c) throw new Error("Canvas não inicializado");
+    try {
+      const { objects, options } = await loadSVGFromString(svgString);
+      const validObjects = objects.filter(Boolean) as FabricObject[];
+      if (validObjects.length === 0) throw new Error("SVG vazio ou inválido");
+      const group = util.groupSVGElements(validObjects, options);
+      const { x, y } = getViewportCenterInCanvasCoords(c);
+      const maxW = Math.min(500, c.width! * 0.6);
+      if (group.width && group.width > maxW) group.scaleToWidth(maxW);
+      group.set({ left: x - group.getScaledWidth() / 2, top: y - group.getScaledHeight() / 2 } as any);
+      (group as any).set("data", { layerId: makeLayerId(), layerName: fileName || "SVG Importado" });
+      group.setCoords();
+      c.add(group);
+      c.setActiveObject(group);
+      c.renderAll();
+      refreshLayers(c);
+      return group;
+    } catch (err: any) {
+      throw new Error(err?.message || "Falha ao importar SVG");
+    }
+  }, [getViewportCenterInCanvasCoords, refreshLayers]);
+
+  const addSVGFromURL = useCallback(async (url: string) => {
+    const c = canvasRef.current;
+    if (!c) throw new Error("Canvas não inicializado");
+    try {
+      const { objects, options } = await loadSVGFromURL(url);
+      const validObjects = objects.filter(Boolean) as FabricObject[];
+      if (validObjects.length === 0) throw new Error("SVG vazio ou inválido");
+      const group = util.groupSVGElements(validObjects, options);
+      const { x, y } = getViewportCenterInCanvasCoords(c);
+      const maxW = Math.min(500, c.width! * 0.6);
+      if (group.width && group.width > maxW) group.scaleToWidth(maxW);
+      group.set({ left: x - group.getScaledWidth() / 2, top: y - group.getScaledHeight() / 2 } as any);
+      const fileName = url.split("/").pop()?.replace(/\.svg.*$/i, "") || "SVG";
+      (group as any).set("data", { layerId: makeLayerId(), layerName: fileName });
+      group.setCoords();
+      c.add(group);
+      c.setActiveObject(group);
+      c.renderAll();
+      refreshLayers(c);
+      return group;
+    } catch (err: any) {
+      throw new Error(err?.message || "Falha ao carregar SVG da URL (verifique CORS)");
+    }
+  }, [getViewportCenterInCanvasCoords, refreshLayers]);
+
+  function makeLayerId() {
+    return typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
   return {
     canvasRef, canvasElRef, initCanvas, zoomToFit,
     selectedObject, layers, projectName, setProjectName, zoom,
@@ -1335,6 +1390,7 @@ export function useFabricCanvas() {
     canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
     addText, addRect, addCircle, addLine, addTriangle, addStar, addPolygon,
     addImage, addImageFromUrl,
+    addSVGFromString, addSVGFromURL,
     deleteSelected, duplicateSelected, bringToFront, sendToBack,
     selectLayer, toggleLayerVisible, toggleLayerLocked, moveLayerForward, moveLayerBackward, moveLayerToListIndex, renameLayer,
     updateObjectProp,
