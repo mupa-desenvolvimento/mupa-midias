@@ -1477,6 +1477,56 @@ export type Database = {
           },
         ]
       }
+      nutrition_tips: {
+        Row: {
+          category: string
+          content: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          tenant_id: string | null
+          title: string
+          updated_at: string
+          used: boolean
+          used_at: string | null
+        }
+        Insert: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_tips_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_channel_items: {
         Row: {
           channel_id: string
