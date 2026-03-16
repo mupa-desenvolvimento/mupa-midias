@@ -319,6 +319,7 @@ function FloatingLayersPanel({
 
 export default function GraphicEditor() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
