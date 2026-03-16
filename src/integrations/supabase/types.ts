@@ -1158,6 +1158,106 @@ export type Database = {
         }
         Relationships: []
       }
+      instagram_posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          instagram_id: string
+          is_active: boolean
+          media_type: string
+          media_url: string | null
+          permalink: string | null
+          posted_at: string | null
+          tenant_id: string | null
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          instagram_id: string
+          is_active?: boolean
+          media_type?: string
+          media_url?: string | null
+          permalink?: string | null
+          posted_at?: string | null
+          tenant_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          instagram_id?: string
+          is_active?: boolean
+          media_type?: string
+          media_url?: string | null
+          permalink?: string | null
+          posted_at?: string | null
+          tenant_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_posts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_settings: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          fetch_days: number
+          id: string
+          instagram_user_id: string | null
+          is_active: boolean
+          last_fetched_at: string | null
+          tenant_id: string | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          fetch_days?: number
+          id?: string
+          instagram_user_id?: string | null
+          is_active?: boolean
+          last_fetched_at?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          fetch_days?: number
+          id?: string
+          instagram_user_id?: string | null
+          is_active?: boolean
+          last_fetched_at?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_items: {
         Row: {
           created_at: string
