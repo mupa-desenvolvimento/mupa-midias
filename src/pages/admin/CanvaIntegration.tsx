@@ -140,6 +140,44 @@ import { PRESET_TEMPLATES } from '@/components/graphic-editor/presetTemplates';
             </CardContent>
           </Card>
         </div>
+
+        {/* Templates Prontos Section */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <LayoutTemplate className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Templates Prontos</h2>
+              <Badge variant="secondary" className="text-xs">{PRESET_TEMPLATES.length}</Badge>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => navigate('/admin/graphic-editor')}>
+              Ver todos no Editor
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {PRESET_TEMPLATES.map((preset) => (
+              <button
+                key={preset.id}
+                className="group relative rounded-xl border border-border/60 overflow-hidden hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 transition-all text-left bg-card"
+                onClick={() => navigate(`/admin/graphic-editor?template=${preset.id}`)}
+              >
+                <div
+                  className="aspect-[9/16] max-h-[180px] flex flex-col items-center justify-center p-3"
+                  style={{ backgroundColor: preset.bgColor }}
+                >
+                  <span className="text-3xl mb-1">{preset.icon}</span>
+                  <span className="text-white text-[10px] font-semibold text-center leading-tight">{preset.name}</span>
+                </div>
+                <div className="p-2 bg-card">
+                  <div className="text-xs font-medium truncate">{preset.name}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    {preset.width}×{preset.height}
+                  </div>
+                </div>
+                <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </button>
+            ))}
+          </div>
+        </div>
        ) : (
           <div className="space-y-4">
            <div className="flex items-center justify-between">
