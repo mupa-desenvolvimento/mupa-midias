@@ -663,6 +663,7 @@ const OfflinePlayer = () => {
                   media={activeMedia as any}
                   mediaUrl={resolvedMediaUrl || activeMedia.file_url || ""}
                   objectFit={getObjectFit()}
+                  isPortrait={isPortrait}
                   onEnded={goToNext}
                 />
               </div>
