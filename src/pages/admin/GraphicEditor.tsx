@@ -455,13 +455,15 @@ export default function GraphicEditor() {
     toast.success("Imagem salva na galeria!");
   }, [getCanvasDataUrl, saveProject]);
 
-  const galleryItems = mediaItems.map((m) => ({
-    id: m.id,
-    name: m.name,
-    file_url: m.file_url,
-    thumbnail_url: m.thumbnail_url,
-    type: m.type,
-  }));
+  const galleryItems = mediaItems
+    .filter((m) => m.type !== "font")
+    .map((m) => ({
+      id: m.id,
+      name: m.name,
+      file_url: m.file_url,
+      thumbnail_url: m.thumbnail_url,
+      type: m.type,
+    }));
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background">
