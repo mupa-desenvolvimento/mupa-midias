@@ -6,6 +6,10 @@ import { usePlayerFaceDetection } from "@/hooks/usePlayerFaceDetection";
 import { setupKioskMode } from "@/utils/nativeBridge";
 import { Capacitor } from "@capacitor/core";
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
+import { useProductLookup } from "@/hooks/useProductLookup";
+import { useProductDisplaySettingsBySlug } from "@/hooks/useProductDisplaySettings";
+import { ProductLookupContainer } from "@/components/player/ProductLookupContainer";
+import { EanInput } from "@/components/player/EanInput";
 import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useMediaRotation, useClock } from "@/hooks/player";
 import { MediaRenderer, PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen } from "@/components/player-core";
 import {
