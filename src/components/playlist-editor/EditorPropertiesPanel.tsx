@@ -84,13 +84,12 @@ const getMediaIcon = (type: string) => {
     image: Image,
     news: Newspaper,
     weather: CloudSun,
-    url: Globe,
-    youtube: Youtube,
-    html: Code,
-    widget: LayoutGrid,
-    table: Table,
+    motivational: MessageCircleHeart,
+    curiosity: Lightbulb,
+    birthday: Cake,
+    nutrition: Apple,
     instagram: Instagram,
-    campaign: Megaphone,
+    campaign: QrCode,
   };
   return map[type] || FileText;
 };
