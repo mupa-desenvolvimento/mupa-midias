@@ -95,7 +95,7 @@ function ArticleImage({ url, className }: { url?: string; className?: string }) 
 }
 
 // ━━━ LAYOUT 1: Destaque Principal (hero + sidebar) ━━━
-export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
+export function LayoutHeroSidebar({ articles, category, isPortrait }: LayoutProps) {
   const hero = articles[0];
   const side = articles.slice(1, 5);
   if (!hero) return <EmptyState />;
@@ -107,28 +107,33 @@ export function LayoutHeroSidebar({ articles, category }: LayoutProps) {
   return (
     <div className="w-full h-full bg-black text-white overflow-hidden flex flex-col min-h-0">
       <LayoutHeader category={category} />
-      <div className="flex-1 flex min-h-0">
+      <div className={cn("flex-1 flex min-h-0", isPortrait ? "flex-col" : "flex-row")}>
         {/* Hero */}
-        <div className="flex-[3] relative overflow-hidden">
+        <div className={cn("relative overflow-hidden", isPortrait ? "flex-[2]" : "flex-[3]")}>
           <ArticleImage url={hero.image_url} className="absolute inset-0 w-full h-full" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-blue-400 font-semibold">{heroCategory}</span>
-            <h2 className="text-sm md:text-base font-bold leading-tight line-clamp-3">{heroTitle}</h2>
-            <p className="text-[10px] text-white/60 line-clamp-2">{heroDescription}</p>
+            <h2 className={cn("font-bold leading-tight line-clamp-3", isPortrait ? "text-lg" : "text-sm md:text-base")}>{heroTitle}</h2>
+            <p className={cn("text-white/60 line-clamp-2", isPortrait ? "text-xs" : "text-[10px]")}>{heroDescription}</p>
           </div>
           <div className="absolute bottom-3 right-3">
             <ArticleQR url={hero.link} size={40} />
           </div>
         </div>
         {/* Sidebar */}
-        <div className="flex-[2] flex flex-col border-l border-white/10 min-w-0">
+        <div className={cn(
+          "flex min-w-0",
+          isPortrait 
+            ? "flex-[3] flex-col border-t border-white/10" 
+            : "flex-[2] flex-col border-l border-white/10"
+        )}>
           {side.map((a, i) => (
             <div key={a.id} className={cn("flex-1 flex gap-2 p-2 min-h-0", i > 0 && "border-t border-white/10")}>
-              <ArticleImage url={a.image_url} className="w-16 h-full rounded shrink-0" />
+              <ArticleImage url={a.image_url} className={cn("rounded shrink-0", isPortrait ? "w-20 h-full" : "w-16 h-full")} />
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <span className="text-[8px] text-blue-400 uppercase">{normalizeDisplayText(a.category).toUpperCase()}</span>
-                <h3 className="text-[10px] font-semibold leading-tight line-clamp-2">{normalizeDisplayText(a.title)}</h3>
+                <h3 className={cn("font-semibold leading-tight line-clamp-2", isPortrait ? "text-xs" : "text-[10px]")}>{normalizeDisplayText(a.title)}</h3>
                 <span className="text-[8px] text-white/40 mt-auto">{normalizeDisplayText(a.source)}</span>
               </div>
               <ArticleQR url={a.link} size={28} />
