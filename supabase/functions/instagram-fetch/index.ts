@@ -74,11 +74,13 @@ Deno.serve(async (req) => {
 
     // Action: save-settings - Save/update Instagram settings
     if (action === "save-settings") {
-      const { data: existing } = await supabaseAdmin
-        .from("instagram_settings")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
+      let query = supabaseAdmin.from("instagram_settings").select("id");
+      if (tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      } else {
+        query = query.is("tenant_id", null);
+      }
+      const { data: existing } = await query.maybeSingle();
 
       // Validate token by fetching user info
       let username = "";
@@ -121,11 +123,13 @@ Deno.serve(async (req) => {
     // Action: fetch-posts - Fetch posts from Instagram and save
     if (action === "fetch-posts") {
       // Get settings
-      const { data: settings } = await supabaseAdmin
-        .from("instagram_settings")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .single();
+      let settingsQuery = supabaseAdmin.from("instagram_settings").select("*");
+      if (tenantId) {
+        settingsQuery = settingsQuery.eq("tenant_id", tenantId);
+      } else {
+        settingsQuery = settingsQuery.is("tenant_id", null);
+      }
+      const { data: settings } = await settingsQuery.single();
 
       if (!settings?.access_token) {
         return new Response(JSON.stringify({ error: "Token não configurado" }), {
@@ -161,7 +165,7 @@ Deno.serve(async (req) => {
 
         const { error } = await supabaseAdmin
           .from("instagram_posts")
-          .upsert(row, { onConflict: "instagram_posts_ig_id_unique", ignoreDuplicates: true });
+          .upsert(row, { onConflict: "instagram_id", ignoreDuplicates: true });
 
         if (!error) inserted++;
       }
