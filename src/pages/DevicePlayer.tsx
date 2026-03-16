@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useDevicePlayerData } from "@/hooks/useDevicePlayerData";
 import { useAutoHideControls, useFullscreen, useMediaRotation } from "@/hooks/player";
