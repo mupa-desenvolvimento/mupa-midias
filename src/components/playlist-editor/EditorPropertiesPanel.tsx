@@ -80,13 +80,20 @@ const formatDuration = (seconds: number) => {
 };
 
 const getMediaIcon = (type: string) => {
-  switch (type) {
-    case "video": return Video;
-    case "image": return Image;
-    case "news": return Newspaper;
-    case "weather": return CloudSun;
-    default: return FileText;
-  }
+  const map: Record<string, any> = {
+    video: Video,
+    image: Image,
+    news: Newspaper,
+    weather: CloudSun,
+    url: Globe,
+    youtube: Youtube,
+    html: Code,
+    widget: LayoutGrid,
+    table: Table,
+    instagram: Instagram,
+    campaign: Megaphone,
+  };
+  return map[type] || FileText;
 };
 
 const getAutoContentLabel = (type: string) => {
