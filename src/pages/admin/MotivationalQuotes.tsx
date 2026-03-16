@@ -63,7 +63,7 @@ export default function MotivationalQuotes() {
             Authorization: `Bearer ${session.access_token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ count: 30 }),
+          body: JSON.stringify({ count: 200 }),
         }
       );
       const result = await res.json();
