@@ -176,7 +176,7 @@ export function LayoutGrid({ articles, category, isPortrait }: LayoutProps) {
 }
 
 // ━━━ LAYOUT 3: Ticker / Lista Horizontal ━━━
-export function LayoutTicker({ articles, category }: LayoutProps) {
+export function LayoutTicker({ articles, category, isPortrait }: LayoutProps) {
   const hero = articles[0];
   const ticker = articles.slice(1, 4);
   if (!hero) return <EmptyState />;
@@ -192,11 +192,11 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
       <div className="flex-1 flex items-stretch min-h-0">
         <div className="flex-1 relative overflow-hidden">
           <ArticleImage url={hero.image_url} className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+          <div className={cn("absolute inset-0", isPortrait ? "bg-gradient-to-t from-black/70 via-black/30 to-transparent" : "bg-gradient-to-r from-black/70 via-black/30 to-transparent")} />
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">{heroCategory}</span>
-            <h2 className="text-sm md:text-lg font-extrabold leading-tight line-clamp-3">{heroTitle}</h2>
-            <p className="text-[10px] text-white/60 line-clamp-2">{heroDescription}</p>
+            <h2 className={cn("font-extrabold leading-tight line-clamp-3", isPortrait ? "text-lg" : "text-sm md:text-lg")}>{heroTitle}</h2>
+            <p className={cn("text-white/60 line-clamp-2", isPortrait ? "text-xs" : "text-[10px]")}>{heroDescription}</p>
           </div>
           <div className="absolute bottom-3 right-3">
             <ArticleQR url={hero.link} size={40} />
@@ -204,9 +204,12 @@ export function LayoutTicker({ articles, category }: LayoutProps) {
         </div>
       </div>
       {/* Bottom ticker */}
-      <div className="h-16 bg-black/60 backdrop-blur-sm border-t border-white/10 flex items-stretch divide-x divide-white/10">
+      <div className={cn(
+        "bg-black/60 backdrop-blur-sm border-t border-white/10",
+        isPortrait ? "flex flex-col divide-y divide-white/10" : "h-16 flex items-stretch divide-x divide-white/10"
+      )}>
         {ticker.map((a) => (
-          <div key={a.id} className="flex-1 flex items-center gap-2 px-3 min-w-0">
+          <div key={a.id} className={cn("flex items-center gap-2 px-3 min-w-0", isPortrait ? "py-2" : "flex-1")}>
             <ArticleImage url={a.image_url} className="w-10 h-10 rounded shrink-0" />
             <div className="min-w-0 flex-1">
               <h3 className="text-[9px] font-semibold leading-tight line-clamp-2">{normalizeDisplayText(a.title)}</h3>
