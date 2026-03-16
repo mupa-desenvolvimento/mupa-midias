@@ -94,9 +94,11 @@ export default function PriceCheckIntegrationsList() {
             <p className="text-sm text-muted-foreground mb-6">
               Crie sua primeira integração colando uma CURL de API de preços
             </p>
-            <Button onClick={() => navigate("new")} className="gap-2">
-              <Plus className="h-4 w-4" /> Nova Integração via CURL
-            </Button>
+            {isSuperAdmin && (
+              <Button onClick={() => navigate("new")} className="gap-2">
+                <Plus className="h-4 w-4" /> Nova Integração via CURL
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
