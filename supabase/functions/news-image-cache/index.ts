@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 const MAX_RUNTIME_MS = 50000;
-const DEFAULT_BATCH = 20;
+const DEFAULT_BATCH = 30;
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {

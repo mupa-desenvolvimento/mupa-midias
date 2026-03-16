@@ -298,7 +298,7 @@ export function useNews() {
   const triggerImageCache = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('news-image-cache', {
-        body: { batch: 5 }
+        body: { batch: 20 }
       });
       if (error) throw error;
       return data;
