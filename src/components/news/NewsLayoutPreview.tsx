@@ -70,6 +70,7 @@ function ArticleQR({ url, size = 48 }: { url?: string | null; size?: number }) {
 interface LayoutProps {
   articles: NewsArticle[];
   category: string;
+  isPortrait?: boolean;
 }
 
 function ArticleImage({ url, className }: { url?: string; className?: string }) {
