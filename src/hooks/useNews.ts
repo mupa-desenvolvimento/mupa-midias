@@ -284,7 +284,7 @@ export function useNews() {
       }
       // Auto-trigger image cache after collection
       try {
-        await supabase.functions.invoke('news-image-cache', { body: { batch: 5 } });
+        await supabase.functions.invoke('news-image-cache', { body: { batch: 20 } });
         queryClient.invalidateQueries({ queryKey: ["news-articles"] });
       } catch { /* silent */ }
     },
