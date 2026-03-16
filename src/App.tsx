@@ -192,6 +192,7 @@ function AppContent() {
                         <Route path="auto-content/news" element={<NewsModule />} />
                         <Route path="auto-content/quote" element={<MotivationalQuotes />} />
                         <Route path="auto-content/curiosity" element={<CuriositiesManager />} />
+                        <Route path="auto-content/nutrition" element={<NutritionTipsManager />} />
                         <Route path="auto-content/:moduleType" element={<AutoContentModulePage />} />
                         <Route path="camera" element={<Camera />} />
                         <Route path="monitoring" element={<LiveMonitoring />} />
