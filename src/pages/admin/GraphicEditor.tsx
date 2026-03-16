@@ -509,6 +509,8 @@ export default function GraphicEditor() {
           onAddPolygon={addPolygon}
           onAddImage={addImage}
           onAddImageFromUrl={addImageFromUrl}
+          onAddSVGFromString={addSVGFromString}
+          onAddSVGFromURL={addSVGFromURL}
           onDelete={deleteSelected}
           onDuplicate={duplicateSelected}
           onBringToFront={bringToFront}
