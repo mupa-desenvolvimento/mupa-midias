@@ -19,6 +19,15 @@ const DevicePlayer = () => {
   const { data, isLoading, error } = useDevicePlayerData(deviceId);
   const { showControls } = useAutoHideControls();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
+  const [isPortrait, setIsPortrait] = useState(() => 
+    typeof window !== "undefined" ? window.innerHeight > window.innerWidth : false
+  );
+
+  useEffect(() => {
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const mediaItems = data?.overrideMedia
     ? [data.overrideMedia]
