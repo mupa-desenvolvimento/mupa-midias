@@ -198,8 +198,12 @@ export default function InstagramFeedManager() {
             <Settings className="w-4 h-4" />
             Configurar
           </Button>
-          {isConnected && (
+          {isConnected ? (
             <>
+              <Button size="sm" variant="outline" onClick={handleDisconnect} className="gap-2 text-destructive">
+                <Unlink className="w-4 h-4" />
+                Desconectar
+              </Button>
               <Button size="sm" variant="outline" onClick={handleCreateSlide} disabled={creatingSlide || posts.length === 0} className="gap-2">
                 <Plus className="w-4 h-4" />
                 Criar Slide
@@ -209,6 +213,11 @@ export default function InstagramFeedManager() {
                 {fetching ? "Buscando..." : "Buscar Posts"}
               </Button>
             </>
+          ) : (
+            <Button size="sm" onClick={handleConnectInstagram} disabled={connecting} className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+              <Link2 className="w-4 h-4" />
+              {connecting ? "Conectando..." : "Conectar Instagram"}
+            </Button>
           )}
         </div>
       </div>

@@ -196,6 +196,7 @@ function AppContent() {
                         <Route path="auto-content/curiosity" element={<CuriositiesManager />} />
                         <Route path="auto-content/nutrition" element={<NutritionTipsManager />} />
                         <Route path="auto-content/instagram" element={<InstagramFeedManager />} />
+                        <Route path="instagram/callback" element={<InstagramCallback />} />
                         <Route path="auto-content/:moduleType" element={<AutoContentModulePage />} />
                         <Route path="camera" element={<Camera />} />
                         <Route path="monitoring" element={<LiveMonitoring />} />
