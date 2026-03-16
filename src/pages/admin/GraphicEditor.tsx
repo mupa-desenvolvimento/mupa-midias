@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { LayerItem } from "@/components/graphic-editor/useFabricCanvas";
+import { PRESET_TEMPLATES, type PresetTemplate } from "@/components/graphic-editor/presetTemplates";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -330,6 +332,7 @@ export default function GraphicEditor() {
     canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
     addText, addRect, addCircle, addLine, addTriangle, addStar, addPolygon,
     addImage, addImageFromUrl,
+    addSVGFromString, addSVGFromURL,
     deleteSelected, duplicateSelected, bringToFront, sendToBack,
     layers, selectLayer, toggleLayerVisible, toggleLayerLocked, moveLayerForward, moveLayerBackward, moveLayerToListIndex, renameLayer,
     updateObjectProp,
@@ -396,6 +399,22 @@ export default function GraphicEditor() {
     try {
       await loadProjectData(tpl.project);
       toast.success("Template aplicado");
+      setShowTemplatesDialog(false);
+    } catch {
+      toast.error("Falha ao aplicar template");
+    }
+  }, [loadProjectData]);
+
+  const handleApplyPresetTemplate = useCallback(async (preset: PresetTemplate) => {
+    try {
+      await loadProjectData({
+        name: preset.name,
+        canvas: preset.canvas,
+        bgColor: preset.bgColor,
+        width: preset.width,
+        height: preset.height,
+      });
+      toast.success(`Template "${preset.name}" aplicado!`);
       setShowTemplatesDialog(false);
     } catch {
       toast.error("Falha ao aplicar template");
@@ -506,6 +525,8 @@ export default function GraphicEditor() {
           onAddPolygon={addPolygon}
           onAddImage={addImage}
           onAddImageFromUrl={addImageFromUrl}
+          onAddSVGFromString={addSVGFromString}
+          onAddSVGFromURL={addSVGFromURL}
           onDelete={deleteSelected}
           onDuplicate={duplicateSelected}
           onBringToFront={bringToFront}
@@ -623,31 +644,65 @@ export default function GraphicEditor() {
       />
 
       <Dialog open={showTemplatesDialog} onOpenChange={(o) => !o && setShowTemplatesDialog(false)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Templates</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs">Salvar template do layout atual</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  placeholder="Nome do template"
-                  className="h-9"
-                />
-                <Button className="h-9" onClick={handleSaveTemplate}>Salvar</Button>
+          <Tabs defaultValue="presets" className="flex-1 min-h-0">
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="presets">Templates Prontos</TabsTrigger>
+              <TabsTrigger value="saved">Meus Templates ({templates.length})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="presets" className="mt-4">
+              <ScrollArea className="h-[50vh]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pr-4">
+                  {PRESET_TEMPLATES.map((preset) => (
+                    <button
+                      key={preset.id}
+                      className="group relative rounded-xl border border-border/60 overflow-hidden hover:border-[#00d4ff]/60 hover:shadow-lg hover:shadow-[#00d4ff]/10 transition-all text-left"
+                      onClick={() => handleApplyPresetTemplate(preset)}
+                    >
+                      <div
+                        className="aspect-[9/16] max-h-[200px] flex flex-col items-center justify-center p-4"
+                        style={{ backgroundColor: preset.bgColor }}
+                      >
+                        <span className="text-4xl mb-2">{preset.icon}</span>
+                        <span className="text-white text-xs font-semibold text-center leading-tight">{preset.name}</span>
+                      </div>
+                      <div className="p-2.5 bg-card">
+                        <div className="text-xs font-medium truncate">{preset.name}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          {preset.width}×{preset.height} • {preset.category}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground/70 mt-1 line-clamp-2">{preset.description}</p>
+                      </div>
+                      <div className="absolute inset-0 bg-[#00d4ff]/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="saved" className="mt-4 space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs">Salvar template do layout atual</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Nome do template"
+                    className="h-9"
+                  />
+                  <Button className="h-9" onClick={handleSaveTemplate}>Salvar</Button>
+                </div>
               </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            <div className="space-y-2">
-              <Label className="text-xs">Meus templates</Label>
-              <ScrollArea className="h-64 border rounded-md">
-                <div className="p-2 space-y-1">
+              <ScrollArea className="h-[40vh]">
+                <div className="space-y-1">
                   {templates.length === 0 ? (
                     <div className="py-10 text-center text-sm text-muted-foreground">Nenhum template salvo</div>
                   ) : (
@@ -670,8 +725,8 @@ export default function GraphicEditor() {
                   )}
                 </div>
               </ScrollArea>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTemplatesDialog(false)}>Fechar</Button>

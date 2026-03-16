@@ -3,7 +3,7 @@ import {
   Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
   Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
   Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
-  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight,
+  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode, Link,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { LayerItem } from "@/components/graphic-editor/useFabricCanvas";
 
 interface MediaGalleryItem {
@@ -33,6 +36,8 @@ interface Props {
   onAddPolygon: () => void;
   onAddImage: (f: File) => void;
   onAddImageFromUrl: (url: string) => void;
+  onAddSVGFromString?: (svg: string, name?: string) => Promise<any>;
+  onAddSVGFromURL?: (url: string) => Promise<any>;
   onDelete: () => void;
   onDuplicate: () => void;
   onBringToFront: () => void;
@@ -68,6 +73,7 @@ export function EditorSidebar({
   onAddText, onAddRect, onAddCircle, onAddLine, onAddTriangle,
   onAddStar, onAddPolygon,
   onAddImage, onAddImageFromUrl,
+  onAddSVGFromString, onAddSVGFromURL,
   onDelete, onDuplicate, onBringToFront, onSendToBack,
   onToggleGrid,
   hasSelection, showGrid,
@@ -81,6 +87,7 @@ export function EditorSidebar({
   galleryItems, galleryLoading,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const svgFileRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -92,11 +99,46 @@ export function EditorSidebar({
   const [galleryFilter, setGalleryFilter] = useState("");
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
+  const [showSvgDialog, setShowSvgDialog] = useState(false);
+  const [svgUrl, setSvgUrl] = useState("");
+  const [svgLoading, setSvgLoading] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) onAddImage(file);
     e.target.value = "";
+  };
+
+  const handleSvgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onAddSVGFromString) return;
+    e.target.value = "";
+    setSvgLoading(true);
+    try {
+      const text = await file.text();
+      await onAddSVGFromString(text, file.name.replace(/\.svg$/i, ""));
+      toast.success("SVG importado!");
+      setShowSvgDialog(false);
+    } catch (err: any) {
+      toast.error(err?.message || "SVG inválido");
+    } finally {
+      setSvgLoading(false);
+    }
+  };
+
+  const handleSvgFromUrl = async () => {
+    if (!svgUrl.trim() || !onAddSVGFromURL) return;
+    setSvgLoading(true);
+    try {
+      await onAddSVGFromURL(svgUrl.trim());
+      toast.success("SVG importado!");
+      setSvgUrl("");
+      setShowSvgDialog(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Falha ao carregar SVG (verifique CORS)");
+    } finally {
+      setSvgLoading(false);
+    }
   };
 
   const searchImages = useCallback(async (page = 1, source?: SearchSource) => {
@@ -195,6 +237,16 @@ export function EditorSidebar({
                 <input
                   ref={fileRef} type="file" accept="image/*"
                   onChange={handleFileUpload} className="hidden"
+                />
+                <Button
+                  variant="outline" size="sm" className="w-full h-9 gap-1.5 text-xs mt-2"
+                  onClick={() => setShowSvgDialog(true)}
+                >
+                  <FileCode className="h-3.5 w-3.5" /> Importar SVG
+                </Button>
+                <input
+                  ref={svgFileRef} type="file" accept=".svg"
+                  onChange={handleSvgFileUpload} className="hidden"
                 />
               </div>
 
@@ -523,6 +575,61 @@ export function EditorSidebar({
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      {/* SVG Import Dialog */}
+      <Dialog open={showSvgDialog} onOpenChange={setShowSvgDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCode className="h-5 w-5" /> Importar SVG
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs mb-2 block">Upload de arquivo .svg</Label>
+              <Button
+                variant="outline"
+                className="w-full h-12 gap-2"
+                onClick={() => svgFileRef.current?.click()}
+                disabled={svgLoading}
+              >
+                {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Selecionar arquivo SVG
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Separator className="flex-1" />
+              <span className="text-xs text-muted-foreground">ou</span>
+              <Separator className="flex-1" />
+            </div>
+
+            <div>
+              <Label className="text-xs mb-2 block">Carregar de URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://example.com/icon.svg"
+                  value={svgUrl}
+                  onChange={(e) => setSvgUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSvgFromUrl()}
+                  className="h-10 text-sm"
+                />
+                <Button
+                  onClick={handleSvgFromUrl}
+                  disabled={!svgUrl.trim() || svgLoading}
+                  className="h-10 shrink-0"
+                >
+                  {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-muted-foreground">
+              O SVG importado aparecerá no painel de layers. Você pode escalar, rotacionar e alterar cores dos paths.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
