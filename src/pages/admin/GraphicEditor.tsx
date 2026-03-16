@@ -405,6 +405,22 @@ export default function GraphicEditor() {
     }
   }, [loadProjectData]);
 
+  const handleApplyPresetTemplate = useCallback(async (preset: PresetTemplate) => {
+    try {
+      await loadProjectData({
+        name: preset.name,
+        canvas: preset.canvas,
+        bgColor: preset.bgColor,
+        width: preset.width,
+        height: preset.height,
+      });
+      toast.success(`Template "${preset.name}" aplicado!`);
+      setShowTemplatesDialog(false);
+    } catch {
+      toast.error("Falha ao aplicar template");
+    }
+  }, [loadProjectData]);
+
   const handleDeleteTemplate = useCallback((id: string) => {
     const next = templates.filter((t) => t.id !== id);
     persistTemplates(next);
