@@ -31,7 +31,10 @@ const isJwtLike = (value: string) => {
 };
 
 const interpolateString = (value: string, context: Record<string, string>) => {
-  return String(value ?? "").replace(/\{(\w+)\}/g, (_, key) => (context[key] ?? `{${key}}`));
+  // Support both {{var}} and {var} patterns
+  return String(value ?? "")
+    .replace(/\{\{(\w+)\}\}/g, (_, key) => (context[key] ?? `{{${key}}}`))
+    .replace(/\{(\w+)\}/g, (match, key) => (context[key] !== undefined ? context[key] : match));
 };
 
 const interpolateJson = (value: any, context: Record<string, string>): any => {
@@ -389,6 +392,7 @@ serve(async (req: Request) => {
         status: response.status,
         response_time_ms: responseTimeMs,
         response: json ? sanitizeForUi(json) : text,
+        raw_response: json || text,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
