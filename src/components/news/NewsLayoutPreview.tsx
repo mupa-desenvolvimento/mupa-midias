@@ -224,8 +224,8 @@ export function LayoutTicker({ articles, category, isPortrait }: LayoutProps) {
 }
 
 // ━━━ LAYOUT 4: Minimalista / Clean ━━━
-export function LayoutMinimal({ articles, category }: LayoutProps) {
-  const items = articles.slice(0, 4);
+export function LayoutMinimal({ articles, category, isPortrait }: LayoutProps) {
+  const items = articles.slice(0, isPortrait ? 6 : 4);
   if (items.length === 0) return <EmptyState />;
 
   return (
@@ -243,16 +243,16 @@ export function LayoutMinimal({ articles, category }: LayoutProps) {
       </div>
       <div className="flex-1 flex flex-col divide-y divide-slate-100 overflow-hidden">
         {items.map((a, i) => (
-          <div key={a.id} className="flex-1 flex items-center gap-4 px-5 min-h-0">
+          <div key={a.id} className={cn("flex-1 flex items-center gap-4 px-5 min-h-0", isPortrait && "flex-row-reverse")}>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-[9px] font-bold text-red-500 uppercase">{normalizeDisplayText(a.category).toUpperCase()}</span>
                 <span className="text-[9px] text-slate-400">{normalizeDisplayText(a.source)}</span>
               </div>
-              <h3 className="text-xs font-semibold leading-tight line-clamp-2">{normalizeDisplayText(a.title)}</h3>
+              <h3 className={cn("font-semibold leading-tight line-clamp-2", isPortrait ? "text-sm" : "text-xs")}>{normalizeDisplayText(a.title)}</h3>
               {i === 0 && <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">{normalizeDisplayText(a.description)}</p>}
             </div>
-            <ArticleImage url={a.image_url} className="w-20 h-14 rounded-lg shrink-0" />
+            <ArticleImage url={a.image_url} className={cn("rounded-lg shrink-0", isPortrait ? "w-24 h-16" : "w-20 h-14")} />
             <ArticleQR url={a.link} size={32} />
           </div>
         ))}
