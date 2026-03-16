@@ -512,7 +512,7 @@ export default function GraphicEditor() {
     }));
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-background">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-card">
       {/* Topbar */}
       <div className="flex items-center">
         <Button
@@ -688,7 +688,7 @@ export default function GraphicEditor() {
                   {PRESET_TEMPLATES.map((preset) => (
                     <button
                       key={preset.id}
-                      className="group relative rounded-xl border border-border/60 overflow-hidden hover:border-[#00d4ff]/60 hover:shadow-lg hover:shadow-[#00d4ff]/10 transition-all text-left"
+                      className="group relative rounded-xl border border-border/60 overflow-hidden hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 transition-all text-left"
                       onClick={() => handleApplyPresetTemplate(preset)}
                     >
                       <div
@@ -705,7 +705,7 @@ export default function GraphicEditor() {
                         </div>
                         <p className="text-[10px] text-muted-foreground/70 mt-1 line-clamp-2">{preset.description}</p>
                       </div>
-                      <div className="absolute inset-0 bg-[#00d4ff]/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     </button>
                   ))}
                 </div>

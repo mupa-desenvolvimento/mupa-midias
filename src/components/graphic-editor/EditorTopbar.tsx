@@ -30,13 +30,13 @@ export function EditorTopbar({
   onOpenTemplates,
 }: Props) {
   return (
-    <header className="h-14 border-b border-white/10 bg-[#14141a]/80 backdrop-blur flex items-center px-4 gap-3 shrink-0 shadow-sm">
+    <header className="h-14 border-b border-border bg-card/80 backdrop-blur flex items-center px-4 gap-3 shrink-0 shadow-sm">
       <div className="flex items-center gap-2 shrink-0">
         {onBack && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/5"
+            className="h-9 w-9"
             onClick={onBack}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -44,10 +44,10 @@ export function EditorTopbar({
         )}
 
         <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-md bg-[#00d4ff]/20 border border-[#00d4ff]/30" />
+          <div className="h-6 w-6 rounded-md bg-primary/20 border border-primary/30" />
           <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight text-white">Mupa Editor</div>
-            <div className="text-[10px] text-white/50">TV Static Creator</div>
+            <div className="text-sm font-semibold tracking-tight">Mupa Editor</div>
+            <div className="text-[10px] text-muted-foreground">TV Static Creator</div>
           </div>
         </div>
 
@@ -55,7 +55,7 @@ export function EditorTopbar({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 ml-2 border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+            className="h-9 ml-2"
             onClick={onNewProject}
           >
             Novo Projeto
@@ -67,10 +67,10 @@ export function EditorTopbar({
         <Input
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
-          className="h-9 max-w-[520px] bg-white/5 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-[#00d4ff]/40"
+          className="h-9 max-w-[520px]"
         />
         {typeof canvasWidth === "number" && typeof canvasHeight === "number" && (
-          <div className="text-xs text-white/60 shrink-0">
+          <div className="text-xs text-muted-foreground shrink-0">
             {canvasWidth} × {canvasHeight} px
           </div>
         )}
@@ -80,7 +80,7 @@ export function EditorTopbar({
         <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/5" onClick={onUndo}>
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onUndo}>
                 <Undo2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -89,7 +89,7 @@ export function EditorTopbar({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/5" onClick={onRedo}>
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onRedo}>
                 <Redo2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -97,24 +97,24 @@ export function EditorTopbar({
           </Tooltip>
         </div>
 
-        <div className="h-6 w-px bg-white/10 mx-1" />
+        <div className="h-6 w-px bg-border mx-1" />
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/5" onClick={() => onZoom(-0.1)}>
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => onZoom(-0.1)}>
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <div className="text-xs text-white/60 w-14 text-center tabular-nums">{Math.round(zoom * 100)}%</div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/5" onClick={() => onZoom(0.1)}>
+          <div className="text-xs text-muted-foreground w-14 text-center tabular-nums">{Math.round(zoom * 100)}%</div>
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => onZoom(0.1)}>
             <ZoomIn className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="h-6 w-px bg-white/10 mx-1" />
+        <div className="h-6 w-px bg-border mx-1" />
 
         <Button
           variant="outline"
           size="sm"
-          className="h-9 border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+          className="h-9"
           onClick={onExportPNG}
         >
           <FileImage className="h-4 w-4 mr-2" /> Export PNG
@@ -123,7 +123,7 @@ export function EditorTopbar({
         <Button
           variant="outline"
           size="sm"
-          className="h-9 border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+          className="h-9"
           onClick={onExportSVG}
         >
           <FileImage className="h-4 w-4 mr-2" /> Export SVG
@@ -132,7 +132,7 @@ export function EditorTopbar({
         <Button
           variant="outline"
           size="sm"
-          className="h-9 border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+          className="h-9"
           onClick={onOpenTemplates}
         >
           <LayoutTemplate className="h-4 w-4 mr-2" /> Templates
@@ -140,7 +140,7 @@ export function EditorTopbar({
 
         <Button
           size="sm"
-          className="h-9 bg-[#00d4ff] text-[#0a0a0f] hover:bg-[#00d4ff]/90"
+          className="h-9"
           onClick={onSaveToGallery}
         >
           <Upload className="h-4 w-4 mr-2" /> Salvar no Mupa
@@ -151,7 +151,7 @@ export function EditorTopbar({
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/5"
+              className="h-9 w-9"
               onClick={onSave}
             >
               <Save className="h-4 w-4" />
