@@ -7,9 +7,10 @@ import { useEffect, useMemo, useState } from "react";
 interface NewsPlayerSlideProps {
   onEnded?: () => void;
   media?: { metadata?: any } | null;
+  isPortrait?: boolean;
 }
 
-export const NewsPlayerSlide = ({ media }: NewsPlayerSlideProps) => {
+export const NewsPlayerSlide = ({ media, isPortrait = false }: NewsPlayerSlideProps) => {
   const { deviceCode, deviceId } = useParams();
   const [searchParams] = useSearchParams();
   const queryDeviceId = searchParams.get("device_id");
