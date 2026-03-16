@@ -86,10 +86,11 @@ export default function InstagramFeedManager() {
     setSavingSettings(true);
     try {
       const token = tokenInput.startsWith("••") ? undefined : tokenInput;
+      const { data: tenantId } = await supabase.rpc('get_user_tenant_id_strict');
       const { data, error } = await supabase.functions.invoke("instagram-fetch", {
         body: {
           action: "save-settings",
-          tenantId: null,
+          tenantId,
           accessToken: token,
           fetchDays: parseInt(fetchDays),
         },
