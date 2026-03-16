@@ -219,6 +219,7 @@ function AppContent() {
                         <Route path="inky" element={<InkyIntelligence />} />
                         <Route path="list-example" element={<ExampleListPage />} />
                         <Route path="qrcode-campaigns" element={<QRCodeCampaigns />} />
+                        <Route path="logs" element={<PlatformLogs />} />
                       </Routes>
                     </AppLayout>
                   </div>
