@@ -74,11 +74,13 @@ Deno.serve(async (req) => {
 
     // Action: save-settings - Save/update Instagram settings
     if (action === "save-settings") {
-      const { data: existing } = await supabaseAdmin
-        .from("instagram_settings")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
+      let query = supabaseAdmin.from("instagram_settings").select("id");
+      if (tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      } else {
+        query = query.is("tenant_id", null);
+      }
+      const { data: existing } = await query.maybeSingle();
 
       // Validate token by fetching user info
       let username = "";
