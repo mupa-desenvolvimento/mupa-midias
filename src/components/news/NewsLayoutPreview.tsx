@@ -146,14 +146,17 @@ export function LayoutHeroSidebar({ articles, category, isPortrait }: LayoutProp
 }
 
 // ━━━ LAYOUT 2: Grade de Cards ━━━
-export function LayoutGrid({ articles, category }: LayoutProps) {
+export function LayoutGrid({ articles, category, isPortrait }: LayoutProps) {
   const items = articles.slice(0, 6);
   if (items.length === 0) return <EmptyState />;
 
   return (
     <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden flex flex-col min-h-0">
       <LayoutHeader category={category} />
-      <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-2 p-3 min-h-0">
+      <div className={cn(
+        "flex-1 grid gap-2 p-3 min-h-0",
+        isPortrait ? "grid-cols-2 grid-rows-3" : "grid-cols-3 grid-rows-2"
+      )}>
         {items.map((a) => (
           <div key={a.id} className="relative rounded-lg overflow-hidden group">
             <ArticleImage url={a.image_url} className="absolute inset-0 w-full h-full" />
@@ -163,7 +166,7 @@ export function LayoutGrid({ articles, category }: LayoutProps) {
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-2">
               <span className="text-[8px] uppercase text-emerald-400 font-semibold">{normalizeDisplayText(a.category).toUpperCase()}</span>
-              <h3 className="text-[9px] font-bold leading-tight line-clamp-2 mt-0.5">{normalizeDisplayText(a.title)}</h3>
+              <h3 className={cn("font-bold leading-tight line-clamp-2 mt-0.5", isPortrait ? "text-[10px]" : "text-[9px]")}>{normalizeDisplayText(a.title)}</h3>
             </div>
           </div>
         ))}
