@@ -63,7 +63,8 @@ export const useMediaItems = (folderId?: string | null) => {
       
       let query = supabase
         .from("media_items")
-        .select("*");
+        .select("*")
+        .neq("type", "font");
 
       if (folderId !== undefined) {
         if (folderId === null) {
