@@ -27,7 +27,7 @@ export default function QRCodeCampaigns() {
     <PageShell
       header={<div><h1 className="text-2xl font-bold">QR Code Campanhas</h1><p className="text-sm text-muted-foreground">Crie e gerencie campanhas com QR Code para TVs e terminais</p></div>}
     >
-      {/* Dashboard */}
+      <div className="overflow-y-auto h-full space-y-6 pr-1">
       {!isLoading && campaigns.length > 0 && <CampaignDashboard campaigns={campaigns} />}
 
       {/* Actions */}
