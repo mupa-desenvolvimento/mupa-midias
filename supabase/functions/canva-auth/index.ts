@@ -27,8 +27,8 @@
 
  // FIX #2 & #3 & #6: Extracted token refresh helper — eliminates 3x duplication,
  // checks for null refresh_token, and provides a single place for future locking logic.
- async function getValidCanvaToken(
-   supabase: ReturnType<typeof createClient>,
+async function getValidCanvaToken(
+  supabase: any,
    userId: string,
    clientId: string,
    clientSecret: string,
