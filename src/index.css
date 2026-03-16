@@ -94,6 +94,37 @@
     --sidebar-border: 234 82% 15%; /* borda sutil */
     --sidebar-ring: 218 94% 49%; /* #085CF0 */
   }
+
+  .mupa-editor {
+    color-scheme: dark;
+  }
+
+  .mupa-editor.dark {
+    --background: 240 20% 5%;
+    --foreground: 0 0% 100%;
+
+    --card: 240 10% 13%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 240 10% 13%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 190 100% 50%;
+    --primary-foreground: 240 20% 5%;
+
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 10% 10%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 190 100% 50%;
+    --accent-foreground: 240 20% 5%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 190 100% 50%;
+  }
 }
 
 @layer base {

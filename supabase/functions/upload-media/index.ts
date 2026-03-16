@@ -1,5 +1,9 @@
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.87.1"
+// @ts-ignore
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.18"
+
+declare const Deno: any;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,7 +76,7 @@ function getMediaType(mimeType: string): string {
   return 'document'
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   console.log('=== upload-media function called ===')
   
   if (req.method === 'OPTIONS') {

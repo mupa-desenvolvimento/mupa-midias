@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Palette, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Strikethrough, Monitor, Upload, Trash2, ChevronsUpDown, Check, Star } from "lucide-react";
+import { Palette, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Strikethrough, Monitor, Upload, Trash2, ChevronsUpDown, Check, Star, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import type { AlignmentSettings } from "@/editor/alignment-engine";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +117,7 @@ interface Props {
   canvasWidth: number;
   canvasHeight: number;
   onCanvasResize: (w: number, h: number) => void;
+  onCanvasSwapOrientation: () => void;
   alignmentSettings: AlignmentSettings;
   onAlignmentSettingsChange: (updates: Partial<AlignmentSettings>) => void;
 }
@@ -129,6 +130,7 @@ export function EditorProperties({
   canvasWidth,
   canvasHeight,
   onCanvasResize,
+  onCanvasSwapOrientation,
   alignmentSettings,
   onAlignmentSettingsChange,
 }: Props) {
@@ -538,7 +540,7 @@ export function EditorProperties({
 
   if (!selected) {
     return (
-      <div className="w-[260px] border-l border-border bg-card flex flex-col shrink-0 h-full">
+      <div className="w-[360px] border-l border-border bg-card flex flex-col shrink-0 h-full">
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-5">
             <div className="flex flex-col items-center justify-center py-6">
@@ -604,6 +606,18 @@ export function EditorProperties({
                     max={4096}
                   />
                 </div>
+              </div>
+
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-7 w-full text-xs"
+                  onClick={onCanvasSwapOrientation}
+                >
+                  <RotateCw className="h-3.5 w-3.5 mr-2" />
+                  Trocar orientação (mantém proporção)
+                </Button>
               </div>
 
               <p className="text-[10px] text-muted-foreground/60">{canvasWidth} × {canvasHeight} px</p>
@@ -814,7 +828,7 @@ export function EditorProperties({
   const isText = selected.type === "i-text" || selected.type === "text";
 
   return (
-    <div className="w-[260px] border-l border-border bg-card flex flex-col shrink-0 h-full">
+    <div className="w-[360px] border-l border-border bg-card flex flex-col shrink-0 h-full">
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-5">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Propriedades</p>

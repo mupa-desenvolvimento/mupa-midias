@@ -143,9 +143,9 @@ export function EditorSidebar({
   );
 
   return (
-    <div className="w-[300px] border-r border-border bg-card flex flex-col shrink-0 h-full">
+    <div className="w-[300px] border-r border-white/10 bg-[#1f1f25] flex flex-col shrink-0 h-full text-white">
       <Tabs defaultValue="tools" className="flex flex-col h-full">
-        <TabsList className="mx-2 mt-2 grid grid-cols-4 h-9">
+        <TabsList className="mx-2 mt-2 grid grid-cols-4 h-9 bg-white/5 border border-white/10">
           <TabsTrigger value="tools" className="text-xs gap-1">
             <Wrench className="h-3 w-3" /> Ferramentas
           </TabsTrigger>

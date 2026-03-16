@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Circle, Eye, EyeOff, GripVertical, Image as ImageIcon, Lock, Minus, Square, Star, Triangle, Type, Unlock } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Circle, Eye, EyeOff, GripVertical, Image as ImageIcon, Lock, Minus, Square, Star, Triangle, Type, Unlock } from "lucide-react";
 import { useFabricCanvas } from "@/components/graphic-editor/useFabricCanvas";
 import { EditorTopbar } from "@/components/graphic-editor/EditorTopbar";
 import { EditorSidebar } from "@/components/graphic-editor/EditorSidebar";
@@ -120,15 +120,62 @@ function FloatingLayersPanel({
   onToggleLayerVisible,
   onToggleLayerLocked,
   onMoveLayerToListIndex,
+  boundsRef,
 }: {
   layers: LayerItem[];
   onSelectLayer: (id: string) => void;
   onToggleLayerVisible: (id: string) => void;
   onToggleLayerLocked: (id: string) => void;
   onMoveLayerToListIndex: (id: string, toIndex: number) => void;
+  boundsRef: React.RefObject<HTMLElement>;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [orderedIds, setOrderedIds] = useState<string[]>(() => layers.map((l) => l.id));
+  const panelRef = useRef<HTMLDivElement>(null);
+  const isDraggingPanelRef = useRef(false);
+  const dragStartRef = useRef<{ clientX: number; clientY: number; x: number; y: number; pointerId: number } | null>(null);
+
+  const storageKey = "graphic-editor-floating-layers-panel";
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      return !!parsed?.collapsed;
+    } catch {
+      return false;
+    }
+  });
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const x = typeof parsed?.x === "number" ? parsed.x : null;
+      const y = typeof parsed?.y === "number" ? parsed.y : null;
+      if (x === null || y === null) return null;
+      return { x, y };
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ ...pos, collapsed }));
+    } catch {
+      void 0;
+    }
+  }, [collapsed, pos]);
+
+  useEffect(() => {
+    if (pos) return;
+    const boundsEl = boundsRef.current;
+    if (!boundsEl) return;
+    const bounds = boundsEl.getBoundingClientRect();
+    const panelWidth = panelRef.current?.getBoundingClientRect().width || 280;
+    setPos({ x: Math.max(0, bounds.width - panelWidth - 24), y: 24 });
+  }, [boundsRef, pos]);
 
   useEffect(() => {
     const ids = layers.map((l) => l.id);
@@ -152,13 +199,89 @@ function FloatingLayersPanel({
     onMoveLayerToListIndex(active.id as string, newIndex);
   };
 
+  const clampToBounds = useCallback(
+    (nextX: number, nextY: number) => {
+      const boundsEl = boundsRef.current;
+      const panelEl = panelRef.current;
+      if (!boundsEl || !panelEl) return { x: nextX, y: nextY };
+      const bounds = boundsEl.getBoundingClientRect();
+      const rect = panelEl.getBoundingClientRect();
+      const maxX = Math.max(0, bounds.width - rect.width);
+      const maxY = Math.max(0, bounds.height - rect.height);
+      return {
+        x: Math.min(Math.max(0, nextX), maxX),
+        y: Math.min(Math.max(0, nextY), maxY),
+      };
+    },
+    [boundsRef]
+  );
+
+  const onHeaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    if (!pos) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-no-drag]")) return;
+
+    isDraggingPanelRef.current = true;
+    dragStartRef.current = { clientX: e.clientX, clientY: e.clientY, x: pos.x, y: pos.y, pointerId: e.pointerId };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+
+  const onHeaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingPanelRef.current) return;
+    const start = dragStartRef.current;
+    if (!start || start.pointerId !== e.pointerId) return;
+    const nextX = start.x + (e.clientX - start.clientX);
+    const nextY = start.y + (e.clientY - start.clientY);
+    setPos(clampToBounds(nextX, nextY));
+  };
+
+  const endPanelDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const start = dragStartRef.current;
+    if (!start || start.pointerId !== e.pointerId) return;
+    isDraggingPanelRef.current = false;
+    dragStartRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      void 0;
+    }
+  };
+
+  const positionStyle = pos ? { left: pos.x, top: pos.y } : { right: 24, top: 24 };
+
   return (
-    <div className="absolute right-6 top-6 w-[280px] max-h-[70%] bg-card border border-border rounded-xl shadow-lg overflow-hidden flex flex-col">
-      <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-        <div className="text-sm font-semibold">Layers</div>
-        <div className="text-xs text-muted-foreground">{layers.length}</div>
+    <div
+      ref={panelRef}
+      className={`absolute w-[280px] bg-card border border-border rounded-xl shadow-lg overflow-hidden flex flex-col ${collapsed ? "" : "max-h-[70%]"}`}
+      style={positionStyle}
+    >
+      <div
+        className="px-3 py-2 border-b border-border flex items-center justify-between select-none cursor-grab active:cursor-grabbing"
+        onPointerDown={onHeaderPointerDown}
+        onPointerMove={onHeaderPointerMove}
+        onPointerUp={endPanelDrag}
+        onPointerCancel={endPanelDrag}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          <div className="text-sm font-semibold truncate">Layers</div>
+          <div className="text-xs text-muted-foreground">{layers.length}</div>
+        </div>
+        <button
+          type="button"
+          data-no-drag
+          className="p-1 rounded hover:bg-accent"
+          onClick={() => setCollapsed((v) => !v)}
+          aria-label={collapsed ? "Expandir" : "Minimizar"}
+        >
+          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+        </button>
       </div>
-      <div className="flex-1 min-h-0">
+
+      {!collapsed && (
+        <div className="flex-1 min-h-0">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
             <ScrollArea className="h-full">
@@ -186,7 +309,8 @@ function FloatingLayersPanel({
             </ScrollArea>
           </SortableContext>
         </DndContext>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -203,13 +327,13 @@ export default function GraphicEditor() {
     initCanvas, canvasElRef,
     selectedObject, projectName, setProjectName, zoom,
     showGrid, toggleGrid, canvasBgColor, changeCanvasBg,
-    canvasWidth, canvasHeight, resizeCanvas,
+    canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
     addText, addRect, addCircle, addLine, addTriangle, addStar, addPolygon,
     addImage, addImageFromUrl,
     deleteSelected, duplicateSelected, bringToFront, sendToBack,
     layers, selectLayer, toggleLayerVisible, toggleLayerLocked, moveLayerForward, moveLayerBackward, moveLayerToListIndex, renameLayer,
     updateObjectProp,
-    undo, redo, exportPNG, exportSVG, saveProject, handleZoom,
+    undo, redo, exportPNG, exportSVG, saveProject, handleZoom, handleWheelNavigation,
     getCanvasDataUrl,
     getProjectData, loadProjectData,
     alignmentSettings, updateAlignmentSettings,
@@ -220,7 +344,7 @@ export default function GraphicEditor() {
   useEffect(() => {
     const el = canvasElRef.current;
     if (el) initCanvas(el);
-  }, []);
+  }, [canvasElRef, initCanvas]);
 
   useEffect(() => {
     const raw = localStorage.getItem("graphic-editor-templates");
@@ -278,14 +402,12 @@ export default function GraphicEditor() {
     const container = canvasContainerRef.current;
     if (!container) return;
     const handler = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        handleZoom(e.deltaY > 0 ? -0.05 : 0.05);
-      }
+      handleWheelNavigation(e);
+      e.preventDefault();
     };
     container.addEventListener("wheel", handler, { passive: false });
     return () => container.removeEventListener("wheel", handler);
-  }, [handleZoom]);
+  }, [handleWheelNavigation]);
 
   const handleSaveToGallery = useCallback(async (folderId: string | null, fileName: string) => {
     const dataUrl = getCanvasDataUrl();
@@ -394,7 +516,7 @@ export default function GraphicEditor() {
           <ContextMenuTrigger asChild>
             <div
               ref={canvasContainerRef}
-              className="flex-1 overflow-auto bg-muted/30 flex items-center justify-center p-8 relative"
+              className="flex-1 overflow-hidden bg-muted/30 flex items-center justify-center p-8 relative"
             >
               {showGrid && (
                 <div
@@ -405,15 +527,14 @@ export default function GraphicEditor() {
                   }}
                 />
               )}
-              <div className="shadow-lg rounded-lg border border-border" style={{ backgroundColor: canvasBgColor }}>
-                <canvas ref={canvasElRef} />
-              </div>
+              <canvas ref={canvasElRef} className="rounded-lg" />
               <FloatingLayersPanel
                 layers={layers}
                 onSelectLayer={selectLayer}
                 onToggleLayerVisible={toggleLayerVisible}
                 onToggleLayerLocked={toggleLayerLocked}
                 onMoveLayerToListIndex={moveLayerToListIndex}
+                boundsRef={canvasContainerRef}
               />
             </div>
           </ContextMenuTrigger>
@@ -474,6 +595,7 @@ export default function GraphicEditor() {
           canvasWidth={canvasWidth}
           canvasHeight={canvasHeight}
           onCanvasResize={resizeCanvas}
+          onCanvasSwapOrientation={swapCanvasOrientation}
           alignmentSettings={alignmentSettings}
           onAlignmentSettingsChange={updateAlignmentSettings}
         />

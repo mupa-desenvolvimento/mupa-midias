@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Canvas, IText, Rect, Circle, Line, Triangle, Polygon, FabricImage, FabricObject, ActiveSelection, Shadow } from "fabric";
+import { Canvas, IText, Rect, Circle, Line, Triangle, Polygon, FabricImage, FabricObject, ActiveSelection, Shadow, Point } from "fabric";
 import { attachSmartGuides } from "@/editor/smart-guides";
 import type { AlignmentSettings } from "@/editor/alignment-engine";
 
@@ -60,11 +60,12 @@ function createPolygonPoints(sides: number, radius: number): { x: number; y: num
 export function useFabricCanvas() {
   const canvasRef = useRef<Canvas | null>(null);
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
+  const bgRectRef = useRef<Rect | null>(null);
   const [selectedObject, setSelectedObject] = useState<SelectedObjectProps | null>(null);
   const [layers, setLayers] = useState<LayerItem[]>([]);
   const [projectName, setProjectName] = useState("Projeto sem título");
   const [zoom, setZoom] = useState(1);
-  const [showGrid, setShowGrid] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
   const [canvasBgColor, setCanvasBgColor] = useState("#ffffff");
   const [canvasWidth, setCanvasWidth] = useState(900);
   const [canvasHeight, setCanvasHeight] = useState(600);
@@ -89,6 +90,39 @@ export function useFabricCanvas() {
   });
   const alignmentSettingsRef = useRef<AlignmentSettings>(alignmentSettings);
   const smartGuidesCleanupRef = useRef<null | (() => void)>(null);
+  const isSpacePressedRef = useRef(false);
+  const isPanningRef = useRef(false);
+  const lastPanClientRef = useRef<{ x: number; y: number } | null>(null);
+  const prevSkipTargetFindRef = useRef<boolean | null>(null);
+  const prevSelectionRef = useRef<boolean | null>(null);
+  const prevDefaultCursorRef = useRef<string | null>(null);
+  const prevHoverCursorRef = useRef<string | null>(null);
+
+  const getViewportCenterInCanvasCoords = useCallback((c: Canvas) => {
+    const vpt = c.viewportTransform || [1, 0, 0, 1, 0, 0];
+    const scaleX = vpt[0] || 1;
+    const scaleY = vpt[3] || 1;
+    const viewportCx = c.getWidth() / 2;
+    const viewportCy = c.getHeight() / 2;
+    return {
+      x: (viewportCx - (vpt[4] || 0)) / scaleX,
+      y: (viewportCy - (vpt[5] || 0)) / scaleY,
+    };
+  }, []);
+
+  const panViewportToObject = useCallback((obj: FabricObject) => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const vpt = c.viewportTransform;
+    if (!vpt) return;
+    const zoom = c.getZoom() || 1;
+    const viewportCx = c.getWidth() / 2;
+    const viewportCy = c.getHeight() / 2;
+    const center = obj.getCenterPoint();
+    vpt[4] = viewportCx - center.x * zoom;
+    vpt[5] = viewportCy - center.y * zoom;
+    c.setViewportTransform(vpt);
+  }, []);
 
   // History
   const historyRef = useRef<string[]>([]);
@@ -103,10 +137,68 @@ export function useFabricCanvas() {
     return `${key} ${next}`;
   }, []);
 
+  const isBackgroundObject = useCallback((obj: FabricObject) => {
+    const anyObj = obj as any;
+    const data = anyObj?.data && typeof anyObj.data === "object" ? anyObj.data : null;
+    return !!data?.isBackground;
+  }, []);
+
+  const ensureBackgroundRect = useCallback((canvas: Canvas, opts: { width: number; height: number; color: string }) => {
+    const { width, height, color } = opts;
+    let bg = bgRectRef.current;
+
+    const objects = canvas.getObjects();
+    const bgFromCanvas = objects.find((o) => isBackgroundObject(o as any)) as any;
+    if (!bg || !objects.includes(bg)) {
+      if (bgFromCanvas && bgFromCanvas.type === "rect") bg = bgFromCanvas as Rect;
+      else bg = null;
+    }
+
+    if (!bg) {
+      bg = new Rect({
+        left: 0,
+        top: 0,
+        width,
+        height,
+        fill: color,
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        hasBorders: false,
+        hoverCursor: "default",
+        objectCaching: false,
+      });
+      (bg as any).set("data", { isBackground: true, layerId: "__background__", layerName: "Fundo" });
+      canvas.add(bg);
+      canvas.sendObjectToBack(bg);
+      bgRectRef.current = bg;
+      return bg;
+    }
+
+    const anyBg = bg as any;
+    const currentData = anyBg?.data && typeof anyBg.data === "object" ? anyBg.data : {};
+    if (!currentData.isBackground || !currentData.layerId) {
+      bg.set("data" as any, { ...currentData, isBackground: true, layerId: "__background__", layerName: currentData.layerName || "Fundo" });
+    }
+
+    bg.set({ left: 0, top: 0, width, height, fill: color } as any);
+    canvas.sendObjectToBack(bg);
+    bg.setCoords();
+    bgRectRef.current = bg;
+    return bg;
+  }, [isBackgroundObject]);
+
   const ensureLayerData = useCallback((obj: FabricObject) => {
     const anyObj = obj as any;
     const currentData = anyObj?.data && typeof anyObj.data === "object" ? anyObj.data : {};
     const nextData: any = { ...currentData };
+
+    if (nextData?.isBackground) {
+      if (!nextData.layerId) nextData.layerId = "__background__";
+      if (!nextData.layerName) nextData.layerName = "Fundo";
+      anyObj.set("data", nextData);
+      return nextData as { layerId: string; layerName: string };
+    }
 
     if (!nextData.layerId) {
       nextData.layerId =
@@ -147,12 +239,15 @@ export function useFabricCanvas() {
     if (active) {
       if (active.type === "activeselection") {
         (active as ActiveSelection).forEachObject((obj: FabricObject) => {
+          if (isBackgroundObject(obj)) return;
           const data = ensureLayerData(obj);
           if (data?.layerId) activeIds.add(data.layerId);
         });
       } else {
-        const data = ensureLayerData(active as FabricObject);
-        if (data?.layerId) activeIds.add(data.layerId);
+        if (!isBackgroundObject(active as any)) {
+          const data = ensureLayerData(active as FabricObject);
+          if (data?.layerId) activeIds.add(data.layerId);
+        }
       }
     }
 
@@ -160,6 +255,7 @@ export function useFabricCanvas() {
       .getObjects()
       .slice()
       .reverse()
+      .filter((obj) => !isBackgroundObject(obj as any))
       .map((obj) => {
         const data = ensureLayerData(obj);
         const locked = !!(
@@ -181,7 +277,7 @@ export function useFabricCanvas() {
       });
 
     setLayers(items);
-  }, [ensureLayerData]);
+  }, [ensureLayerData, isBackgroundObject]);
 
   const saveHistory = useCallback(() => {
     if (isRestoringRef.current || !canvasRef.current) return;
@@ -218,7 +314,7 @@ export function useFabricCanvas() {
     const canvas = new Canvas(el, {
       width: 900,
       height: 600,
-      backgroundColor: "#ffffff",
+      backgroundColor: "transparent",
       selection: true,
       preserveObjectStacking: true,
     });
@@ -232,6 +328,18 @@ export function useFabricCanvas() {
     canvas.on("mouse:down", (opt: any) => {
       const ev = opt?.e as MouseEvent | undefined;
       if (!ev) return;
+
+      if (isSpacePressedRef.current && ev.button === 0) {
+        isPanningRef.current = true;
+        lastPanClientRef.current = { x: ev.clientX, y: ev.clientY };
+        prevSkipTargetFindRef.current = canvas.skipTargetFind;
+        canvas.skipTargetFind = true;
+        canvas.discardActiveObject();
+        canvas.defaultCursor = "grabbing";
+        canvas.requestRenderAll();
+        return;
+      }
+
       if (ev.button !== 2) return;
       if (opt?.target) {
         canvas.setActiveObject(opt.target);
@@ -243,7 +351,34 @@ export function useFabricCanvas() {
       refreshLayers(canvas);
     });
 
+    canvas.on("mouse:move", (opt: any) => {
+      if (!isPanningRef.current) return;
+      const ev = opt?.e as MouseEvent | undefined;
+      if (!ev) return;
+      const last = lastPanClientRef.current;
+      if (!last) return;
+      const vpt = canvas.viewportTransform;
+      if (!vpt) return;
+
+      vpt[4] += ev.clientX - last.x;
+      vpt[5] += ev.clientY - last.y;
+      lastPanClientRef.current = { x: ev.clientX, y: ev.clientY };
+      canvas.requestRenderAll();
+    });
+
+    canvas.on("mouse:up", () => {
+      if (!isPanningRef.current) return;
+      isPanningRef.current = false;
+      lastPanClientRef.current = null;
+      canvas.skipTargetFind = prevSkipTargetFindRef.current ?? false;
+      prevSkipTargetFindRef.current = null;
+      canvas.defaultCursor = isSpacePressedRef.current ? "grab" : (prevDefaultCursorRef.current ?? "default");
+      canvas.requestRenderAll();
+    });
+
     canvasRef.current = canvas;
+    bgRectRef.current = null;
+    ensureBackgroundRect(canvas, { width: 900, height: 600, color: canvasBgColor });
     smartGuidesCleanupRef.current = attachSmartGuides({
       canvas,
       getSettings: () => alignmentSettingsRef.current,
@@ -259,16 +394,18 @@ export function useFabricCanvas() {
         if (data.name) setProjectName(data.name);
         if (data.bgColor) {
           setCanvasBgColor(data.bgColor);
-          canvas.backgroundColor = data.bgColor;
+          ensureBackgroundRect(canvas, { width: canvas.getWidth(), height: canvas.getHeight(), color: data.bgColor });
         }
         if (data.width && data.height) {
           setCanvasWidth(data.width);
           setCanvasHeight(data.height);
           canvas.setDimensions({ width: data.width, height: data.height });
+          ensureBackgroundRect(canvas, { width: data.width, height: data.height, color: (typeof data.bgColor === "string" && data.bgColor) ? data.bgColor : canvasBgColor });
         }
         if (data.canvas) {
           canvas.loadFromJSON(data.canvas).then(() => {
             canvas.getObjects().forEach((obj) => ensureLayerData(obj));
+            ensureBackgroundRect(canvas, { width: canvas.getWidth(), height: canvas.getHeight(), color: (typeof data.bgColor === "string" && data.bgColor) ? data.bgColor : canvasBgColor });
             canvas.renderAll();
             saveHistory();
             refreshLayers(canvas);
@@ -281,7 +418,7 @@ export function useFabricCanvas() {
 
     refreshLayers(canvas);
     return canvas;
-  }, [ensureLayerData, refreshLayers, saveHistory]);
+  }, [canvasBgColor, ensureBackgroundRect, ensureLayerData, refreshLayers, saveHistory]);
 
   const updateAlignmentSettings = useCallback((updates: Partial<AlignmentSettings>) => {
     setAlignmentSettings((prev) => ({ ...prev, ...updates }));
@@ -307,23 +444,25 @@ export function useFabricCanvas() {
     if (typeof data.name === "string" && data.name.trim()) setProjectName(data.name);
     if (typeof data.bgColor === "string" && data.bgColor) {
       setCanvasBgColor(data.bgColor);
-      c.backgroundColor = data.bgColor;
+      ensureBackgroundRect(c, { width: c.getWidth(), height: c.getHeight(), color: data.bgColor });
     }
     if (typeof data.width === "number" && typeof data.height === "number" && data.width > 0 && data.height > 0) {
       setCanvasWidth(data.width);
       setCanvasHeight(data.height);
       c.setDimensions({ width: data.width, height: data.height });
+      ensureBackgroundRect(c, { width: data.width, height: data.height, color: (typeof data.bgColor === "string" && data.bgColor) ? data.bgColor : canvasBgColor });
     }
 
     await c.loadFromJSON(data.canvas);
     c.getObjects().forEach((obj) => ensureLayerData(obj));
+    ensureBackgroundRect(c, { width: c.getWidth(), height: c.getHeight(), color: (typeof data.bgColor === "string" && data.bgColor) ? data.bgColor : canvasBgColor });
     c.discardActiveObject();
     c.renderAll();
     isRestoringRef.current = false;
     saveHistory();
     updateSelection(c);
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers, saveHistory]);
+  }, [canvasBgColor, ensureBackgroundRect, ensureLayerData, refreshLayers, saveHistory]);
 
   const updateSelection = (canvas: Canvas) => {
     const obj = canvas.getActiveObject();
@@ -363,31 +502,102 @@ export function useFabricCanvas() {
     c.setDimensions({ width: w, height: h });
     setCanvasWidth(w);
     setCanvasHeight(h);
+    ensureBackgroundRect(c, { width: w, height: h, color: canvasBgColor });
     c.renderAll();
-  }, []);
+  }, [canvasBgColor, ensureBackgroundRect]);
+
+  const swapCanvasOrientation = useCallback(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+
+    const newW = canvasHeight;
+    const newH = canvasWidth;
+
+    c.setDimensions({ width: newW, height: newH });
+    setCanvasWidth(newW);
+    setCanvasHeight(newH);
+    ensureBackgroundRect(c, { width: newW, height: newH, color: canvasBgColor });
+
+    const objects = c.getObjects().filter((o) => !isBackgroundObject(o as any));
+    if (objects.length === 0) {
+      c.renderAll();
+      saveHistory();
+      refreshLayers(c);
+      return;
+    }
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (const obj of objects) {
+      const rect = obj.getBoundingRect();
+      minX = Math.min(minX, rect.left);
+      minY = Math.min(minY, rect.top);
+      maxX = Math.max(maxX, rect.left + rect.width);
+      maxY = Math.max(maxY, rect.top + rect.height);
+    }
+
+    const boundsW = Math.max(1, maxX - minX);
+    const boundsH = Math.max(1, maxY - minY);
+    const oldCenterX = minX + boundsW / 2;
+    const oldCenterY = minY + boundsH / 2;
+
+    const targetW = newW * 0.92;
+    const targetH = newH * 0.92;
+    const scale = Math.min(targetW / boundsW, targetH / boundsH);
+
+    const newCenterX = newW / 2;
+    const newCenterY = newH / 2;
+
+    for (const obj of objects) {
+      const center = obj.getCenterPoint();
+      const dx = center.x - oldCenterX;
+      const dy = center.y - oldCenterY;
+      const nextCenterX = newCenterX + dx * scale;
+      const nextCenterY = newCenterY + dy * scale;
+
+      obj.set({
+        scaleX: (obj.scaleX || 1) * scale,
+        scaleY: (obj.scaleY || 1) * scale,
+      } as any);
+      obj.setPositionByOrigin(new Point(nextCenterX, nextCenterY), "center", "center");
+      obj.setCoords();
+    }
+
+    c.renderAll();
+    updateSelection(c);
+    saveHistory();
+    refreshLayers(c);
+  }, [canvasBgColor, canvasHeight, canvasWidth, ensureBackgroundRect, isBackgroundObject, refreshLayers, saveHistory]);
 
   // ---- Actions ----
 
   const addText = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const { x, y } = getViewportCenterInCanvasCoords(c);
     const text = new IText("Texto aqui", {
-      left: 100, top: 100,
+      left: x, top: y,
       fontSize: 28, fontFamily: "Inter",
       fill: "#1a1a1a",
     });
     ensureLayerData(text);
     c.add(text);
+    text.set({ left: x - text.getScaledWidth() / 2, top: y - text.getScaledHeight() / 2 } as any);
+    text.setCoords();
     c.setActiveObject(text);
     c.renderAll();
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addRect = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const { x, y } = getViewportCenterInCanvasCoords(c);
     const rect = new Rect({
-      left: 150, top: 150, width: 150, height: 100,
+      left: x - 150 / 2, top: y - 100 / 2, width: 150, height: 100,
       fill: "#3b82f6", stroke: "#1d4ed8", strokeWidth: 2,
       rx: 8, ry: 8,
     });
@@ -396,13 +606,14 @@ export function useFabricCanvas() {
     c.setActiveObject(rect);
     c.renderAll();
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addCircle = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const { x, y } = getViewportCenterInCanvasCoords(c);
     const circle = new Circle({
-      left: 200, top: 200, radius: 60,
+      left: x - 60, top: y - 60, radius: 60,
       fill: "#10b981", stroke: "#047857", strokeWidth: 2,
     });
     ensureLayerData(circle);
@@ -410,12 +621,15 @@ export function useFabricCanvas() {
     c.setActiveObject(circle);
     c.renderAll();
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addLine = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const { x, y } = getViewportCenterInCanvasCoords(c);
     const line = new Line([50, 300, 300, 300], {
+      left: x - 250 / 2,
+      top: y,
       stroke: "#1a1a1a", strokeWidth: 3,
     });
     ensureLayerData(line as any);
@@ -423,13 +637,14 @@ export function useFabricCanvas() {
     c.setActiveObject(line);
     c.renderAll();
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addTriangle = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const { x, y } = getViewportCenterInCanvasCoords(c);
     const tri = new Triangle({
-      left: 250, top: 150, width: 100, height: 100,
+      left: x - 100 / 2, top: y - 100 / 2, width: 100, height: 100,
       fill: "#f59e0b", stroke: "#d97706", strokeWidth: 2,
     });
     ensureLayerData(tri);
@@ -437,14 +652,15 @@ export function useFabricCanvas() {
     c.setActiveObject(tri);
     c.renderAll();
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addStar = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const { x, y } = getViewportCenterInCanvasCoords(c);
     const pts = createStarPoints(5, 50, 20);
     const star = new Polygon(pts, {
-      left: 200, top: 150,
+      left: x - 50, top: y - 50,
       fill: "#eab308", stroke: "#ca8a04", strokeWidth: 2,
     });
     ensureLayerData(star);
@@ -452,14 +668,15 @@ export function useFabricCanvas() {
     c.setActiveObject(star);
     c.renderAll();
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addPolygon = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const { x, y } = getViewportCenterInCanvasCoords(c);
     const pts = createPolygonPoints(6, 50);
     const poly = new Polygon(pts, {
-      left: 200, top: 200,
+      left: x - 50, top: y - 50,
       fill: "#8b5cf6", stroke: "#7c3aed", strokeWidth: 2,
     });
     ensureLayerData(poly);
@@ -467,7 +684,7 @@ export function useFabricCanvas() {
     c.setActiveObject(poly);
     c.renderAll();
     refreshLayers(c);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addImage = useCallback((file: File) => {
     const c = canvasRef.current;
@@ -478,10 +695,13 @@ export function useFabricCanvas() {
       const imgEl = new Image();
       imgEl.crossOrigin = "anonymous";
       imgEl.onload = () => {
-        const fImg = new FabricImage(imgEl, { left: 50, top: 50 });
+        const { x, y } = getViewportCenterInCanvasCoords(c);
+        const fImg = new FabricImage(imgEl, { left: x, top: y });
         ensureLayerData(fImg as any);
         const maxW = Math.min(400, c.width! * 0.6);
         if (fImg.width && fImg.width > maxW) fImg.scaleToWidth(maxW);
+        fImg.set({ left: x - fImg.getScaledWidth() / 2, top: y - fImg.getScaledHeight() / 2 } as any);
+        fImg.setCoords();
         c.add(fImg);
         c.setActiveObject(fImg);
         c.renderAll();
@@ -490,7 +710,7 @@ export function useFabricCanvas() {
       imgEl.src = url;
     };
     reader.readAsDataURL(file);
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const addImageFromUrl = useCallback((url: string) => {
     const c = canvasRef.current;
@@ -498,10 +718,13 @@ export function useFabricCanvas() {
     const imgEl = new Image();
     imgEl.crossOrigin = "anonymous";
     imgEl.onload = () => {
-      const fImg = new FabricImage(imgEl, { left: 50, top: 50 });
+      const { x, y } = getViewportCenterInCanvasCoords(c);
+      const fImg = new FabricImage(imgEl, { left: x, top: y });
       ensureLayerData(fImg as any);
       const maxW = Math.min(400, c.width! * 0.6);
       if (fImg.width && fImg.width > maxW) fImg.scaleToWidth(maxW);
+      fImg.set({ left: x - fImg.getScaledWidth() / 2, top: y - fImg.getScaledHeight() / 2 } as any);
+      fImg.setCoords();
       c.add(fImg);
       c.setActiveObject(fImg);
       c.renderAll();
@@ -511,7 +734,7 @@ export function useFabricCanvas() {
       console.error("Failed to load image from URL:", url);
     };
     imgEl.src = url;
-  }, [ensureLayerData, refreshLayers]);
+  }, [ensureLayerData, getViewportCenterInCanvasCoords, refreshLayers]);
 
   const deleteSelected = useCallback(() => {
     const c = canvasRef.current;
@@ -573,10 +796,11 @@ export function useFabricCanvas() {
     const target = c.getObjects().find((o) => ((o as any).data?.layerId as string | undefined) === layerId);
     if (!target) return;
     c.setActiveObject(target);
+    panViewportToObject(target as any);
     c.renderAll();
     updateSelection(c);
     refreshLayers(c);
-  }, [refreshLayers]);
+  }, [panViewportToObject, refreshLayers]);
 
   const toggleLayerVisible = useCallback((layerId: string) => {
     const c = canvasRef.current;
@@ -740,10 +964,10 @@ export function useFabricCanvas() {
   const changeCanvasBg = useCallback((color: string) => {
     const c = canvasRef.current;
     if (!c) return;
-    c.backgroundColor = color;
+    ensureBackgroundRect(c, { width: c.getWidth(), height: c.getHeight(), color });
     setCanvasBgColor(color);
     c.renderAll();
-  }, []);
+  }, [ensureBackgroundRect]);
 
   const toggleGrid = useCallback(() => {
     setShowGrid((prev) => !prev);
@@ -757,12 +981,13 @@ export function useFabricCanvas() {
     isRestoringRef.current = true;
     c.loadFromJSON(historyRef.current[historyIndexRef.current]).then(() => {
       c.getObjects().forEach((obj) => ensureLayerData(obj));
+      ensureBackgroundRect(c, { width: c.getWidth(), height: c.getHeight(), color: canvasBgColor });
       c.renderAll();
       isRestoringRef.current = false;
       updateSelection(c);
       refreshLayers(c);
     });
-  }, [ensureLayerData, refreshLayers]);
+  }, [canvasBgColor, ensureBackgroundRect, ensureLayerData, refreshLayers]);
 
   const redo = useCallback(() => {
     const c = canvasRef.current;
@@ -771,18 +996,42 @@ export function useFabricCanvas() {
     isRestoringRef.current = true;
     c.loadFromJSON(historyRef.current[historyIndexRef.current]).then(() => {
       c.getObjects().forEach((obj) => ensureLayerData(obj));
+      ensureBackgroundRect(c, { width: c.getWidth(), height: c.getHeight(), color: canvasBgColor });
       c.renderAll();
       isRestoringRef.current = false;
       updateSelection(c);
       refreshLayers(c);
     });
-  }, [ensureLayerData, refreshLayers]);
+  }, [canvasBgColor, ensureBackgroundRect, ensureLayerData, refreshLayers]);
 
   // Export
   const getCanvasDataUrl = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return null;
-    return c.toDataURL({ format: "png", quality: 1, multiplier: 2 });
+    const vpt = (c.viewportTransform ? [...c.viewportTransform] : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number];
+    const active = c.getActiveObject();
+    c.discardActiveObject();
+    c.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    c.renderAll();
+
+    const dataUrl = (c as any).toDataURL({
+      format: "png",
+      quality: 1,
+      multiplier: 2,
+      left: 0,
+      top: 0,
+      width: c.getWidth(),
+      height: c.getHeight(),
+    });
+
+    c.setViewportTransform(vpt);
+    c.renderAll();
+    if (active) {
+      c.setActiveObject(active);
+      c.renderAll();
+    }
+
+    return dataUrl;
   }, []);
 
   const exportPNG = useCallback(() => {
@@ -797,7 +1046,21 @@ export function useFabricCanvas() {
   const exportSVG = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+    const vpt = (c.viewportTransform ? [...c.viewportTransform] : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number];
+    const active = c.getActiveObject();
+    c.discardActiveObject();
+    c.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    c.renderAll();
+
     const svg = c.toSVG();
+
+    c.setViewportTransform(vpt);
+    c.renderAll();
+    if (active) {
+      c.setActiveObject(active);
+      c.renderAll();
+    }
+
     const blob = new Blob([svg], { type: "image/svg+xml" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -824,14 +1087,111 @@ export function useFabricCanvas() {
     if (!c) return;
     let z = c.getZoom() + delta;
     z = Math.min(Math.max(z, 0.1), 3);
-    c.setZoom(z);
+    c.zoomToPoint(new Point(c.getWidth() / 2, c.getHeight() / 2), z);
     setZoom(z);
     c.renderAll();
   }, []);
 
+  const handleWheelNavigation = useCallback((e: WheelEvent) => {
+    const c = canvasRef.current;
+    const el = canvasElRef.current;
+    if (!c || !el) return;
+    const vpt = c.viewportTransform;
+    if (!vpt) return;
+
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (e.ctrlKey || e.metaKey) {
+      const current = c.getZoom();
+      const next = Math.min(Math.max(current * Math.pow(0.999, e.deltaY), 0.1), 3);
+      c.zoomToPoint(new Point(x, y), next);
+      setZoom(next);
+      c.requestRenderAll();
+      return;
+    }
+
+    const dx = e.shiftKey ? e.deltaY : e.deltaX;
+    const dy = e.shiftKey ? 0 : e.deltaY;
+    vpt[4] -= dx;
+    vpt[5] -= dy;
+    c.setViewportTransform(vpt);
+    c.requestRenderAll();
+  }, []);
+
+  const newProject = useCallback((opts: { width: number; height: number; name?: string; bgColor?: string }) => {
+    const c = canvasRef.current;
+    if (!c) return;
+
+    const nextW = Math.max(1, Math.floor(opts.width));
+    const nextH = Math.max(1, Math.floor(opts.height));
+    const nextBg = typeof opts.bgColor === "string" && opts.bgColor ? opts.bgColor : "#ffffff";
+    const nextName = typeof opts.name === "string" && opts.name.trim() ? opts.name.trim() : "Projeto sem título";
+
+    try {
+      localStorage.removeItem("graphic-editor-project");
+    } catch {
+      void 0;
+    }
+
+    isRestoringRef.current = true;
+    c.clear();
+    bgRectRef.current = null;
+    c.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    c.setDimensions({ width: nextW, height: nextH });
+    ensureBackgroundRect(c, { width: nextW, height: nextH, color: nextBg });
+
+    setProjectName(nextName);
+    setCanvasBgColor(nextBg);
+    setCanvasWidth(nextW);
+    setCanvasHeight(nextH);
+    setZoom(1);
+    setShowGrid(true);
+
+    historyRef.current = [];
+    historyIndexRef.current = -1;
+
+    c.discardActiveObject();
+    c.renderAll();
+    isRestoringRef.current = false;
+    saveHistory();
+    updateSelection(c);
+    refreshLayers(c);
+  }, [ensureBackgroundRect, refreshLayers, saveHistory]);
+
   // Keyboard
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      const tag = el.tagName?.toLowerCase();
+      return tag === "input" || tag === "textarea" || tag === "select";
+    };
+
+    const keydown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !isTypingTarget(e.target)) {
+        const c = canvasRef.current;
+        const active = c?.getActiveObject() as any;
+        const isEditingText = !!(active && (active.type === "i-text" || active.type === "text") && active.isEditing);
+        if (!isEditingText) {
+          if (!isSpacePressedRef.current) {
+            isSpacePressedRef.current = true;
+            if (c) {
+              prevSelectionRef.current = c.selection;
+              prevDefaultCursorRef.current = c.defaultCursor;
+              prevHoverCursorRef.current = c.hoverCursor;
+              c.selection = false;
+              c.defaultCursor = "grab";
+              c.hoverCursor = "grab";
+            }
+          }
+          e.preventDefault();
+          return;
+        }
+      }
+
       if (e.key === "Delete" || e.key === "Backspace") {
         const active = canvasRef.current?.getActiveObject();
         if (active && active.type !== "i-text") deleteSelected();
@@ -840,23 +1200,45 @@ export function useFabricCanvas() {
       if ((e.ctrlKey || e.metaKey) && e.key === "y") { e.preventDefault(); redo(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "d") { e.preventDefault(); duplicateSelected(); }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+
+    const keyup = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (!isSpacePressedRef.current) return;
+      isSpacePressedRef.current = false;
+      const c = canvasRef.current;
+      if (c) {
+        c.selection = prevSelectionRef.current ?? true;
+        prevSelectionRef.current = null;
+        c.defaultCursor = prevDefaultCursorRef.current ?? "default";
+        c.hoverCursor = prevHoverCursorRef.current ?? "move";
+        prevDefaultCursorRef.current = null;
+        prevHoverCursorRef.current = null;
+        c.requestRenderAll();
+      }
+    };
+
+    window.addEventListener("keydown", keydown, { passive: false });
+    window.addEventListener("keyup", keyup);
+    return () => {
+      window.removeEventListener("keydown", keydown as any);
+      window.removeEventListener("keyup", keyup);
+    };
   }, [deleteSelected, undo, redo, duplicateSelected]);
 
   return {
     canvasRef, canvasElRef, initCanvas,
     selectedObject, layers, projectName, setProjectName, zoom,
     showGrid, toggleGrid, canvasBgColor, changeCanvasBg,
-    canvasWidth, canvasHeight, resizeCanvas,
+    canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
     addText, addRect, addCircle, addLine, addTriangle, addStar, addPolygon,
     addImage, addImageFromUrl,
     deleteSelected, duplicateSelected, bringToFront, sendToBack,
     selectLayer, toggleLayerVisible, toggleLayerLocked, moveLayerForward, moveLayerBackward, moveLayerToListIndex, renameLayer,
     updateObjectProp,
-    undo, redo, exportPNG, exportSVG, saveProject, handleZoom,
+    undo, redo, exportPNG, exportSVG, saveProject, handleZoom, handleWheelNavigation,
     getCanvasDataUrl,
     getProjectData, loadProjectData,
     alignmentSettings, updateAlignmentSettings,
+    newProject,
   };
 }
