@@ -217,6 +217,7 @@ function AppContent() {
                         <Route path="api-integrations/:id/edit" element={<ApiIntegrationForm />} />
                         <Route path="inky" element={<InkyIntelligence />} />
                         <Route path="list-example" element={<ExampleListPage />} />
+                        <Route path="qrcode-campaigns" element={<QRCodeCampaigns />} />
                       </Routes>
                     </AppLayout>
                   </div>
