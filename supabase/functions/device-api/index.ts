@@ -500,7 +500,7 @@ Deno.serve(async (req: Request) => {
           override_media_id, override_media_expires_at,
           last_sync_requested_at, store_code,
           companies(id, slug),
-          override_media:media_items!devices_override_media_id_fkey(id, name, type, file_url, duration)
+          override_media:media_items!devices_override_media_id_fkey(id, name, type, file_url, duration, metadata)
         `)
         .eq('device_token', token)
         .maybeSingle()
