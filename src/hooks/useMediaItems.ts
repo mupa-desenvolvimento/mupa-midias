@@ -78,14 +78,43 @@ export const useMediaItems = (folderId?: string | null) => {
 
       if (error) throw error;
       
-      console.log('[useMediaItems] Fetched', data?.length || 0, 'items');
-      
       // Transform URLs to public format
-      return (data as MediaItem[]).map(item => ({
+      const items = (data as MediaItem[]).map(item => ({
         ...item,
         file_url: getPublicUrl(item.file_url),
         thumbnail_url: getPublicUrl(item.thumbnail_url),
       }));
+
+      // Also fetch active campaigns and merge as virtual media items
+      const { data: campaigns } = await supabase
+        .from("qrcode_campaigns")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      const campaignItems: MediaItem[] = (campaigns || []).map((c: any) => ({
+        id: c.id,
+        name: c.title,
+        type: 'campaign',
+        file_url: getPublicUrl(c.image_url),
+        thumbnail_url: getPublicUrl(c.image_url),
+        file_size: null,
+        duration: 10,
+        resolution: null,
+        status: 'active',
+        metadata: { campaign_type: c.campaign_type, qr_url: c.qr_url, config: c.config },
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        folder_id: null,
+      }));
+
+      // Filter out campaigns already linked via media_id to avoid duplicates
+      const linkedMediaIds = new Set((campaigns || []).map((c: any) => c.media_id).filter(Boolean));
+      const dedupedItems = items.filter(item => !linkedMediaIds.has(item.id) || item.type !== 'campaign');
+
+      const allItems = [...dedupedItems, ...campaignItems];
+      console.log('[useMediaItems] Fetched', items.length, 'media +', campaignItems.length, 'campaigns');
+      return allItems;
     },
     staleTime: 0, // Always consider data stale to ensure fresh fetches
     refetchOnWindowFocus: true,
