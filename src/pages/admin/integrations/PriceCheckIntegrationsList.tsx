@@ -52,9 +52,16 @@ export default function PriceCheckIntegrationsList() {
             Conecte qualquer API de consulta de preço colando a CURL
           </p>
         </div>
-        <Button onClick={() => navigate("new")} className="gap-2">
-          <Plus className="h-4 w-4" /> Nova Integração via CURL
-        </Button>
+        {isSuperAdmin && (
+          <Button onClick={() => navigate("new")} className="gap-2">
+            <Plus className="h-4 w-4" /> Nova Integração via CURL
+          </Button>
+        )}
+        {!isSuperAdmin && (
+          <Badge variant="outline" className="gap-1 text-xs">
+            <Shield className="h-3 w-3" /> Somente visualização
+          </Badge>
+        )}
       </div>
 
       <div className="relative max-w-sm">
