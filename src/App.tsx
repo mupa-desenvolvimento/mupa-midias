@@ -57,6 +57,7 @@ import NutritionTipsManager from "./pages/admin/NutritionTipsManager";
 import InstagramFeedManager from "./pages/admin/InstagramFeedManager";
 import InstagramCallback from "./pages/admin/InstagramCallback";
 import QRCodeCampaigns from "./pages/admin/QRCodeCampaigns";
+import PlatformLogs from "./pages/admin/PlatformLogs";
 import MotivationalTV from "./pages/MotivationalTV";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
@@ -218,6 +219,7 @@ function AppContent() {
                         <Route path="inky" element={<InkyIntelligence />} />
                         <Route path="list-example" element={<ExampleListPage />} />
                         <Route path="qrcode-campaigns" element={<QRCodeCampaigns />} />
+                        <Route path="logs" element={<PlatformLogs />} />
                       </Routes>
                     </AppLayout>
                   </div>

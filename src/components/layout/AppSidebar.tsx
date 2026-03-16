@@ -83,7 +83,8 @@ const superAdminItems = [
 { title: "Clientes", url: "/admin/tenants", icon: Building2 },
 { title: "Empresas", url: "/admin/companies", icon: Plug2 },
 { title: "Integrações", url: "/admin/integrations", icon: Link },
-{ title: "Price API Integrations", url: "/admin/api-integrations", icon: Link }];
+{ title: "Price API Integrations", url: "/admin/api-integrations", icon: Link },
+{ title: "Logs", url: "/admin/logs", icon: Eye }];
 
 
 const SidebarNavItem = ({ item }: {item: typeof menuItems[number];}) => {
