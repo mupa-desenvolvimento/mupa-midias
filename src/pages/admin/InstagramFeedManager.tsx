@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Instagram, RefreshCw, Plus, ExternalLink, Image, Video, LayoutGrid, List, Settings, Eye, Calendar,
+  Instagram, RefreshCw, Plus, ExternalLink, Image, Video, LayoutGrid, List, Settings, Eye, Calendar, Link2, Unlink,
 } from "lucide-react";
 
 interface InstagramPost {
