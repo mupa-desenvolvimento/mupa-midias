@@ -7,92 +7,120 @@
 
 @layer base {
   :root {
-    /* Light mode */
-    --background: 190 80% 94%; /* #E4F8FC */
-    --foreground: 234 82% 11%; /* #050A34 */
+    /* Light mode — refined, airy, professional */
+    --background: 200 20% 98%;       /* Near-white with cool tint */
+    --foreground: 224 40% 15%;       /* Deep blue-gray for readability */
 
-    --card: 0 0% 100%; /* #FFFFFF */
-    --card-foreground: 234 82% 11%; /* #050A34 */
+    --card: 0 0% 100%;              /* Pure white cards */
+    --card-foreground: 224 40% 15%;
 
-    --popover: 0 0% 100%; /* #FFFFFF */
-    --popover-foreground: 234 82% 11%; /* #050A34 */
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 40% 15%;
 
-    --primary: 224 86% 25%; /* #092676 */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary: 224 86% 25%;         /* #092676 — MUPA institutional */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 195 95% 84%; /* #AFE9FD */
-    --secondary-foreground: 234 82% 11%; /* #050A34 */
+    --secondary: 200 30% 95%;       /* Subtle cool gray */
+    --secondary-foreground: 224 40% 15%;
 
-    --muted: 190 80% 94%; /* #E4F8FC */
-    --muted-foreground: 205 11% 40%; /* #5C6972 */
+    --muted: 200 20% 95%;           /* Light muted bg */
+    --muted-foreground: 210 10% 45%; /* Readable gray */
 
-    --accent: 218 94% 49%; /* #085CF0 */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --accent: 218 94% 49%;          /* #085CF0 — Vibrant action blue */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 84%; /* #D5D5D5 */
-    --input: 0 0% 84%; /* #D5D5D5 */
-    --ring: 218 94% 49%; /* #085CF0 */
+    --border: 220 13% 91%;          /* Soft border */
+    --input: 220 13% 91%;
+    --ring: 218 94% 49%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 224 86% 25%; /* #092676 */
-    --sidebar-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-primary: 218 94% 49%; /* #085CF0 */
-    --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-accent: 218 94% 49%; /* #085CF0 */
-    --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-border: 224 86% 35%; /* tom mais claro do primary */
-    --sidebar-ring: 218 94% 49%; /* #085CF0 */
+    /* Chart colors */
+    --chart-1: 218 94% 49%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 72% 51%;
+
+    /* Sidebar */
+    --sidebar-background: 224 86% 25%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 218 94% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 70% 35%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 224 60% 32%;
+    --sidebar-ring: 218 94% 49%;
 
     /* Custom tokens */
-    --gradient-from: 224 86% 25%; /* #092676 */
-    --gradient-to: 218 94% 49%; /* #085CF0 */
+    --gradient-from: 224 86% 25%;
+    --gradient-to: 218 94% 49%;
     --warning: 38 92% 50%;
     --info: 218 94% 49%;
     --success: 142 76% 36%;
+
+    /* Elevation shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(224 40% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(224 40% 15% / 0.07), 0 2px 4px -2px hsl(224 40% 15% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(224 40% 15% / 0.08), 0 4px 6px -4px hsl(224 40% 15% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(224 40% 15% / 0.1), 0 8px 10px -6px hsl(224 40% 15% / 0.05);
   }
 
   .dark {
-    /* Dark mode */
-    --background: 234 82% 11%; /* #050A34 */
-    --foreground: 0 0% 100%; /* #FFFFFF */
+    /* Dark mode — refined, deep, high contrast */
+    --background: 228 25% 8%;       /* Deep blue-black */
+    --foreground: 210 40% 96%;      /* Soft white */
 
-    --card: 224 86% 25%; /* #092676 */
-    --card-foreground: 0 0% 100%; /* #FFFFFF */
+    --card: 225 25% 12%;            /* Elevated card */
+    --card-foreground: 210 40% 96%;
 
-    --popover: 224 86% 25%; /* #092676 */
-    --popover-foreground: 0 0% 100%; /* #FFFFFF */
+    --popover: 225 25% 12%;
+    --popover-foreground: 210 40% 96%;
 
-    --primary: 224 86% 25%; /* #092676 */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary: 218 94% 55%;         /* Brighter blue for dark mode */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 224 86% 25%; /* #092676 */
-    --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+    --secondary: 225 20% 16%;       /* Subtle elevation */
+    --secondary-foreground: 210 40% 96%;
 
-    --muted: 224 86% 25%; /* #092676 */
-    --muted-foreground: 0 0% 84%; /* #D5D5D5 */
+    --muted: 225 20% 14%;
+    --muted-foreground: 215 15% 60%; /* Readable muted text */
 
-    --accent: 218 94% 49%; /* #085CF0 */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --accent: 218 94% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 224 86% 25%; /* #092676 */
-    --input: 224 86% 25%; /* #092676 */
-    --ring: 218 94% 49%; /* #085CF0 */
+    --border: 225 15% 18%;          /* Subtle border */
+    --input: 225 15% 18%;
+    --ring: 218 94% 55%;
 
-    --sidebar-background: 234 82% 8%; /* mais escuro que o background */
-    --sidebar-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-primary: 218 94% 49%; /* #085CF0 */
-    --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-accent: 218 94% 35%; /* azul mais escuro */
-    --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
-    --sidebar-border: 234 82% 15%; /* borda sutil */
-    --sidebar-ring: 218 94% 49%; /* #085CF0 */
+    /* Chart colors (brighter for dark bg) */
+    --chart-1: 218 94% 60%;
+    --chart-2: 173 58% 50%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 280 65% 65%;
+    --chart-5: 0 72% 60%;
+
+    /* Sidebar */
+    --sidebar-background: 228 30% 6%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 218 94% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 218 80% 35%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 228 20% 14%;
+    --sidebar-ring: 218 94% 55%;
+
+    /* Elevation shadows for dark mode */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.4), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.5), 0 8px 10px -6px hsl(0 0% 0% / 0.3);
   }
 
   .mupa-editor {
@@ -140,17 +168,28 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
     margin: 0;
-    /* Add the radial gradients from the landing page as a fixed background */
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(8, 92, 240, 0.12), transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(9, 38, 118, 0.10), transparent 50%);
-    background-attachment: fixed;
+    font-feature-settings: "cv11", "ss01";
+    font-variation-settings: "opsz" 32;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   html {
     scroll-behavior: smooth;
+  }
+
+  /* Better focus styles for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  /* Smooth transitions for theme switching */
+  *, *::before, *::after {
+    transition-property: background-color, border-color;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
   }
 }
 
@@ -164,21 +203,40 @@
   }
   
   .glass-effect {
-    backdrop-filter: blur(16px) saturate(180%);
-    background-color: hsl(var(--background) / 0.75);
+    backdrop-filter: blur(20px) saturate(180%);
+    background-color: hsl(var(--background) / 0.8);
     border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  .glass-card {
+    backdrop-filter: blur(12px) saturate(150%);
+    background-color: hsl(var(--card) / 0.85);
+    border: 1px solid hsl(var(--border) / 0.4);
+    box-shadow: var(--shadow-md);
+  }
+
+  .elevated-card {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 200ms ease, transform 200ms ease;
+  }
+
+  .elevated-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
   
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out;
+    animation: fadeIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   
   .animate-slide-up {
-    animation: slideUp 0.3s ease-out;
+    animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   
   .animate-scale-in {
-    animation: scaleIn 0.2s ease-out;
+    animation: scaleIn 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .text-gradient {
@@ -190,7 +248,7 @@
 
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
   }
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -200,11 +258,11 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.25);
+    background-color: hsl(var(--muted-foreground) / 0.2);
     border-radius: 20px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.4);
+    background-color: hsl(var(--muted-foreground) / 0.35);
   }
 
   video::-webkit-media-controls-panel {
@@ -225,7 +283,7 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -236,7 +294,7 @@
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -247,7 +305,7 @@
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
