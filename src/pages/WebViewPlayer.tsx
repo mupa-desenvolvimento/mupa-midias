@@ -413,8 +413,31 @@ const WebViewPlayer = () => {
         </div>
       </div>
 
+      {/* EAN Scanner Input (always listening) */}
+      <EanInput
+        isVisible={!showProductOverlay}
+        onSubmit={handleEanSubmit}
+        disabled={false}
+        alwaysListenForScanner={true}
+      />
+
+      {/* Product lookup overlay */}
+      {showProductOverlay && (
+        <ProductLookupContainer
+          product={product}
+          isLoading={isProductLoading}
+          error={productError}
+          onDismiss={handleDismissProduct}
+          timeout={15}
+          displaySettings={displaySettings || undefined}
+        />
+      )}
+
       {/* Media */}
-      <div className="absolute inset-0">
+      <div className={cn(
+        "absolute inset-0",
+        showProductOverlay ? "opacity-20 pointer-events-none" : "opacity-100"
+      )}>
         {(activeMedia.type === "news" || activeMedia.type === "weather") && (
           <div className="absolute inset-0 z-10">
             <MediaRenderer media={activeMedia as any} mediaUrl={activeMedia.file_url || ""} objectFit={getObjectFit()} />
