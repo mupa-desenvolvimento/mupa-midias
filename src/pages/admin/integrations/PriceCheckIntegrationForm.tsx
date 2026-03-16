@@ -45,7 +45,7 @@ async function executeCurlViaProxy(parsed: ParsedCurl, variables?: Record<string
     body: {
       action: "raw_test",
       method: parsed.method,
-      url: parsed.fullUrl,
+      url: parsed.url,
       headers: parsed.headers,
       body: parsed.bodyJson || parsed.bodyText || null,
       variables: variables || {},
