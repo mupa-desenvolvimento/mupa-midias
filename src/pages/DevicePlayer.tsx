@@ -75,6 +75,7 @@ const DevicePlayer = () => {
           mediaUrl={activeMedia.file_url || ""}
           objectFit="fill"
           onEnded={goToNext}
+          isPortrait={isPortrait}
         />
       </div>
 
