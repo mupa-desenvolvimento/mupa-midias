@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { NewsPlayerSlide } from "./NewsPlayerSlide";
 import { useDeviceWeather } from "@/hooks/useDeviceWeather";
 import { WeatherContainer } from "@/components/weather-layouts/WeatherContainer";
-import { isIframeType, resolveContentSrc, getYouTubeEmbedUrl } from "@/constants/contentTypes";
+import { resolveContentSrc } from "@/constants/contentTypes";
 
 export interface MediaItem {
   id: string;
@@ -153,54 +153,58 @@ export const MediaRenderer = ({
     );
   }
 
-  // ─── YouTube ───
-  if (media.type === "youtube") {
-    const src = resolveContentSrc("youtube", media.file_url, media.metadata);
-    const embedUrl = src ? getYouTubeEmbedUrl(src) : null;
-
-    if (!embedUrl) {
-      return (
-        <div className="w-full h-full bg-black flex items-center justify-center text-white/50">
-          <p>URL do YouTube inválida</p>
-        </div>
-      );
-    }
-
+  // ─── Motivational / Curiosity / Birthday / Nutrition (text-based dynamic content) ───
+  if (['motivational', 'curiosity', 'birthday', 'nutrition'].includes(media.type)) {
+    const meta = media.metadata as any;
     return (
-      <iframe
+      <div
         key={media.id}
-        src={embedUrl}
-        className={cn("w-full h-full border-0", transitionClass)}
-        allow="autoplay; encrypted-media; picture-in-picture"
-        allowFullScreen
-        title={media.name}
-      />
+        className={cn("w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center p-8", transitionClass)}
+      >
+        <div className="text-center max-w-2xl">
+          <h2 className="text-3xl font-bold text-foreground mb-4">{media.name}</h2>
+          {meta?.content && (
+            <p className="text-xl text-muted-foreground">{meta.content}</p>
+          )}
+          {meta?.author && (
+            <p className="text-lg text-primary mt-4 italic">— {meta.author}</p>
+          )}
+        </div>
+      </div>
     );
   }
 
-  // ─── URL / HTML / Widget / Table / Instagram (iframe types) ───
-  if (isIframeType(media.type)) {
-    const src = resolveContentSrc(media.type, media.file_url, media.metadata);
-
-    if (media.type === "html" && src && !src.startsWith("http")) {
-      // Inline HTML content
+  // ─── Campaign (QR Code) ───
+  if (media.type === 'campaign') {
+    const meta = media.metadata as any;
+    const src = meta?.campaign_url || meta?.qr_url || media.file_url;
+    if (src) {
       return (
-        <div
+        <img
           key={media.id}
-          className={cn("w-full h-full bg-white overflow-auto", transitionClass)}
-          dangerouslySetInnerHTML={{ __html: src }}
+          src={src}
+          alt={media.name}
+          className={cn("w-full h-full object-contain", transitionClass)}
         />
       );
     }
+    return (
+      <div className="w-full h-full bg-black flex items-center justify-center text-white/50">
+        <p>Campanha não disponível</p>
+      </div>
+    );
+  }
 
+  // ─── Instagram (iframe) ───
+  if (media.type === 'instagram') {
+    const src = resolveContentSrc('instagram', media.file_url, media.metadata);
     if (!src) {
       return (
         <div className="w-full h-full bg-black flex items-center justify-center text-white/50">
-          <p>Conteúdo não disponível</p>
+          <p>Instagram não disponível</p>
         </div>
       );
     }
-
     return (
       <iframe
         key={media.id}
@@ -208,7 +212,6 @@ export const MediaRenderer = ({
         className={cn("w-full h-full border-0", transitionClass)}
         allow="autoplay; encrypted-media"
         allowFullScreen
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         title={media.name}
       />
     );
