@@ -61,7 +61,6 @@ export default function InstagramFeedManager() {
       if (error) throw error;
       if (data) {
         setFetchDays(String(data.fetch_days || 10));
-        setTokenInput(data.access_token ? "••••••••••" : "");
       }
       return data as InstagramSettings | null;
     },
