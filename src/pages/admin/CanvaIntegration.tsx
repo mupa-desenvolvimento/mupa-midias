@@ -1,5 +1,5 @@
  import { useEffect, useState } from 'react';
- import { useNavigate } from 'react-router-dom';
+ import { useNavigate, useSearchParams } from 'react-router-dom';
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
@@ -9,10 +9,11 @@
 import { 
   Link2, Link2Off, Loader2, Download, FolderOpen, 
   Image, RefreshCw, CheckCircle2, ExternalLink, CheckSquare, Square,
-  ChevronRight, Home, Paintbrush
+  ChevronRight, Home, Paintbrush, LayoutTemplate
 } from 'lucide-react';
 import { useCanvaIntegration } from '@/hooks/useCanvaIntegration';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PRESET_TEMPLATES } from '@/components/graphic-editor/presetTemplates';
  
  export default function CanvaIntegration() {
    const navigate = useNavigate();
