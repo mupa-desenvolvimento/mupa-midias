@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { NewsPlayerSlide } from "./NewsPlayerSlide";
 import { useDeviceWeather } from "@/hooks/useDeviceWeather";
 import { WeatherContainer } from "@/components/weather-layouts/WeatherContainer";
+import { isIframeType, resolveContentSrc, getYouTubeEmbedUrl } from "@/constants/contentTypes";
 
 export interface MediaItem {
   id: string;
@@ -84,6 +85,7 @@ export const MediaRenderer = ({
     }
   }, [media, autoPlay]);
 
+  // ─── Video ───
   if (media.type === "video") {
     const handleVideoRef = (el: HTMLVideoElement | null) => {
       videoRef.current = el;
@@ -113,10 +115,12 @@ export const MediaRenderer = ({
     );
   }
 
+  // ─── News ───
   if (media.type === "news") {
     return <NewsPlayerSlide key={media.id} onEnded={onEnded} media={media} isPortrait={isPortrait} />;
   }
 
+  // ─── Weather ───
   if (media.type === "weather") {
     if (!resolvedDeviceCode) {
       return (
@@ -149,6 +153,68 @@ export const MediaRenderer = ({
     );
   }
 
+  // ─── YouTube ───
+  if (media.type === "youtube") {
+    const src = resolveContentSrc("youtube", media.file_url, media.metadata);
+    const embedUrl = src ? getYouTubeEmbedUrl(src) : null;
+
+    if (!embedUrl) {
+      return (
+        <div className="w-full h-full bg-black flex items-center justify-center text-white/50">
+          <p>URL do YouTube inválida</p>
+        </div>
+      );
+    }
+
+    return (
+      <iframe
+        key={media.id}
+        src={embedUrl}
+        className={cn("w-full h-full border-0", transitionClass)}
+        allow="autoplay; encrypted-media; picture-in-picture"
+        allowFullScreen
+        title={media.name}
+      />
+    );
+  }
+
+  // ─── URL / HTML / Widget / Table / Instagram (iframe types) ───
+  if (isIframeType(media.type)) {
+    const src = resolveContentSrc(media.type, media.file_url, media.metadata);
+
+    if (media.type === "html" && src && !src.startsWith("http")) {
+      // Inline HTML content
+      return (
+        <div
+          key={media.id}
+          className={cn("w-full h-full bg-white overflow-auto", transitionClass)}
+          dangerouslySetInnerHTML={{ __html: src }}
+        />
+      );
+    }
+
+    if (!src) {
+      return (
+        <div className="w-full h-full bg-black flex items-center justify-center text-white/50">
+          <p>Conteúdo não disponível</p>
+        </div>
+      );
+    }
+
+    return (
+      <iframe
+        key={media.id}
+        src={src}
+        className={cn("w-full h-full border-0", transitionClass)}
+        allow="autoplay; encrypted-media"
+        allowFullScreen
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        title={media.name}
+      />
+    );
+  }
+
+  // ─── Image (default fallback) ───
   const handleImageRef = (el: HTMLImageElement | null) => {
     if (onElementRef) onElementRef(el);
   };

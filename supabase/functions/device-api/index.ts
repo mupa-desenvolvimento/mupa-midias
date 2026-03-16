@@ -500,7 +500,7 @@ Deno.serve(async (req: Request) => {
           override_media_id, override_media_expires_at,
           last_sync_requested_at, store_code,
           companies(id, slug),
-          override_media:media_items!devices_override_media_id_fkey(id, name, type, file_url, duration)
+          override_media:media_items!devices_override_media_id_fkey(id, name, type, file_url, duration, metadata)
         `)
         .eq('device_token', token)
         .maybeSingle()
@@ -526,6 +526,7 @@ Deno.serve(async (req: Request) => {
             file_url: overrideMediaData.file_url,
             duration: overrideMediaData.duration ?? 10,
             expires_at: device.override_media_expires_at,
+            metadata: overrideMediaData.metadata || null,
           }
         }
       }
@@ -593,7 +594,7 @@ Deno.serve(async (req: Request) => {
                 playlist_items(
                   id, media_id, position, duration_override,
                   start_date, end_date, start_time, end_time, days_of_week,
-                  media:media_items(id, name, type, file_url, duration)
+                  media:media_items(id, name, type, file_url, duration, metadata)
                 ),
                 playlist_channels(
                   id, name, is_active, is_fallback, position,
@@ -601,7 +602,7 @@ Deno.serve(async (req: Request) => {
                   playlist_channel_items(
                     id, media_id, position, duration_override,
                     start_date, end_date, start_time, end_time, days_of_week,
-                    media:media_items(id, name, type, file_url, duration)
+                    media:media_items(id, name, type, file_url, duration, metadata)
                   )
                 )
               `)
@@ -634,6 +635,7 @@ Deno.serve(async (req: Request) => {
                   type: item.media.type,
                   file_url: item.media.file_url,
                   duration: item.media.duration,
+                  metadata: item.media.metadata || null,
                 }
               : null,
           })) || []
@@ -658,6 +660,7 @@ Deno.serve(async (req: Request) => {
                       type: item.media.type,
                       file_url: item.media.file_url,
                       duration: item.media.duration,
+                      metadata: item.media.metadata || null,
                     }
                   : null,
               })) || []

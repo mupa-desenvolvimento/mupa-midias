@@ -23,8 +23,16 @@ import {
   X,
   GripVertical,
   Sparkles,
+  Globe,
+  Youtube,
+  Code,
+  LayoutGrid,
+  Table,
+  Instagram,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MEDIA_FILTER_OPTIONS } from "@/constants/contentTypes";
 
 interface PlaylistFormData {
   name: string;
@@ -72,13 +80,20 @@ const formatDuration = (seconds: number) => {
 };
 
 const getMediaIcon = (type: string) => {
-  switch (type) {
-    case "video": return Video;
-    case "image": return Image;
-    case "news": return Newspaper;
-    case "weather": return CloudSun;
-    default: return FileText;
-  }
+  const map: Record<string, any> = {
+    video: Video,
+    image: Image,
+    news: Newspaper,
+    weather: CloudSun,
+    url: Globe,
+    youtube: Youtube,
+    html: Code,
+    widget: LayoutGrid,
+    table: Table,
+    instagram: Instagram,
+    campaign: Megaphone,
+  };
+  return map[type] || FileText;
 };
 
 const getAutoContentLabel = (type: string) => {
@@ -131,14 +146,8 @@ const MediaLibraryPanel = ({ onAddMedia, itemsLength }: {
           />
         </div>
 
-        <div className="flex gap-1">
-          {[
-            { value: "all", label: "Todos" },
-            { value: "image", label: "Imagens" },
-            { value: "video", label: "Vídeos" },
-            { value: "news", label: "Notícias" },
-            { value: "weather", label: "Clima" },
-          ].map((filter) => (
+        <div className="flex gap-1 flex-wrap">
+          {MEDIA_FILTER_OPTIONS.map((filter) => (
             <button
               key={filter.value}
               onClick={() => setTypeFilter(filter.value)}
