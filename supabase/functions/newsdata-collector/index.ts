@@ -5,9 +5,9 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const NEWSDATA_ENDPOINT = "https://newsdata.io/api/1/latest";
 
-const DEFAULT_MAX_FEEDS_PER_RUN = 4;
+const DEFAULT_MAX_FEEDS_PER_RUN = 8;
 const DEFAULT_MAX_ITEMS_PER_REQUEST = 10;
-const DEFAULT_BATCH_SIZE = 20;
+const DEFAULT_BATCH_SIZE = 30;
 const DEFAULT_TIMEFRAME_DAYS = 1;
 const MAX_RUNTIME_MS = 50000;
 
