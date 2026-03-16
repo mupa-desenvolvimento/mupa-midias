@@ -5,9 +5,9 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const NEWSDATA_ENDPOINT = "https://newsdata.io/api/1/latest";
 
-const DEFAULT_MAX_FEEDS_PER_RUN = 4;
+const DEFAULT_MAX_FEEDS_PER_RUN = 8;
 const DEFAULT_MAX_ITEMS_PER_REQUEST = 10;
-const DEFAULT_BATCH_SIZE = 20;
+const DEFAULT_BATCH_SIZE = 30;
 const DEFAULT_TIMEFRAME_DAYS = 1;
 const MAX_RUNTIME_MS = 50000;
 
@@ -123,7 +123,8 @@ function createSlugFromNewsData(result: NewsDataResult) {
 }
 
 function mapLocalCategoryToNewsData(localCategory: string | null) {
-  const c = (localCategory || "").trim().toLowerCase();
+  const c = (localCategory || "").trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (!c) return null;
 
   const mapping: Record<string, string> = {
@@ -139,6 +140,18 @@ function mapLocalCategoryToNewsData(localCategory: string | null) {
     mundo: "world",
     brasil: "top",
     cotidiano: "top",
+    varejo: "business",
+    supermercados: "business",
+    marketing: "business",
+    ecommerce: "business",
+    franquias: "business",
+    educacao: "education",
+    alimentacao: "food",
+    automoveis: "automobile",
+    pets: "lifestyle",
+    games: "technology",
+    sustentabilidade: "environment",
+    independentes: "top",
   };
 
   return mapping[c] || null;
