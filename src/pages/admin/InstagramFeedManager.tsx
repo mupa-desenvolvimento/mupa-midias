@@ -42,10 +42,9 @@ export default function InstagramFeedManager() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [fetching, setFetching] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
   const [creatingSlide, setCreatingSlide] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [tokenInput, setTokenInput] = useState("");
+  const [connecting, setConnecting] = useState(false);
   const [fetchDays, setFetchDays] = useState("10");
   const [customSince, setCustomSince] = useState("");
   const [customUntil, setCustomUntil] = useState("");
