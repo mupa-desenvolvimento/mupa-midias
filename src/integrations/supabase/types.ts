@@ -2263,6 +2263,123 @@ export type Database = {
         }
         Relationships: []
       }
+      qrcode_campaigns: {
+        Row: {
+          campaign_type: Database["public"]["Enums"]["campaign_type"]
+          config: Json
+          created_at: string
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          media_id: string | null
+          qr_url: string | null
+          scans_count: number
+          short_url: string | null
+          starts_at: string | null
+          tenant_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_type: Database["public"]["Enums"]["campaign_type"]
+          config?: Json
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          media_id?: string | null
+          qr_url?: string | null
+          scans_count?: number
+          short_url?: string | null
+          starts_at?: string | null
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_type?: Database["public"]["Enums"]["campaign_type"]
+          config?: Json
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          media_id?: string | null
+          qr_url?: string | null
+          scans_count?: number
+          short_url?: string | null
+          starts_at?: string | null
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qrcode_campaigns_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qrcode_campaigns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qrcode_scan_logs: {
+        Row: {
+          campaign_id: string
+          device_id: string | null
+          id: string
+          ip_hash: string | null
+          metadata: Json | null
+          scanned_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          campaign_id: string
+          device_id?: string | null
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json | null
+          scanned_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          device_id?: string | null
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json | null
+          scanned_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qrcode_scan_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "qrcode_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qrcode_scan_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regions: {
         Row: {
           code: string | null
@@ -2780,6 +2897,19 @@ export type Database = {
         | "admin_loja"
         | "operador_conteudo"
         | "tecnico"
+      campaign_type:
+        | "satisfaction_survey"
+        | "product_link"
+        | "instant_coupon"
+        | "quick_loyalty"
+        | "whatsapp_chat"
+        | "photo_feedback"
+        | "digital_catalog"
+        | "daily_raffle"
+        | "tutorial_recipe"
+        | "instagram_store"
+        | "refer_earn"
+        | "accessibility_info"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2913,6 +3043,20 @@ export const Constants = {
         "admin_loja",
         "operador_conteudo",
         "tecnico",
+      ],
+      campaign_type: [
+        "satisfaction_survey",
+        "product_link",
+        "instant_coupon",
+        "quick_loyalty",
+        "whatsapp_chat",
+        "photo_feedback",
+        "digital_catalog",
+        "daily_raffle",
+        "tutorial_recipe",
+        "instagram_store",
+        "refer_earn",
+        "accessibility_info",
       ],
     },
   },
