@@ -87,7 +87,7 @@ export const NewsPlayerSlide = ({ media, isPortrait = false }: NewsPlayerSlidePr
 
   return (
     <div className="w-full h-full bg-black overflow-hidden">
-      <NewsLayoutRenderer layoutId={layoutId} articles={rotatedArticles} category={category || "all"} />
+      <NewsLayoutRenderer layoutId={layoutId} articles={rotatedArticles} category={category || "all"} isPortrait={isPortrait} />
     </div>
   );
 };
