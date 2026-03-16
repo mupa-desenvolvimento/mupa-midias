@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { NewsPlayerSlide } from "./NewsPlayerSlide";
 import { useDeviceWeather } from "@/hooks/useDeviceWeather";
 import { WeatherContainer } from "@/components/weather-layouts/WeatherContainer";
-import { isIframeType, resolveContentSrc, getYouTubeEmbedUrl } from "@/constants/contentTypes";
+import { resolveContentSrc } from "@/constants/contentTypes";
 
 export interface MediaItem {
   id: string;
