@@ -55,6 +55,7 @@ import MotivationalQuotes from "./pages/admin/MotivationalQuotes";
 import CuriositiesManager from "./pages/admin/CuriositiesManager";
 import NutritionTipsManager from "./pages/admin/NutritionTipsManager";
 import InstagramFeedManager from "./pages/admin/InstagramFeedManager";
+import InstagramCallback from "./pages/admin/InstagramCallback";
 import MotivationalTV from "./pages/MotivationalTV";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
@@ -195,6 +196,7 @@ function AppContent() {
                         <Route path="auto-content/curiosity" element={<CuriositiesManager />} />
                         <Route path="auto-content/nutrition" element={<NutritionTipsManager />} />
                         <Route path="auto-content/instagram" element={<InstagramFeedManager />} />
+                        <Route path="instagram/callback" element={<InstagramCallback />} />
                         <Route path="auto-content/:moduleType" element={<AutoContentModulePage />} />
                         <Route path="camera" element={<Camera />} />
                         <Route path="monitoring" element={<LiveMonitoring />} />

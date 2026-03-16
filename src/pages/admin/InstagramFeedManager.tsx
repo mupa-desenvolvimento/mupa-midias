@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Instagram, RefreshCw, Plus, ExternalLink, Image, Video, LayoutGrid, List, Settings, Eye, Calendar,
+  Instagram, RefreshCw, Plus, ExternalLink, Image, Video, LayoutGrid, List, Settings, Eye, Calendar, Link2, Unlink,
 } from "lucide-react";
 
 interface InstagramPost {
@@ -42,10 +42,9 @@ export default function InstagramFeedManager() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [fetching, setFetching] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
   const [creatingSlide, setCreatingSlide] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [tokenInput, setTokenInput] = useState("");
+  const [connecting, setConnecting] = useState(false);
   const [fetchDays, setFetchDays] = useState("10");
   const [customSince, setCustomSince] = useState("");
   const [customUntil, setCustomUntil] = useState("");
@@ -62,7 +61,6 @@ export default function InstagramFeedManager() {
       if (error) throw error;
       if (data) {
         setFetchDays(String(data.fetch_days || 10));
-        setTokenInput(data.access_token ? "••••••••••" : "");
       }
       return data as InstagramSettings | null;
     },
@@ -82,31 +80,40 @@ export default function InstagramFeedManager() {
     },
   });
 
-  const handleSaveSettings = async () => {
-    setSavingSettings(true);
+  const handleConnectInstagram = async () => {
+    setConnecting(true);
     try {
-      const token = tokenInput.startsWith("••") ? undefined : tokenInput;
-      const { data: tenantId } = await supabase.rpc('get_user_tenant_id_strict');
-      const { data, error } = await supabase.functions.invoke("instagram-fetch", {
-        body: {
-          action: "save-settings",
-          tenantId,
-          accessToken: token,
-          fetchDays: parseInt(fetchDays),
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast({
-        title: "Configurações salvas!",
-        description: data?.username ? `Conectado como @${data.username}` : "Token salvo com sucesso.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["instagram-settings"] });
-      setShowSettings(false);
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const redirectUri = `${window.location.origin}/admin/instagram/callback`;
+
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/instagram-oauth?action=authorize&redirect_uri=${encodeURIComponent(redirectUri)}`
+      );
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+      if (data.url) {
+        window.location.href = data.url;
+      }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
-      setSavingSettings(false);
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      if (!settings?.id) return;
+      await (supabase as any).from("instagram_settings").update({
+        access_token: null,
+        is_active: false,
+        username: null,
+        instagram_user_id: null,
+      }).eq("id", settings.id);
+      queryClient.invalidateQueries({ queryKey: ["instagram-settings"] });
+      toast({ title: "Instagram desconectado" });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
   };
 
@@ -191,8 +198,12 @@ export default function InstagramFeedManager() {
             <Settings className="w-4 h-4" />
             Configurar
           </Button>
-          {isConnected && (
+          {isConnected ? (
             <>
+              <Button size="sm" variant="outline" onClick={handleDisconnect} className="gap-2 text-destructive">
+                <Unlink className="w-4 h-4" />
+                Desconectar
+              </Button>
               <Button size="sm" variant="outline" onClick={handleCreateSlide} disabled={creatingSlide || posts.length === 0} className="gap-2">
                 <Plus className="w-4 h-4" />
                 Criar Slide
@@ -202,6 +213,11 @@ export default function InstagramFeedManager() {
                 {fetching ? "Buscando..." : "Buscar Posts"}
               </Button>
             </>
+          ) : (
+            <Button size="sm" onClick={handleConnectInstagram} disabled={connecting} className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+              <Link2 className="w-4 h-4" />
+              {connecting ? "Conectando..." : "Conectar Instagram"}
+            </Button>
           )}
         </div>
       </div>
@@ -212,23 +228,20 @@ export default function InstagramFeedManager() {
           <CardHeader>
             <CardTitle className="text-base">Configuração do Instagram</CardTitle>
             <CardDescription>
-              Obtenha um Access Token em{" "}
-              <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                developers.facebook.com
-              </a>
-              {" "}→ Instagram Graph API → Token de acesso.
+              {isConnected
+                ? `Conectado como @${settings?.username || "—"}. Configure o período de busca dos posts.`
+                : "Conecte sua conta do Instagram para importar posts automaticamente."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Access Token do Instagram</Label>
-              <Input
-                type="password"
-                placeholder="Insira o token de acesso..."
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-              />
-            </div>
+            {!isConnected && (
+              <div className="p-4 rounded-lg border border-dashed text-center space-y-3">
+                <Instagram className="w-8 h-8 text-pink-500 mx-auto" />
+                <p className="text-sm text-muted-foreground">
+                  Clique em "Conectar Instagram" acima para autorizar via Facebook/Meta.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Período padrão (dias)</Label>
@@ -253,12 +266,7 @@ export default function InstagramFeedManager() {
                 <Input type="date" value={customUntil} onChange={(e) => setCustomUntil(e.target.value)} />
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSaveSettings} disabled={savingSettings || !tokenInput} className="gap-2">
-                {savingSettings ? "Salvando..." : "Salvar Configuração"}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowSettings(false)}>Cancelar</Button>
-            </div>
+            <Button variant="ghost" onClick={() => setShowSettings(false)}>Fechar</Button>
           </CardContent>
         </Card>
       )}
