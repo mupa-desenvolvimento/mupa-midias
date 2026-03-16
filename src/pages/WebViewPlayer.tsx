@@ -45,9 +45,33 @@ const WebViewPlayer = () => {
 
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   const [updateMessage, setUpdateMessage] = useState("");
+  const [showProductOverlay, setShowProductOverlay] = useState(false);
 
-  const cameraPreviewRef = useRef<HTMLVideoElement>(null);
-  const [showCameraPreview, setShowCameraPreview] = useState(false);
+  // Price lookup
+  const {
+    product,
+    isLoading: isProductLoading,
+    error: productError,
+    lookupProduct,
+    clearProduct,
+  } = useProductLookup({
+    deviceCode: deviceCode || "",
+    deviceId: deviceState?.device_id || undefined,
+    onLookupStart: () => {
+      setShowProductOverlay(true);
+    },
+  });
+
+  const { data: displaySettings } = useProductDisplaySettingsBySlug(deviceState?.company_slug);
+
+  const handleDismissProduct = useCallback(() => {
+    setShowProductOverlay(false);
+    clearProduct();
+  }, [clearProduct]);
+
+  const handleEanSubmit = useCallback((ean: string) => {
+    lookupProduct(ean);
+  }, [lookupProduct]);
 
   const mediaElementRef = useRef<HTMLVideoElement | HTMLImageElement | null>(null);
 
