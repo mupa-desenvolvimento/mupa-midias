@@ -27,6 +27,7 @@ interface MediaRendererProps {
   loop?: boolean;
   hideUntilReady?: boolean;
   onElementRef?: (el: HTMLVideoElement | HTMLImageElement | null) => void;
+  isPortrait?: boolean;
 }
 
 export const MediaRenderer = ({
