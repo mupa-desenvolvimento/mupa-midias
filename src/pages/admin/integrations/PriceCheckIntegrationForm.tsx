@@ -159,11 +159,12 @@ export default function PriceCheckIntegrationForm() {
       const result = await executeCurlViaProxy(parsedAuth);
       setAuthTestResult(result);
       
-      // Try to extract token from response
-      if (result?.response && authTokenPath) {
-        const responseBody = typeof result.response === "string" 
-          ? (() => { try { return JSON.parse(result.response); } catch { return null; } })()
-          : result.response;
+      // Try to extract token from raw (unsanitized) response
+      if (authTokenPath) {
+        const rawBody = result?.raw_response || result?.response;
+        const responseBody = typeof rawBody === "string" 
+          ? (() => { try { return JSON.parse(rawBody); } catch { return null; } })()
+          : rawBody;
         
         if (responseBody) {
           const token = resolveJsonPath(responseBody, authTokenPath);
