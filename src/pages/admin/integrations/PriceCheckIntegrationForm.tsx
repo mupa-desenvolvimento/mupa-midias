@@ -72,7 +72,6 @@ export default function PriceCheckIntegrationForm() {
       navigate("/admin/integrations");
     }
   }, [isSuperAdmin, isSuperAdminLoading, navigate]);
-  const existingIntegration = integrations?.find(i => i.id === id);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
