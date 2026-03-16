@@ -332,6 +332,7 @@ export default function GraphicEditor() {
     canvasWidth, canvasHeight, resizeCanvas, swapCanvasOrientation,
     addText, addRect, addCircle, addLine, addTriangle, addStar, addPolygon,
     addImage, addImageFromUrl,
+    addSVGFromString, addSVGFromURL,
     deleteSelected, duplicateSelected, bringToFront, sendToBack,
     layers, selectLayer, toggleLayerVisible, toggleLayerLocked, moveLayerForward, moveLayerBackward, moveLayerToListIndex, renameLayer,
     updateObjectProp,
