@@ -24,6 +24,8 @@ import {
 import { WeatherSettings } from "./weather/WeatherSettings";
 import { NewsModule } from "./news/NewsModule";
 import { useWeather } from "@/hooks/useWeather";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type StatusFilter = "all" | "active" | "inactive";
 
