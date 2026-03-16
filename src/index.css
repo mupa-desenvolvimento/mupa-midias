@@ -312,3 +312,23 @@
     transform: scale(1);
   }
 }
+
+/* Android WebView fullscreen fix — X96 / Android 9+ */
+html, body, #root {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+/* Force fixed elements to respect full viewport on old WebViews */
+.fixed.inset-0 {
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  top: 0 !important;
+  left: 0 !important;
+}
