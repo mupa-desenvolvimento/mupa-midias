@@ -526,6 +526,7 @@ Deno.serve(async (req: Request) => {
             file_url: overrideMediaData.file_url,
             duration: overrideMediaData.duration ?? 10,
             expires_at: device.override_media_expires_at,
+            metadata: overrideMediaData.metadata || null,
           }
         }
       }
