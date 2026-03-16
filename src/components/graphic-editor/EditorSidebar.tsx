@@ -3,7 +3,7 @@ import {
   Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
   Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
   Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
-  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight,
+  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode, Link,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { LayerItem } from "@/components/graphic-editor/useFabricCanvas";
 
 interface MediaGalleryItem {
@@ -33,6 +36,8 @@ interface Props {
   onAddPolygon: () => void;
   onAddImage: (f: File) => void;
   onAddImageFromUrl: (url: string) => void;
+  onAddSVGFromString?: (svg: string, name?: string) => Promise<any>;
+  onAddSVGFromURL?: (url: string) => Promise<any>;
   onDelete: () => void;
   onDuplicate: () => void;
   onBringToFront: () => void;
