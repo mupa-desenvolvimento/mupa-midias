@@ -68,17 +68,13 @@ const isValidModuleType = (value: string | undefined): value is AutoContentType 
 /* ─── Birthday Module (standalone) ─── */
 function BirthdayModulePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [slidePeriod, setSlidePeriod] = useState<BirthdaySlidePeriod>("month");
+  const [period, setPeriod] = useState<BirthdaySlidePeriod>("month");
   const [layout, setLayout] = useState<BirthdayLayoutType>("cards");
-  const [slideDialogOpen, setSlideDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
-  const [slideCreated, setSlideCreated] = useState(false);
   const { allPeople, isLoading, filterByPeriod, uploadCsv } = useBirthdayPeople();
 
-  const getPeopleForPeriod = (p: BirthdayPeriod) => filterByPeriod(p);
-  const dayPeople = useMemo(() => getPeopleForPeriod("day"), [allPeople, filterByPeriod]);
-  const weekPeople = useMemo(() => getPeopleForPeriod("week"), [allPeople, filterByPeriod]);
-  const monthPeople = useMemo(() => getPeopleForPeriod("month"), [allPeople, filterByPeriod]);
+  const dayPeople = useMemo(() => filterByPeriod("day"), [allPeople, filterByPeriod]);
+  const weekPeople = useMemo(() => filterByPeriod("week"), [allPeople, filterByPeriod]);
+  const monthPeople = useMemo(() => filterByPeriod("month"), [allPeople, filterByPeriod]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,141 +84,161 @@ function BirthdayModulePage() {
     e.target.value = "";
   };
 
-  const header = (
-    <div className="px-4 pt-3 pb-2">
-      <h2 className="text-lg font-semibold">Aniversariantes</h2>
-      <p className="text-muted-foreground text-sm mt-1">
-        Gerencie a base de aniversariantes e visualize os layouts para exibição nas TVs.
-      </p>
-    </div>
-  );
+  const periodLabel = period === "all" ? "todos os períodos" : period === "day" ? "hoje" : period === "week" ? "esta semana" : "este mês";
 
-  const handleOpenCreate = () => {
-    setDialogMode("create");
-    setSlideDialogOpen(true);
-  };
-
-  const handleOpenEdit = () => {
-    setDialogMode("edit");
-    setSlideDialogOpen(true);
-  };
-
-  const handleSlideSelect = (selectedLayout: BirthdayLayoutType, selectedPeriod: BirthdaySlidePeriod) => {
-    setLayout(selectedLayout);
-    setSlidePeriod(selectedPeriod);
-    setSlideCreated(true);
-  };
-
-  const periodLabel = slidePeriod === "all" ? "todos os períodos" : slidePeriod === "day" ? "hoje" : slidePeriod === "week" ? "esta semana" : "este mês";
-
-  const controls = (
-    <div className="px-4 pb-2 space-y-4">
-      {/* Top row: Actions */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleOpenCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Criar Slide
-          </Button>
-          {slideCreated && (
-            <Button variant="outline" size="sm" onClick={handleOpenEdit} className="gap-2">
-              <Pencil className="w-4 h-4" />
-              Alterar Layout
-            </Button>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadCsv.isPending}
-            className="gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            {uploadCsv.isPending ? "Importando..." : "Importar CSV"}
-          </Button>
-        </div>
-
-        {slideCreated && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
-              {BIRTHDAY_LAYOUTS.find((l) => l.value === layout)?.label ?? layout}
-            </span>
-            <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
-              {slidePeriod === "all" ? "Todos os períodos" : slidePeriod === "day" ? "Hoje" : slidePeriod === "week" ? "Semana" : "Mês"}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Stats bar */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Cake className="w-3.5 h-3.5" />
-          Total cadastrados: {allPeople.length}
-        </span>
-        {slidePeriod !== "all" && (
-          <span>
-            {getPeopleForPeriod(slidePeriod as BirthdayPeriod).length} aniversariante(s) {periodLabel}
-          </span>
-        )}
-        {slidePeriod === "all" && (
-          <>
-            <span>{dayPeople.length} hoje</span>
-            <span>{weekPeople.length} semana</span>
-            <span>{monthPeople.length} mês</span>
-          </>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderSection = (title: string, people: typeof allPeople, period: BirthdayPeriod) => {
+  const renderSection = (title: string, people: typeof allPeople, p: BirthdayPeriod) => {
     if (people.length === 0) return null;
     return (
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-muted-foreground px-1">{title} ({people.length})</h3>
-        <BirthdayContainer people={people} period={period} layout={layout} />
+        <BirthdayContainer people={people} period={p} layout={layout} />
       </div>
     );
   };
 
+  // --- Empty state ---
+  if (!isLoading && allPeople.length === 0) {
+    return (
+      <PageShell
+        header={
+          <div className="px-4 pt-3 pb-2">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Cake className="w-5 h-5 text-primary" /> Aniversariantes
+            </h2>
+            <p className="text-muted-foreground text-sm mt-1">Gerencie a base de aniversariantes e visualize os layouts para exibição nas TVs.</p>
+          </div>
+        }
+        footer={null}
+      >
+        <div className="flex h-full items-center justify-center">
+          <div className="text-center max-w-sm space-y-4">
+            <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+              <Cake className="w-10 h-10 text-primary/60" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold">Nenhum aniversariante cadastrado</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Importe um arquivo CSV com os dados dos colaboradores (nome, data de nascimento, departamento, cargo).
+              </p>
+            </div>
+            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploadCsv.isPending} className="gap-2">
+              <Upload className="w-4 h-4" />
+              {uploadCsv.isPending ? "Importando..." : "Importar CSV"}
+            </Button>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  // --- Header ---
+  const header = (
+    <div className="px-4 pt-3 pb-2 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Cake className="w-5 h-5 text-primary" /> Aniversariantes
+          </h2>
+          <p className="text-muted-foreground text-sm mt-0.5">Gerencie e visualize os layouts para exibição.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadCsv.isPending} className="gap-2">
+            <Upload className="w-4 h-4" />
+            {uploadCsv.isPending ? "Importando..." : "Importar CSV"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="rounded-lg border bg-card p-3 text-center">
+          <p className="text-2xl font-bold text-foreground">{allPeople.length}</p>
+          <p className="text-[11px] text-muted-foreground">Cadastrados</p>
+        </div>
+        <div
+          onClick={() => setPeriod("day")}
+          className={`rounded-lg border p-3 text-center cursor-pointer transition-colors ${period === "day" ? "border-primary bg-primary/5" : "bg-card hover:bg-muted/50"}`}
+        >
+          <p className="text-2xl font-bold text-foreground">{dayPeople.length}</p>
+          <p className="text-[11px] text-muted-foreground">Hoje</p>
+        </div>
+        <div
+          onClick={() => setPeriod("week")}
+          className={`rounded-lg border p-3 text-center cursor-pointer transition-colors ${period === "week" ? "border-primary bg-primary/5" : "bg-card hover:bg-muted/50"}`}
+        >
+          <p className="text-2xl font-bold text-foreground">{weekPeople.length}</p>
+          <p className="text-[11px] text-muted-foreground">Semana</p>
+        </div>
+        <div
+          onClick={() => setPeriod("month")}
+          className={`rounded-lg border p-3 text-center cursor-pointer transition-colors ${period === "month" ? "border-primary bg-primary/5" : "bg-card hover:bg-muted/50"}`}
+        >
+          <p className="text-2xl font-bold text-foreground">{monthPeople.length}</p>
+          <p className="text-[11px] text-muted-foreground">Mês</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // --- Controls: period tabs + layout selector ---
+  const controls = (
+    <div className="px-4 pb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Period */}
+      <ToggleGroup
+        type="single"
+        value={period}
+        onValueChange={(v) => v && setPeriod(v as BirthdaySlidePeriod)}
+        className="bg-muted rounded-lg p-1"
+      >
+        {[
+          { value: "day", label: "Hoje", icon: CalendarDays },
+          { value: "week", label: "Semana", icon: CalendarRange },
+          { value: "month", label: "Mês", icon: Calendar },
+          { value: "all", label: "Todos", icon: Layers },
+        ].map((p) => (
+          <ToggleGroupItem key={p.value} value={p.value} size="sm" className="gap-1.5 text-xs px-3">
+            <p.icon className="w-3.5 h-3.5" />
+            {p.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+
+      {/* Layout */}
+      <ToggleGroup
+        type="single"
+        value={layout}
+        onValueChange={(v) => v && setLayout(v as BirthdayLayoutType)}
+        className="bg-muted rounded-lg p-1"
+      >
+        {BIRTHDAY_LAYOUTS.map((l) => (
+          <ToggleGroupItem key={l.value} value={l.value} size="sm" className="gap-1.5 text-xs px-2.5">
+            <l.icon className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{l.label}</span>
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
+  );
+
+  // --- Content ---
   let content: JSX.Element;
   if (isLoading) {
     content = (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        Carregando aniversariantes...
-      </div>
+      <div className="flex h-full items-center justify-center text-muted-foreground">Carregando aniversariantes...</div>
     );
-  } else if (allPeople.length === 0) {
-    content = (
-      <div className="flex h-full items-center justify-center">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Nenhum aniversariante cadastrado</CardTitle>
-            <CardDescription>
-              Importe um arquivo CSV com os dados dos colaboradores para começar.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  } else if (slidePeriod === "all") {
+  } else if (period === "all") {
+    const hasAny = dayPeople.length > 0 || weekPeople.length > 0 || monthPeople.length > 0;
     content = (
       <div className="space-y-8">
         {renderSection("🎂 Aniversariantes de Hoje", dayPeople, "day")}
         {renderSection("📅 Aniversariantes da Semana", weekPeople, "week")}
         {renderSection("🗓️ Aniversariantes do Mês", monthPeople, "month")}
-        {dayPeople.length === 0 && weekPeople.length === 0 && monthPeople.length === 0 && (
-          <div className="text-center py-6">
+        {!hasAny && (
+          <div className="text-center py-6 space-y-2">
             <p className="text-muted-foreground text-sm">Nenhum aniversariante nos períodos selecionados.</p>
-            <p className="text-xs text-muted-foreground mt-1">Mostrando todos os {allPeople.length} cadastrados abaixo:</p>
+            <p className="text-xs text-muted-foreground">Mostrando todos os {allPeople.length} cadastrados:</p>
             <div className="mt-4">
               <BirthdayContainer people={allPeople} period="month" layout={layout} />
             </div>
@@ -231,14 +247,14 @@ function BirthdayModulePage() {
       </div>
     );
   } else {
-    const currentPeriod = slidePeriod as BirthdayPeriod;
-    const filtered = getPeopleForPeriod(currentPeriod);
+    const currentPeriod = period as BirthdayPeriod;
+    const filtered = filterByPeriod(currentPeriod);
     if (filtered.length === 0) {
       content = (
         <div className="space-y-6">
           <div className="text-center py-6">
             <p className="text-muted-foreground text-sm">Nenhum aniversariante {periodLabel}.</p>
-            <p className="text-xs text-muted-foreground mt-1">Mostrando todos os {allPeople.length} cadastrados abaixo:</p>
+            <p className="text-xs text-muted-foreground mt-1">Mostrando todos os {allPeople.length} cadastrados:</p>
           </div>
           <BirthdayContainer people={allPeople} period={currentPeriod} layout={layout} />
         </div>
@@ -249,19 +265,9 @@ function BirthdayModulePage() {
   }
 
   return (
-    <>
-      <PageShell header={header} controls={controls} footer={null}>
-        <ListViewport>{content}</ListViewport>
-      </PageShell>
-      <BirthdaySlideDialog
-        open={slideDialogOpen}
-        onOpenChange={setSlideDialogOpen}
-        onSelect={handleSlideSelect}
-        initialLayout={layout}
-        initialPeriod={slidePeriod}
-        mode={dialogMode}
-      />
-    </>
+    <PageShell header={header} controls={controls} footer={null}>
+      <ListViewport>{content}</ListViewport>
+    </PageShell>
   );
 }
 
