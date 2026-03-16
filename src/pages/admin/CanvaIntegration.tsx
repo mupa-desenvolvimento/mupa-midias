@@ -62,7 +62,7 @@ import { PRESET_TEMPLATES } from '@/components/graphic-editor/presetTemplates';
    return (
     <div className="p-6 space-y-6">
       {!isConnected ? (
-        <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <>
           <Card className="w-full max-w-md shadow-xl border-border/60">
             <CardHeader className="text-center pb-2">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
