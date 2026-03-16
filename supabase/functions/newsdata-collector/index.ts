@@ -123,7 +123,8 @@ function createSlugFromNewsData(result: NewsDataResult) {
 }
 
 function mapLocalCategoryToNewsData(localCategory: string | null) {
-  const c = (localCategory || "").trim().toLowerCase();
+  const c = (localCategory || "").trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (!c) return null;
 
   const mapping: Record<string, string> = {
@@ -139,6 +140,18 @@ function mapLocalCategoryToNewsData(localCategory: string | null) {
     mundo: "world",
     brasil: "top",
     cotidiano: "top",
+    varejo: "business",
+    supermercados: "business",
+    marketing: "business",
+    ecommerce: "business",
+    franquias: "business",
+    educacao: "education",
+    alimentacao: "food",
+    automoveis: "automobile",
+    pets: "lifestyle",
+    games: "technology",
+    sustentabilidade: "environment",
+    independentes: "top",
   };
 
   return mapping[c] || null;
