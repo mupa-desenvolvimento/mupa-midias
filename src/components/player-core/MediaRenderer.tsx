@@ -114,7 +114,7 @@ export const MediaRenderer = ({
   }
 
   if (media.type === "news") {
-    return <NewsPlayerSlide key={media.id} onEnded={onEnded} media={media} />;
+    return <NewsPlayerSlide key={media.id} onEnded={onEnded} media={media} isPortrait={isPortrait} />;
   }
 
   if (media.type === "weather") {
