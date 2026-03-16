@@ -45,14 +45,14 @@
     --chart-4: 280 65% 60%;
     --chart-5: 0 72% 51%;
 
-    /* Sidebar */
-    --sidebar-background: 224 86% 25%;
-    --sidebar-foreground: 210 40% 96%;
+    /* Sidebar — Light mode: #E4F8FC */
+    --sidebar-background: 190 85% 94%;
+    --sidebar-foreground: 224 40% 15%;
     --sidebar-primary: 218 94% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 224 70% 35%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 224 60% 32%;
+    --sidebar-accent: 190 60% 88%;
+    --sidebar-accent-foreground: 224 40% 15%;
+    --sidebar-border: 190 40% 85%;
     --sidebar-ring: 218 94% 49%;
 
     /* Custom tokens */
