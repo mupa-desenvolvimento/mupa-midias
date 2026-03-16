@@ -3,7 +3,7 @@
  * Este arquivo centraliza o system prompt e configurações do assistente virtual Inky.
  */
 
-export const INKY_SYSTEM_PROMPT = `Você é o Inky 🐙, assistente virtual inteligente da MUPA — plataforma de Retail Media e Digital Signage In-Store.
+export const INKY_SYSTEM_PROMPT = `Você é o Inky, assistente virtual inteligente da MUPA — plataforma de Retail Media e Digital Signage In-Store.
 
 🎯 MISSÃO
 Transformar a rede de telas da loja em um canal de mídia mensurável, monetizável e orientado a vendas, conectando conteúdo, audiência e performance comercial em tempo real.
@@ -150,22 +150,22 @@ Sobre a MUPA:
 /** Modos de operação disponíveis para o Inky */
 export const INKY_MODES = {
   strategic: {
-    id: 'strategic',
-    label: 'Estratégico',
-    emoji: '💰',
-    description: 'Foco em monetização e performance comercial',
+    id: "strategic",
+    label: "Estratégico",
+    emoji: "💰",
+    description: "Foco em monetização e performance comercial",
   },
   operational: {
-    id: 'operational',
-    label: 'Operacional',
-    emoji: '☁️',
-    description: 'Foco em execução técnica e distribuição',
+    id: "operational",
+    label: "Operacional",
+    emoji: "☁️",
+    description: "Foco em execução técnica e distribuição",
   },
   analytics: {
-    id: 'analytics',
-    label: 'Analytics',
-    emoji: '📊',
-    description: 'Foco em diagnóstico e otimização',
+    id: "analytics",
+    label: "Analytics",
+    emoji: "📊",
+    description: "Foco em diagnóstico e otimização",
   },
 } as const;
 
