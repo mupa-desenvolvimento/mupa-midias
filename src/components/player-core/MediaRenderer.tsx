@@ -42,6 +42,7 @@ export const MediaRenderer = ({
   loop = false,
   hideUntilReady = false,
   onElementRef,
+  isPortrait = false,
 }: MediaRendererProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(!hideUntilReady);
