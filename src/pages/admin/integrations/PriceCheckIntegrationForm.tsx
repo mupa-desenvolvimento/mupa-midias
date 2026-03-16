@@ -12,8 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-  Loader2, Save, ArrowLeft, ArrowRight, Check, Terminal, Code2,
-  Braces, Globe, Key, Zap, Play, Copy, CheckCircle2, AlertCircle
+  Loader2, Save, ArrowLeft, ArrowRight, Terminal, Code2,
+  Braces, Globe, Key, Zap, Play, CheckCircle2, AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCompanies } from "@/hooks/useCompanies";
@@ -35,6 +35,25 @@ const steps = [
   { id: "request", label: "2. Consulta (CURL)", icon: Terminal },
   { id: "mapping", label: "3. Mapeamento", icon: Braces },
 ];
+
+/**
+ * Execute a parsed CURL via edge function proxy (no need to save first).
+ * The edge function receives the raw parsed data and executes it.
+ */
+async function executeCurlViaProxy(parsed: ParsedCurl, variables?: Record<string, string>) {
+  const { data, error } = await supabase.functions.invoke("price-check-proxy", {
+    body: {
+      action: "raw_test",
+      method: parsed.method,
+      url: parsed.url,
+      headers: parsed.headers,
+      body: parsed.bodyJson || parsed.bodyText || null,
+      variables: variables || {},
+    },
+  });
+  if (error) throw error;
+  return data;
+}
 
 export default function PriceCheckIntegrationForm() {
   const { id } = useParams();
@@ -62,6 +81,7 @@ export default function PriceCheckIntegrationForm() {
   const [tokenExpiration, setTokenExpiration] = useState(3600);
   const [isTestingAuth, setIsTestingAuth] = useState(false);
   const [authTestResult, setAuthTestResult] = useState<any>(null);
+  const [extractedToken, setExtractedToken] = useState<string | null>(null);
 
   // Request CURL state
   const [requestCurl, setRequestCurl] = useState("");
@@ -73,6 +93,7 @@ export default function PriceCheckIntegrationForm() {
   const [testBarcode, setTestBarcode] = useState("");
   const [testStoreCode, setTestStoreCode] = useState("");
   const [lastTestResult, setLastTestResult] = useState<any>(null);
+  const [lastTestResponse, setLastTestResponse] = useState<any>(null);
 
   // Mapping
   const [mappingConfig, setMappingConfig] = useState<any>({});
@@ -120,20 +141,42 @@ export default function PriceCheckIntegrationForm() {
     }
   }, [requestCurl]);
 
+  // Helper to resolve a value from JSON using dot path
+  const resolveJsonPath = (obj: any, path: string): any => {
+    if (!obj || !path) return undefined;
+    return path.split('.').reduce((acc, part) => acc?.[part], obj);
+  };
+
   const handleTestAuth = async () => {
-    if (!isEditing || !id) {
-      toast.error("Salve a integração antes de testar a autenticação");
+    if (!parsedAuth) {
+      toast.error("Cole uma CURL de autenticação válida");
       return;
     }
     setIsTestingAuth(true);
     setAuthTestResult(null);
+    setExtractedToken(null);
     try {
-      const { data, error } = await supabase.functions.invoke("price-check-proxy", {
-        body: { action: "auth_test", integration_id: id },
-      });
-      if (error) throw error;
-      setAuthTestResult(data);
-      if (data?.success) toast.success("Autenticação executada com sucesso!");
+      const result = await executeCurlViaProxy(parsedAuth);
+      setAuthTestResult(result);
+      
+      // Try to extract token from response
+      if (result?.response && authTokenPath) {
+        const responseBody = typeof result.response === "string" 
+          ? (() => { try { return JSON.parse(result.response); } catch { return null; } })()
+          : result.response;
+        
+        if (responseBody) {
+          const token = resolveJsonPath(responseBody, authTokenPath);
+          if (token && typeof token === "string") {
+            setExtractedToken(token);
+            toast.success(`Token extraído com sucesso! (${token.slice(0, 20)}...)`);
+          } else {
+            toast.warning(`Token não encontrado no path: ${authTokenPath}`);
+          }
+        }
+      }
+      
+      if (result?.success) toast.success("Autenticação executada com sucesso!");
       else toast.error("Falha na autenticação");
     } catch (err: any) {
       toast.error(err?.message || "Erro ao testar autenticação");
@@ -143,21 +186,43 @@ export default function PriceCheckIntegrationForm() {
   };
 
   const handleTestRequest = async () => {
-    if (!isEditing || !id) {
-      toast.error("Salve a integração antes de testar");
+    if (!parsedRequest) {
+      toast.error("Cole uma CURL de consulta válida");
       return;
     }
     const barcode = testBarcode.trim();
     if (!barcode) { toast.error("Informe um código de barras"); return; }
+    
     setIsTestingRequest(true);
     setLastTestResult(null);
+    setLastTestResponse(null);
     try {
-      const { data, error } = await supabase.functions.invoke("price-check-proxy", {
-        body: { action: "request_test", integration_id: id, barcode, store_code: testStoreCode.trim() || undefined },
-      });
-      if (error) throw error;
-      setLastTestResult(data);
-      if (data?.success) toast.success("Consulta executada com sucesso!");
+      // Build variables map
+      const variables: Record<string, string> = {
+        barcode,
+        ean: barcode,
+      };
+      if (testStoreCode.trim()) {
+        variables.store = testStoreCode.trim();
+        variables.loja = testStoreCode.trim();
+        variables.store_code = testStoreCode.trim();
+      }
+      if (extractedToken) {
+        variables.token = extractedToken;
+      }
+
+      const result = await executeCurlViaProxy(parsedRequest, variables);
+      setLastTestResult(result);
+      
+      // Extract the response body for mapping
+      if (result?.response) {
+        const responseBody = typeof result.response === "string"
+          ? (() => { try { return JSON.parse(result.response); } catch { return result.response; } })()
+          : result.response;
+        setLastTestResponse(responseBody);
+      }
+      
+      if (result?.success) toast.success("Consulta executada com sucesso!");
       else toast.error("Consulta executada com falha");
     } catch (err: any) {
       toast.error(err?.message || "Erro ao testar");
@@ -251,7 +316,7 @@ export default function PriceCheckIntegrationForm() {
         </Button>
       </div>
 
-      {/* Name & Company & Settings — always visible */}
+      {/* Name & Company & Settings */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-2 md:col-span-2">
           <Label>Nome da Integração</Label>
@@ -420,20 +485,32 @@ export default function PriceCheckIntegrationForm() {
                       <Play className="h-4 w-4 text-primary" /> Testar Autenticação
                     </CardTitle>
                     <CardDescription>
-                      {isEditing
-                        ? "Execute a CURL de login para validar e ver o token retornado"
-                        : "Salve a integração primeiro para poder testar a autenticação"}
+                      Execute a CURL de login para validar e extrair o token
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Button
                       onClick={handleTestAuth}
-                      disabled={!isEditing || isTestingAuth || !parsedAuth}
+                      disabled={isTestingAuth || !parsedAuth}
                       className="gap-2"
                     >
                       {isTestingAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                       Executar Login
                     </Button>
+
+                    {extractedToken && (
+                      <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 space-y-1">
+                        <div className="flex items-center gap-2 text-sm font-medium text-green-500">
+                          <CheckCircle2 className="h-4 w-4" /> Token extraído com sucesso
+                        </div>
+                        <p className="font-mono text-xs text-muted-foreground truncate">
+                          {extractedToken.slice(0, 80)}...
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Este token será usado automaticamente como {"{{token}}"} na CURL de consulta
+                        </p>
+                      </div>
+                    )}
 
                     {authTestResult && (
                       <div className="rounded-lg border bg-muted/10 p-4 space-y-2">
@@ -444,8 +521,11 @@ export default function PriceCheckIntegrationForm() {
                             <AlertCircle className="h-4 w-4 text-destructive" />
                           )}
                           <span className="font-medium">
-                            {authTestResult.success ? "Token obtido com sucesso!" : "Falha na autenticação"}
+                            {authTestResult.success ? "Resposta da autenticação" : "Falha na autenticação"}
                           </span>
+                          {typeof authTestResult.response_time_ms === "number" && (
+                            <span className="text-xs text-muted-foreground ml-2">{authTestResult.response_time_ms}ms</span>
+                          )}
                         </div>
                         <pre className="font-mono text-xs bg-muted/20 p-3 rounded overflow-auto max-h-[300px]">
                           {typeof authTestResult.response === "string"
@@ -487,9 +567,14 @@ export default function PriceCheckIntegrationForm() {
               </CardTitle>
               <CardDescription>
                 Cole a CURL da consulta de produto/preço. 
-                {hasAuth && (
-                  <span className="text-primary font-medium">
-                    {" "}Use {"{{token}}"} onde o token de autenticação deve ser inserido automaticamente.
+                {hasAuth && extractedToken && (
+                  <span className="text-green-500 font-medium">
+                    {" "}✓ Token de autenticação disponível — será injetado automaticamente em {"{{token}}"}.
+                  </span>
+                )}
+                {hasAuth && !extractedToken && (
+                  <span className="text-yellow-500 font-medium">
+                    {" "}⚠ Token não obtido ainda. Teste a autenticação primeiro ou use {"{{token}}"} como placeholder.
                   </span>
                 )}
               </CardDescription>
@@ -583,9 +668,8 @@ export default function PriceCheckIntegrationForm() {
                 <Play className="h-4 w-4 text-primary" /> Testar Consulta
               </CardTitle>
               <CardDescription>
-                {isEditing
-                  ? `Execute um teste real com um código de barras${hasAuth ? " (autenticação será executada automaticamente antes)" : ""}`
-                  : "Salve a integração primeiro para poder testar"}
+                Execute um teste real com um código de barras
+                {hasAuth && extractedToken && " (token de autenticação será usado automaticamente)"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -599,7 +683,11 @@ export default function PriceCheckIntegrationForm() {
                   <Input value={testStoreCode} onChange={(e) => setTestStoreCode(e.target.value)} placeholder="0001" className="font-mono" />
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={handleTestRequest} disabled={!isEditing || isTestingRequest || !testBarcode.trim()} className="gap-2 w-full">
+                  <Button
+                    onClick={handleTestRequest}
+                    disabled={isTestingRequest || !testBarcode.trim() || !parsedRequest}
+                    className="gap-2 w-full"
+                  >
                     {isTestingRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                     Testar Consulta
                   </Button>
@@ -614,7 +702,7 @@ export default function PriceCheckIntegrationForm() {
                     ) : (
                       <AlertCircle className="h-4 w-4 text-destructive" />
                     )}
-                    <span>Status: <span className="font-mono">{lastTestResult.status}</span></span>
+                    <span>Status: <span className="font-mono">{lastTestResult.status || (lastTestResult.success ? "200" : "error")}</span></span>
                     {typeof lastTestResult.response_time_ms === "number" && (
                       <span className="text-xs text-muted-foreground ml-2">{lastTestResult.response_time_ms}ms</span>
                     )}
@@ -624,6 +712,19 @@ export default function PriceCheckIntegrationForm() {
                       ? lastTestResult.response
                       : JSON.stringify(lastTestResult.response, null, 2)}
                   </pre>
+                  {lastTestResponse && typeof lastTestResponse === "object" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 mt-2"
+                      onClick={() => {
+                        setCurrentStep(2);
+                      }}
+                    >
+                      <Braces className="h-4 w-4" />
+                      Usar esta resposta no Mapeamento →
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -646,6 +747,7 @@ export default function PriceCheckIntegrationForm() {
           <IntegrationMapping
             value={mappingConfig}
             onChange={setMappingConfig}
+            externalSampleResponse={lastTestResponse}
           />
 
           {/* Status toggle */}
