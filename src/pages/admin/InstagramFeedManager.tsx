@@ -228,23 +228,20 @@ export default function InstagramFeedManager() {
           <CardHeader>
             <CardTitle className="text-base">Configuração do Instagram</CardTitle>
             <CardDescription>
-              Obtenha um Access Token em{" "}
-              <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                developers.facebook.com
-              </a>
-              {" "}→ Instagram Graph API → Token de acesso.
+              {isConnected
+                ? `Conectado como @${settings?.username || "—"}. Configure o período de busca dos posts.`
+                : "Conecte sua conta do Instagram para importar posts automaticamente."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Access Token do Instagram</Label>
-              <Input
-                type="password"
-                placeholder="Insira o token de acesso..."
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-              />
-            </div>
+            {!isConnected && (
+              <div className="p-4 rounded-lg border border-dashed text-center space-y-3">
+                <Instagram className="w-8 h-8 text-pink-500 mx-auto" />
+                <p className="text-sm text-muted-foreground">
+                  Clique em "Conectar Instagram" acima para autorizar via Facebook/Meta.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Período padrão (dias)</Label>
@@ -269,12 +266,7 @@ export default function InstagramFeedManager() {
                 <Input type="date" value={customUntil} onChange={(e) => setCustomUntil(e.target.value)} />
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSaveSettings} disabled={savingSettings || !tokenInput} className="gap-2">
-                {savingSettings ? "Salvando..." : "Salvar Configuração"}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowSettings(false)}>Cancelar</Button>
-            </div>
+            <Button variant="ghost" onClick={() => setShowSettings(false)}>Fechar</Button>
           </CardContent>
         </Card>
       )}
