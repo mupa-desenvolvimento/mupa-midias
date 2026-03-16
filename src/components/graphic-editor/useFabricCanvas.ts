@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Canvas, IText, Rect, Circle, Line, Triangle, Polygon, FabricImage, FabricObject, ActiveSelection, Shadow, Point } from "fabric";
+import { Canvas, IText, Rect, Circle, Line, Triangle, Polygon, FabricImage, FabricObject, ActiveSelection, Shadow, Point, loadSVGFromString, loadSVGFromURL, util } from "fabric";
 import { attachSmartGuides } from "@/editor/smart-guides";
 import type { AlignmentSettings } from "@/editor/alignment-engine";
 
