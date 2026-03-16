@@ -371,6 +371,14 @@ export default function GraphicEditor() {
     return () => ro.disconnect();
   }, [zoomToFit]);
 
+  // Re-fit when canvas design dimensions change
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (container) {
+      zoomToFit(container.clientWidth, container.clientHeight);
+    }
+  }, [canvasWidth, canvasHeight, zoomToFit]);
+
   useEffect(() => {
     const raw = localStorage.getItem("graphic-editor-templates");
     if (!raw) { setTemplates([]); return; }
