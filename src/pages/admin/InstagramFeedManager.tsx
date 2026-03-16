@@ -93,7 +93,12 @@ export default function InstagramFeedManager() {
 
       if (data.error) throw new Error(data.error);
       if (data.url) {
-        window.location.href = data.url;
+        // Open in new tab to avoid iframe X-Frame-Options blocking
+        const w = window.open(data.url, "_blank");
+        if (!w) {
+          // Fallback: try top-level redirect
+          (window.top || window).location.href = data.url;
+        }
       }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
