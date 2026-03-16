@@ -261,17 +261,37 @@ export function EditorSidebar({
 
         {/* Search Tab */}
         <TabsContent value="search" className="flex-1 overflow-hidden m-0">
-          <div className="p-3 space-y-3">
+          <div className="p-3 space-y-2">
             {/* Source selector */}
             <div className="flex gap-1">
-              {(["pexels", "unsplash", "pixabay"] as SearchSource[]).map((src) => (
+              {(["pexels", "unsplash"] as SearchSource[]).map((src) => (
                 <Badge
                   key={src}
                   variant={activeSource === src ? "default" : "outline"}
                   className="cursor-pointer text-[10px] capitalize"
-                  onClick={() => { setActiveSource(src); if (searchQuery.trim()) setTimeout(() => searchImages(), 100); }}
+                  onClick={() => { setActiveSource(src); if (searchQuery.trim()) setTimeout(() => searchImages(1, src), 100); }}
                 >
-                  {src === "pexels" ? "Pexels" : src === "unsplash" ? "Unsplash" : "Imagens Livres"}
+                  {src === "pexels" ? "Pexels" : "Unsplash"}
+                </Badge>
+              ))}
+            </div>
+
+            {/* Orientation filter */}
+            <div className="flex gap-1">
+              {([
+                { value: "" as SearchOrientation, icon: ImageIcon, label: "Todas" },
+                { value: "landscape" as SearchOrientation, icon: Monitor, label: "Horizontal" },
+                { value: "portrait" as SearchOrientation, icon: Smartphone, label: "Vertical" },
+                { value: "square" as SearchOrientation, icon: SquareIcon, label: "Quadrada" },
+              ]).map((opt) => (
+                <Badge
+                  key={opt.value}
+                  variant={orientation === opt.value ? "default" : "outline"}
+                  className="cursor-pointer text-[10px] gap-0.5"
+                  onClick={() => { setOrientation(opt.value); if (searchQuery.trim()) setTimeout(() => searchImages(1), 100); }}
+                >
+                  <opt.icon className="h-2.5 w-2.5" />
+                  {opt.label}
                 </Badge>
               ))}
             </div>
@@ -279,48 +299,74 @@ export function EditorSidebar({
             {/* Search input */}
             <div className="flex gap-1.5">
               <Input
-                placeholder="Buscar imagens..."
+                placeholder="Ex: supermercado, frutas, tecnologia..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && searchImages()}
+                onKeyDown={(e) => e.key === "Enter" && searchImages(1)}
                 className="h-8 text-xs"
               />
-              <Button size="icon" variant="default" className="h-8 w-8 shrink-0" onClick={searchImages} disabled={searching}>
+              <Button size="icon" variant="default" className="h-8 w-8 shrink-0" onClick={() => searchImages(1)} disabled={searching}>
                 {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
               </Button>
             </div>
+
+            {/* Results count */}
+            {totalResults > 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                {totalResults.toLocaleString("pt-BR")} resultados encontrados
+              </p>
+            )}
           </div>
 
-          <ScrollArea className="flex-1" style={{ height: "calc(100% - 100px)" }}>
+          <ScrollArea className="flex-1" style={{ height: "calc(100% - 140px)" }}>
             <div className="px-3 pb-3">
-              {searching && (
+              {searching && searchResults.length === 0 && (
                 <div className="grid grid-cols-2 gap-1.5">
-                  {Array.from({ length: 6 }).map((_, i) => (
+                  {Array.from({ length: 8 }).map((_, i) => (
                     <Skeleton key={i} className="aspect-[4/3] rounded-md" />
                   ))}
                 </div>
               )}
-              {!searching && searchResults.length > 0 && (
-                <div className="grid grid-cols-2 gap-1.5">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.id}
-                      className="aspect-[4/3] rounded-md overflow-hidden border border-border hover:border-primary hover:shadow-md transition-all group relative"
-                      onClick={() => onAddImageFromUrl(result.url)}
-                    >
-                      <img src={result.thumb} alt="" className="w-full h-full object-cover" loading="lazy" crossOrigin="anonymous" />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity truncate">
-                        {result.photographer ? `📷 ${result.photographer}` : result.source}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+              {searchResults.length > 0 && (
+                <>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.id}
+                        className="aspect-[4/3] rounded-md overflow-hidden border border-border hover:border-primary hover:shadow-md transition-all group relative"
+                        onClick={() => onAddImageFromUrl(result.url)}
+                        title={result.photographer ? `📷 ${result.photographer}` : result.source}
+                      >
+                        <img src={result.thumb} alt="" className="w-full h-full object-cover" loading="lazy" crossOrigin="anonymous" />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                          {result.photographer ? `📷 ${result.photographer}` : result.source}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Load more / pagination */}
+                  {hasMore && (
+                    <div className="mt-3 flex justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 w-full"
+                        onClick={() => searchImages(currentPage + 1)}
+                        disabled={searching}
+                      >
+                        {searching ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronDown className="h-3 w-3" />}
+                        Carregar mais
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
               {!searching && searchResults.length === 0 && (
                 <div className="text-center py-8">
                   <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
                   <p className="text-xs text-muted-foreground">Pesquise imagens gratuitas</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-1">Pexels, Unsplash e mais</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">Pexels e Unsplash</p>
                 </div>
               )}
             </div>
