@@ -493,7 +493,7 @@ export const useFaceDetection = (
       updateActiveFacesState();
       
     } catch (error) {
-      console.error('Error during face detection:', error);
+      console.error('[FaceDetection] Error during face detection:', error);
     }
   }, [videoRef, canvasRef, isModelsLoaded, isActive, registeredPeople, logDetection, findMatchingTrackedFace, updateActiveFacesState]);
 
