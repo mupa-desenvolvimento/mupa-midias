@@ -189,25 +189,23 @@ Deno.serve(async (req: Request) => {
 
     // Parse multipart form data
     const formData = await req.formData()
-    const file = formData.get('file') as File
-    const fileName = formData.get('fileName') as string || file.name
-    const fileType = formData.get('fileType') as string || file.type
-    const folderId = formData.get('folderId') as string || null
+    const uploadedFile = formData.get('file') as File | null
+    const sourceUrl = (formData.get('sourceUrl') as string | null)?.trim() || null
+    const requestedFileName = (formData.get('fileName') as string | null)?.trim() || null
+    const requestedFileType = (formData.get('fileType') as string | null)?.trim() || null
+    const folderId = (formData.get('folderId') as string | null)?.trim() || null
     const fontFamily = (formData.get('fontFamily') as string | null)?.trim() || null
 
-    if (!file) {
+    if (!uploadedFile && !sourceUrl) {
       return new Response(
-        JSON.stringify({ error: 'No file provided' }),
+        JSON.stringify({ error: 'No file or sourceUrl provided' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Step 2: Validate file
-    console.log('Step 2: Validating file...')
-    console.log('File details:', { name: fileName, type: fileType, size: file.size })
-
     const inferMimeFromName = (name: string): string | null => {
       const ext = name.split('.').pop()?.toLowerCase() || ''
+      if (ext === 'svg') return 'image/svg+xml'
       if (ext === 'ttf') return 'font/ttf'
       if (ext === 'otf') return 'font/otf'
       if (ext === 'woff') return 'font/woff'
@@ -216,7 +214,51 @@ Deno.serve(async (req: Request) => {
       return null
     }
 
-    // Validate file type
+    let fileName = requestedFileName || uploadedFile?.name || ''
+    let fileType = requestedFileType || uploadedFile?.type || ''
+    let fileSize = uploadedFile?.size || 0
+    let fileBuffer: ArrayBuffer
+
+    if (uploadedFile) {
+      fileBuffer = await uploadedFile.arrayBuffer()
+    } else {
+      let parsedUrl: URL
+      try {
+        parsedUrl = new URL(sourceUrl)
+      } catch {
+        return new Response(
+          JSON.stringify({ error: 'Invalid sourceUrl' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return new Response(
+          JSON.stringify({ error: 'sourceUrl must use http or https' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const sourceResponse = await fetch(parsedUrl.toString())
+      if (!sourceResponse.ok) {
+        return new Response(
+          JSON.stringify({ error: `Failed to fetch sourceUrl: HTTP ${sourceResponse.status}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const sourceContentType = (sourceResponse.headers.get('content-type') || '').split(';')[0].trim()
+      const pathnameName = decodeURIComponent(parsedUrl.pathname.split('/').pop() || 'imported-file')
+      fileName = fileName || pathnameName || `import-${Date.now()}`
+      fileType = fileType || sourceContentType
+      fileBuffer = await sourceResponse.arrayBuffer()
+      fileSize = fileBuffer.byteLength
+    }
+
+    // Step 2: Validate file
+    console.log('Step 2: Validating file...')
+    console.log('File details:', { name: fileName, type: fileType, size: fileSize, sourceUrl: !!sourceUrl })
+
     const receivedTypeLower = (fileType || '').toLowerCase()
     const normalizedTypeLower = receivedTypeLower.split(';')[0].trim()
     const inferredTypeLower = inferMimeFromName(fileName)?.toLowerCase() || null
@@ -234,7 +276,7 @@ Deno.serve(async (req: Request) => {
     const isDocument = ALLOWED_DOCUMENT_TYPES.includes(effectiveTypeLower)
     const isFont = ALLOWED_FONT_TYPES.includes(effectiveTypeLower)
     const isAllowed = ALL_ALLOWED_TYPES.includes(effectiveTypeLower)
-    
+
     if (!isAllowed) {
       console.error('Invalid file type:', fileType)
       return new Response(
@@ -250,20 +292,20 @@ Deno.serve(async (req: Request) => {
     }
 
     // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      console.error('File too large:', file.size)
+    if (fileSize > MAX_FILE_SIZE) {
+      console.error('File too large:', fileSize)
       return new Response(
         JSON.stringify({ 
           error: 'Arquivo muito grande', 
           details: `Tamanho máximo: ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
-          received: `${(file.size / (1024 * 1024)).toFixed(2)}MB`
+          received: `${(fileSize / (1024 * 1024)).toFixed(2)}MB`
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     const mediaType = getMediaType(effectiveTypeLower)
-    console.log('File validation passed:', { isImage, isVideo, isAudio, isDocument, mediaType })
+    console.log('File validation passed:', { isImage, isVideo, isAudio, mediaType })
 
     // Generate unique file keys
     const timestamp = Date.now()
@@ -286,12 +328,11 @@ Deno.serve(async (req: Request) => {
 
     // Step 3: Upload original file to R2
     console.log('Step 3: Uploading original file to R2...')
-    const fileBuffer = await file.arrayBuffer()
     const uploadResponse = await r2.fetch(uploadUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': effectiveTypeLower || fileType,
-        'Content-Length': file.size.toString(),
+        'Content-Length': fileSize.toString(),
       },
       body: fileBuffer,
     })
