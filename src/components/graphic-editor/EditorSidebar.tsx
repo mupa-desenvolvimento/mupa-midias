@@ -3,7 +3,7 @@ import {
   Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
   Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
   Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
-  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode, Link,
+  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -88,7 +88,6 @@ export function EditorSidebar({
   galleryItems, galleryLoading,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const svgFileRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -101,13 +100,23 @@ export function EditorSidebar({
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
   const [showSvgDialog, setShowSvgDialog] = useState(false);
-  const [svgUrl, setSvgUrl] = useState("");
   const [svgLoading, setSvgLoading] = useState(false);
+  const [selectedSvgFile, setSelectedSvgFile] = useState<File | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) onAddImage(file);
     e.target.value = "";
+  };
+
+  const validateSvgFile = (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".svg") && !file.type.includes("svg")) {
+      throw new Error("Arquivo inválido. Selecione um arquivo .svg");
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
+    }
   };
 
   const uploadSvgToGlobal = async (file: File): Promise<string | null> => {
@@ -124,44 +133,49 @@ export function EditorSidebar({
     formData.append("fileName", normalizedFile.name);
     formData.append("fileType", "image/svg+xml");
 
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
-      }
-    );
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: formData,
+    });
 
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(result.error || result.details || "Erro ao salvar SVG no servidor.");
     }
+
     return result.fileUrl || result.file_url || result.url || result.proxyUrl || null;
   };
 
-  const handleSvgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onAddSVGFromString) return;
+  const handleSelectSvgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
     e.target.value = "";
 
-    if (!file.name.toLowerCase().endsWith('.svg') && !file.type.includes('svg')) {
-      toast.error("Arquivo inválido. Selecione um arquivo .svg");
-      return;
-    }
+    if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
+    try {
+      validateSvgFile(file);
+      setSelectedSvgFile(file);
+    } catch (err: any) {
+      setSelectedSvgFile(null);
+      toast.error(err?.message || "Erro ao selecionar SVG.");
+    }
+  };
+
+  const handleSaveSvgImport = async () => {
+    if (!selectedSvgFile || !onAddSVGFromString) {
+      toast.error("Selecione um arquivo SVG para importar.");
       return;
     }
 
     setSvgLoading(true);
     try {
-      const text = await file.text();
-      await onAddSVGFromString(text, file.name.replace(/\.svg$/i, ""));
-      await uploadSvgToGlobal(file);
+      const text = await selectedSvgFile.text();
+      await onAddSVGFromString(text, selectedSvgFile.name.replace(/\.svg$/i, ""));
+      await uploadSvgToGlobal(selectedSvgFile);
       await onSvgSaved?.();
       toast.success("SVG importado e salvo na biblioteca!");
+      setSelectedSvgFile(null);
       setShowSvgDialog(false);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao importar SVG.");
@@ -170,45 +184,10 @@ export function EditorSidebar({
     }
   };
 
-  const handleSvgFromUrl = async () => {
-    if (!svgUrl.trim() || !onAddSVGFromURL) return;
-
-    try {
-      new URL(svgUrl.trim());
-    } catch {
-      toast.error("URL inválida. Informe uma URL completa (ex: https://...)");
-      return;
-    }
-
-    setSvgLoading(true);
-    try {
-      await onAddSVGFromURL(svgUrl.trim());
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Você precisa estar autenticado para importar SVGs.");
-
-      const formData = new FormData();
-      formData.append("sourceUrl", svgUrl.trim());
-      formData.append("fileType", "image/svg+xml");
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
-      });
-
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(result.error || result.details || "Falha ao salvar SVG da URL na biblioteca.");
-      }
-
-      await onSvgSaved?.();
-      toast.success("SVG importado e salvo na biblioteca!");
-      setSvgUrl("");
-      setShowSvgDialog(false);
-    } catch (err: any) {
-      toast.error(err?.message || "Falha ao carregar SVG da URL.");
-    } finally {
+  const handleOpenSvgDialogChange = (open: boolean) => {
+    setShowSvgDialog(open);
+    if (!open) {
+      setSelectedSvgFile(null);
       setSvgLoading(false);
     }
   };
