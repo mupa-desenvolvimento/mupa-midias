@@ -60,6 +60,7 @@ const menuItems = [
 { title: "Canais", url: "/admin/channels", icon: Tv },
 { title: "Playlists", url: "/admin/playlists", icon: ListVideo },
 { title: "Galeria", url: "/admin/media", icon: Image },
+{ title: "Creator Img", url: "/admin/graphic-editor", icon: Palette },
 { title: "Canva", url: "/admin/canva", icon: Brush },
 { title: "Câmera", url: "/admin/camera", icon: Camera },
 { title: "Monitoramento", url: "/admin/monitoring", icon: Eye },
