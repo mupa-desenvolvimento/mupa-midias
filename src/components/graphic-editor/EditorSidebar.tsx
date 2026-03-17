@@ -246,6 +246,10 @@ export function EditorSidebar({
     { icon: Hexagon, label: "Polígono", action: onAddPolygon, color: "text-purple-500" },
   ];
 
+  const importedSvgItems = galleryItems.filter(
+    (item) => isSvgLibraryItem(item) && item.file_url
+  );
+
   const filteredGallery = galleryItems.filter(
     (item) =>
       (item.type === "image" || item.type === "video") &&
