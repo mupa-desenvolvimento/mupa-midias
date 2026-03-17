@@ -511,6 +511,26 @@ export default function GraphicEditor() {
       type: m.type,
     }));
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen()
+        .then(() => setIsFullscreen(true))
+        .catch(console.error);
+    } else {
+      document.exitFullscreen()
+        .then(() => setIsFullscreen(false))
+        .catch(console.error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-card">
       {/* Topbar */}
@@ -518,7 +538,8 @@ export default function GraphicEditor() {
         <Button
           variant="ghost" size="icon"
           className="h-14 w-12 rounded-none border-r border-border shrink-0"
-          onClick={() => navigate("/admin/canva")}
+          onClick={() => window.close()}
+          title="Fechar"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>

@@ -91,6 +91,33 @@ const superAdminItems = [
 const SidebarNavItem = ({ item }: {item: typeof menuItems[number];}) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const location = useLocation();
+
+  // "Creator Img" opens in a new tab
+  if (item.url === "/admin/graphic-editor") {
+    const link =
+      <a
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground`}
+      >
+        <item.icon className="w-4 h-4 shrink-0" />
+        {!collapsed && <span className="truncate">{item.title}</span>}
+      </a>;
+
+    if (collapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {item.title}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    return link;
+  }
 
   const link =
   <NavLink
