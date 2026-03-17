@@ -174,22 +174,12 @@ export const useFaceDetection = (
       try {
         setIsLoading(true);
         
-        // Explicitly initialize TensorFlow.js backend before loading models
-        // face-api.js bundles its own tf.js which may not have tf.ready()
+        // Force CPU backend here: WebGL initializes but crashes during inference in production/PWA
         const tf = faceapi.tf as any;
-        if (tf && tf.setBackend) {
-          try {
-            await tf.setBackend('webgl');
-            if (typeof tf.ready === 'function') await tf.ready();
-            console.log('[FaceDetection] TF.js backend ready:', tf.getBackend?.() || 'webgl');
-          } catch (backendErr) {
-            console.warn('[FaceDetection] WebGL backend failed, falling back to cpu:', backendErr);
-            try {
-              await tf.setBackend('cpu');
-              if (typeof tf.ready === 'function') await tf.ready();
-            } catch {}
-            console.log('[FaceDetection] TF.js CPU backend ready');
-          }
+        if (tf?.setBackend) {
+          await tf.setBackend('cpu');
+          if (typeof tf.ready === 'function') await tf.ready();
+          console.log('[FaceDetection] TF.js backend ready:', tf.getBackend?.() || 'cpu');
         }
         
         // Use local models instead of fetching from GitHub
