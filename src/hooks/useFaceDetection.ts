@@ -304,7 +304,7 @@ export const useFaceDetection = (
   }, [addAttentionRecord, updateActiveFacesState]);
 
   const detectFaces = useCallback(async () => {
-    if (isDetectingRef.current) {
+    if (isDetectingRef.current || isSwitchingBackendRef.current) {
       return;
     }
 
