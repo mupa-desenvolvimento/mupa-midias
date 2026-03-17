@@ -308,12 +308,32 @@ export function EditorSidebar({
     (item) => isSvgLibraryItem(item) && item.file_url
   );
 
+  const filteredSvgItems = importedSvgItems.filter(
+    (item) => !svgSearchFilter || item.name.toLowerCase().includes(svgSearchFilter.toLowerCase())
+  );
+
   const filteredGallery = galleryItems.filter(
     (item) =>
       (item.type === "image" || item.type === "video") &&
+      !isSvgLibraryItem(item) &&
       item.file_url &&
       (!galleryFilter || item.name.toLowerCase().includes(galleryFilter.toLowerCase()))
   );
+
+  const handleRenameSvg = async (itemId: string, newName: string) => {
+    if (!newName.trim()) return;
+    const finalName = newName.trim().toLowerCase().endsWith(".svg") ? newName.trim() : `${newName.trim()}.svg`;
+    try {
+      const { error } = await supabase.from("media_items").update({ name: finalName }).eq("id", itemId);
+      if (error) throw error;
+      toast.success("Nome atualizado!");
+      await onSvgSaved?.();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao renomear SVG.");
+    } finally {
+      setEditingSvgId(null);
+    }
+  };
 
   return (
     <div className="w-[300px] border-r border-border bg-card flex flex-col shrink-0 h-full">
