@@ -288,6 +288,7 @@ export const useFaceDetection = (
 
   const detectFaces = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded || !isActive) {
+      console.log('[FaceDetection] Skip: ref=', !!videoRef.current, 'canvas=', !!canvasRef.current, 'models=', isModelsLoaded, 'active=', isActive);
       return;
     }
 
@@ -295,6 +296,7 @@ export const useFaceDetection = (
     const canvas = canvasRef.current;
     
     if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.log('[FaceDetection] Skip: video dimensions', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
       return;
     }
 
@@ -314,6 +316,10 @@ export const useFaceDetection = (
         .withFaceDescriptors()
         .withAgeAndGender()
         .withFaceExpressions();
+
+      if (detections.length > 0) {
+        console.log(`[FaceDetection] Detected ${detections.length} face(s)`);
+      }
 
       const now = new Date();
       const currentTrackIds = new Set<string>();
@@ -491,13 +497,14 @@ export const useFaceDetection = (
       updateActiveFacesState();
       
     } catch (error) {
-      console.error('Error during face detection:', error);
+      console.error('[FaceDetection] Error during face detection:', error);
     }
   }, [videoRef, canvasRef, isModelsLoaded, isActive, registeredPeople, logDetection, findMatchingTrackedFace, updateActiveFacesState]);
 
   // Start/stop detection based on isActive
   useEffect(() => {
     if (isActive && isModelsLoaded) {
+      console.log('[FaceDetection] Starting detection interval');
       detectionIntervalRef.current = setInterval(detectFaces, DETECTION_INTERVAL_MS);
     } else {
       if (detectionIntervalRef.current) {
