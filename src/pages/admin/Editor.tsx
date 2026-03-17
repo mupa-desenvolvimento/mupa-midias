@@ -731,6 +731,8 @@ export default function Editor() {
           onAddPolygon={addPolygon}
           onAddImage={addImage}
           onAddImageFromUrl={addImageFromUrl}
+          onAddSVGFromString={addSVGFromString}
+          onSvgSaved={() => undefined}
           onDelete={deleteSelected}
           onDuplicate={duplicateSelected}
           onBringToFront={bringToFront}
