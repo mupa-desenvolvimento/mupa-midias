@@ -103,6 +103,9 @@ export function EditorSidebar({
   const [svgLoading, setSvgLoading] = useState(false);
   const [selectedSvgFile, setSelectedSvgFile] = useState<File | null>(null);
   const [importingLibrarySvgId, setImportingLibrarySvgId] = useState<string | null>(null);
+  const [svgSearchFilter, setSvgSearchFilter] = useState("");
+  const [editingSvgId, setEditingSvgId] = useState<string | null>(null);
+  const [editingSvgName, setEditingSvgName] = useState("");
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
