@@ -390,6 +390,18 @@ export const usePlayerFaceDetection = (
       
     } catch (error) {
       console.error('[PlayerDetection] Detection error:', error);
+
+      if (isFaceApiBackendError(error) && !isSwitchingBackendRef.current) {
+        isSwitchingBackendRef.current = true;
+        try {
+          const backend = await switchFaceApiToCpu(faceapi);
+          console.warn('[PlayerDetection] Backend recovered with fallback:', backend);
+        } catch (fallbackError) {
+          console.error('[PlayerDetection] CPU fallback failed:', fallbackError);
+        } finally {
+          isSwitchingBackendRef.current = false;
+        }
+      }
     }
   }, [isModelsLoaded, isActive, findMatchingTrackedFace]);
 
