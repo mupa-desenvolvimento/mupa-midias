@@ -307,7 +307,18 @@ export function EditorSidebar({
 
               {/* Shapes */}
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Elementos</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Elementos</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                    onClick={() => setShowSvgDialog(true)}
+                  >
+                    <FileCode className="h-3.5 w-3.5" />
+                    Importar SVG
+                  </Button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   {tools.map((t) => (
                     <Button
@@ -321,15 +332,6 @@ export function EditorSidebar({
                       {t.label}
                     </Button>
                   ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-14 flex-col gap-1 text-xs hover:bg-accent"
-                    onClick={() => setShowSvgDialog(true)}
-                  >
-                    <FileCode className="h-5 w-5 text-cyan-500" />
-                    Importar SVG
-                  </Button>
                 </div>
               </div>
 
