@@ -468,7 +468,7 @@ export const useFaceDetection = (
         
         // Log registered person detection (only once per session)
         if (isRegistered && !lastDetectedPersonsRef.current.has(identifiedPerson!.id)) {
-          logDetection(
+          logDetectionRef.current(
             identifiedPerson!.id,
             identifiedPerson!.name,
             identifiedPerson!.cpf,
