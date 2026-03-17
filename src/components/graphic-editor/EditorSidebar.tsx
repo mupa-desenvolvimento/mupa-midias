@@ -3,7 +3,7 @@ import {
   Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
   Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
   Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
-  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode,
+  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode, Pencil, Check, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +103,9 @@ export function EditorSidebar({
   const [svgLoading, setSvgLoading] = useState(false);
   const [selectedSvgFile, setSelectedSvgFile] = useState<File | null>(null);
   const [importingLibrarySvgId, setImportingLibrarySvgId] = useState<string | null>(null);
+  const [svgSearchFilter, setSvgSearchFilter] = useState("");
+  const [editingSvgId, setEditingSvgId] = useState<string | null>(null);
+  const [editingSvgName, setEditingSvgName] = useState("");
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -305,12 +308,32 @@ export function EditorSidebar({
     (item) => isSvgLibraryItem(item) && item.file_url
   );
 
+  const filteredSvgItems = importedSvgItems.filter(
+    (item) => !svgSearchFilter || item.name.toLowerCase().includes(svgSearchFilter.toLowerCase())
+  );
+
   const filteredGallery = galleryItems.filter(
     (item) =>
       (item.type === "image" || item.type === "video") &&
+      !isSvgLibraryItem(item) &&
       item.file_url &&
       (!galleryFilter || item.name.toLowerCase().includes(galleryFilter.toLowerCase()))
   );
+
+  const handleRenameSvg = async (itemId: string, newName: string) => {
+    if (!newName.trim()) return;
+    const finalName = newName.trim().toLowerCase().endsWith(".svg") ? newName.trim() : `${newName.trim()}.svg`;
+    try {
+      const { error } = await supabase.from("media_items").update({ name: finalName }).eq("id", itemId);
+      if (error) throw error;
+      toast.success("Nome atualizado!");
+      await onSvgSaved?.();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao renomear SVG.");
+    } finally {
+      setEditingSvgId(null);
+    }
+  };
 
   return (
     <div className="w-[300px] border-r border-border bg-card flex flex-col shrink-0 h-full">
@@ -383,38 +406,99 @@ export function EditorSidebar({
                 {importedSvgItems.length > 0 && (
                   <div className="mt-3 space-y-2">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">SVGs importados</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {importedSvgItems.map((item) => {
-                        const isImporting = importingLibrarySvgId === item.id;
+                    {importedSvgItems.length > 4 && (
+                      <Input
+                        placeholder="Buscar SVG..."
+                        value={svgSearchFilter}
+                        onChange={(e) => setSvgSearchFilter(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                    )}
+                    <div className="max-h-[280px] overflow-y-auto rounded-md border border-border/50">
+                      <div className="grid grid-cols-2 gap-2 p-1.5">
+                        {filteredSvgItems.map((item) => {
+                          const isImporting = importingLibrarySvgId === item.id;
+                          const isEditing = editingSvgId === item.id;
 
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className="group relative overflow-hidden rounded-md border border-border bg-muted/30 transition-colors hover:border-primary hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
-                            onClick={() => handleAddLibrarySvg(item)}
-                            disabled={isImporting}
-                            title={item.name}
-                          >
-                            <div className="aspect-square flex items-center justify-center overflow-hidden bg-background">
-                              <img
-                                src={item.thumbnail_url || item.file_url || ""}
-                                alt={item.name}
-                                className="h-full w-full object-contain p-2"
-                                loading="lazy"
-                              />
-                            </div>
-                            <div className="border-t border-border px-2 py-1 text-left">
-                              <p className="truncate text-[10px] font-medium text-foreground">{item.name}</p>
-                            </div>
-                            {isImporting && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-background/70">
-                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          return (
+                            <div
+                              key={item.id}
+                              className="group relative overflow-hidden rounded-md border border-border bg-muted/30 transition-colors hover:border-primary hover:bg-accent"
+                            >
+                              <button
+                                type="button"
+                                className="w-full disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => handleAddLibrarySvg(item)}
+                                disabled={isImporting || isEditing}
+                                title={item.name}
+                              >
+                                <div className="aspect-square flex items-center justify-center overflow-hidden bg-background">
+                                  <img
+                                    src={item.thumbnail_url || item.file_url || ""}
+                                    alt={item.name}
+                                    className="h-full w-full object-contain p-2"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              </button>
+                              <div className="border-t border-border px-1.5 py-1 flex items-center gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <Input
+                                      value={editingSvgName}
+                                      autoFocus
+                                      className="h-5 text-[10px] px-1 flex-1 min-w-0"
+                                      onChange={(e) => setEditingSvgName(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleRenameSvg(item.id, editingSvgName);
+                                        if (e.key === "Escape") setEditingSvgId(null);
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      className="shrink-0 p-0.5 rounded hover:bg-accent"
+                                      onClick={() => handleRenameSvg(item.id, editingSvgName)}
+                                    >
+                                      <Check className="h-3 w-3 text-green-500" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="shrink-0 p-0.5 rounded hover:bg-accent"
+                                      onClick={() => setEditingSvgId(null)}
+                                    >
+                                      <X className="h-3 w-3 text-muted-foreground" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="truncate text-[10px] font-medium text-foreground flex-1 min-w-0">{item.name.replace(/\.svg$/i, "")}</p>
+                                    <button
+                                      type="button"
+                                      className="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent transition-opacity"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingSvgId(item.id);
+                                        setEditingSvgName(item.name.replace(/\.svg$/i, ""));
+                                      }}
+                                      title="Renomear"
+                                    >
+                                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
-                            )}
-                          </button>
-                        );
-                      })}
+                              {isImporting && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {filteredSvgItems.length === 0 && svgSearchFilter && (
+                          <p className="col-span-2 text-center text-[10px] text-muted-foreground py-3">Nenhum SVG encontrado</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
