@@ -125,7 +125,6 @@ function AppContent() {
   return (
     <>
       <PWAUpdatePrompt />
-      <InstallPrompt />
       <OfflineIndicator />
       <Toaster />
       <Sonner />

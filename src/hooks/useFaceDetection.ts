@@ -549,6 +549,18 @@ export const useFaceDetection = (
       
     } catch (error) {
       console.error('[FaceDetection] Error during face detection:', error);
+
+      if (isFaceApiBackendError(error) && !isSwitchingBackendRef.current) {
+        isSwitchingBackendRef.current = true;
+        try {
+          const backend = await switchFaceApiToCpu(faceapi);
+          console.warn('[FaceDetection] Backend recovered with fallback:', backend);
+        } catch (fallbackError) {
+          console.error('[FaceDetection] CPU fallback failed:', fallbackError);
+        } finally {
+          isSwitchingBackendRef.current = false;
+        }
+      }
     } finally {
       isDetectingRef.current = false;
     }

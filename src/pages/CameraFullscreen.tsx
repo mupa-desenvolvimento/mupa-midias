@@ -110,13 +110,7 @@ const CameraFullscreen = () => {
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
     
-    // Tentar entrar em fullscreen após um pequeno delay
-    const timer = setTimeout(() => {
-      enterFullscreen();
-    }, 100);
-
     return () => {
-      clearTimeout(timer);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
