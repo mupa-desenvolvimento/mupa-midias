@@ -156,6 +156,8 @@ export const useFaceDetection = (
   const { registeredPeople } = usePeopleRegistry();
   const { logDetection } = useDetectionLog();
   const { addAttentionRecord } = useAttentionHistory();
+  const registeredPeopleRef = useRef(registeredPeople);
+  const logDetectionRef = useRef(logDetection);
 
   // Load face-api.js models - use SSD MobileNet for better accuracy
   useEffect(() => {
