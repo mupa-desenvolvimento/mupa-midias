@@ -3,7 +3,7 @@ import {
   Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
   Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
   Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
-  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode, Link,
+  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,7 +37,6 @@ interface Props {
   onAddImage: (f: File) => void;
   onAddImageFromUrl: (url: string) => void;
   onAddSVGFromString?: (svg: string, name?: string) => Promise<any>;
-  onAddSVGFromURL?: (url: string) => Promise<any>;
   onSvgSaved?: () => Promise<void> | void;
   onDelete: () => void;
   onDuplicate: () => void;
@@ -74,7 +73,7 @@ export function EditorSidebar({
   onAddText, onAddRect, onAddCircle, onAddLine, onAddTriangle,
   onAddStar, onAddPolygon,
   onAddImage, onAddImageFromUrl,
-  onAddSVGFromString, onAddSVGFromURL, onSvgSaved,
+  onAddSVGFromString, onSvgSaved,
   onDelete, onDuplicate, onBringToFront, onSendToBack,
   onToggleGrid,
   hasSelection, showGrid,
@@ -88,7 +87,6 @@ export function EditorSidebar({
   galleryItems, galleryLoading,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const svgFileRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -101,13 +99,23 @@ export function EditorSidebar({
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
   const [showSvgDialog, setShowSvgDialog] = useState(false);
-  const [svgUrl, setSvgUrl] = useState("");
   const [svgLoading, setSvgLoading] = useState(false);
+  const [selectedSvgFile, setSelectedSvgFile] = useState<File | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) onAddImage(file);
     e.target.value = "";
+  };
+
+  const validateSvgFile = (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".svg") && !file.type.includes("svg")) {
+      throw new Error("Arquivo inválido. Selecione um arquivo .svg");
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
+    }
   };
 
   const uploadSvgToGlobal = async (file: File): Promise<string | null> => {
@@ -124,44 +132,49 @@ export function EditorSidebar({
     formData.append("fileName", normalizedFile.name);
     formData.append("fileType", "image/svg+xml");
 
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
-      }
-    );
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: formData,
+    });
 
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(result.error || result.details || "Erro ao salvar SVG no servidor.");
     }
+
     return result.fileUrl || result.file_url || result.url || result.proxyUrl || null;
   };
 
-  const handleSvgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onAddSVGFromString) return;
+  const handleSelectSvgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
     e.target.value = "";
 
-    if (!file.name.toLowerCase().endsWith('.svg') && !file.type.includes('svg')) {
-      toast.error("Arquivo inválido. Selecione um arquivo .svg");
-      return;
-    }
+    if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
+    try {
+      validateSvgFile(file);
+      setSelectedSvgFile(file);
+    } catch (err: any) {
+      setSelectedSvgFile(null);
+      toast.error(err?.message || "Erro ao selecionar SVG.");
+    }
+  };
+
+  const handleSaveSvgImport = async () => {
+    if (!selectedSvgFile || !onAddSVGFromString) {
+      toast.error("Selecione um arquivo SVG para importar.");
       return;
     }
 
     setSvgLoading(true);
     try {
-      const text = await file.text();
-      await onAddSVGFromString(text, file.name.replace(/\.svg$/i, ""));
-      await uploadSvgToGlobal(file);
+      const text = await selectedSvgFile.text();
+      await onAddSVGFromString(text, selectedSvgFile.name.replace(/\.svg$/i, ""));
+      await uploadSvgToGlobal(selectedSvgFile);
       await onSvgSaved?.();
       toast.success("SVG importado e salvo na biblioteca!");
+      setSelectedSvgFile(null);
       setShowSvgDialog(false);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao importar SVG.");
@@ -170,45 +183,10 @@ export function EditorSidebar({
     }
   };
 
-  const handleSvgFromUrl = async () => {
-    if (!svgUrl.trim() || !onAddSVGFromURL) return;
-
-    try {
-      new URL(svgUrl.trim());
-    } catch {
-      toast.error("URL inválida. Informe uma URL completa (ex: https://...)");
-      return;
-    }
-
-    setSvgLoading(true);
-    try {
-      await onAddSVGFromURL(svgUrl.trim());
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Você precisa estar autenticado para importar SVGs.");
-
-      const formData = new FormData();
-      formData.append("sourceUrl", svgUrl.trim());
-      formData.append("fileType", "image/svg+xml");
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
-      });
-
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(result.error || result.details || "Falha ao salvar SVG da URL na biblioteca.");
-      }
-
-      await onSvgSaved?.();
-      toast.success("SVG importado e salvo na biblioteca!");
-      setSvgUrl("");
-      setShowSvgDialog(false);
-    } catch (err: any) {
-      toast.error(err?.message || "Falha ao carregar SVG da URL.");
-    } finally {
+  const handleOpenSvgDialogChange = (open: boolean) => {
+    setShowSvgDialog(open);
+    if (!open) {
+      setSelectedSvgFile(null);
       setSvgLoading(false);
     }
   };
@@ -309,10 +287,6 @@ export function EditorSidebar({
                 <input
                   ref={fileRef} type="file" accept="image/*"
                   onChange={handleFileUpload} className="hidden"
-                />
-                <input
-                  ref={svgFileRef} type="file" accept=".svg"
-                  onChange={handleSvgFileUpload} className="hidden"
                 />
               </div>
 
@@ -654,57 +628,60 @@ export function EditorSidebar({
       </Tabs>
 
       {/* SVG Import Dialog */}
-      <Dialog open={showSvgDialog} onOpenChange={setShowSvgDialog}>
+      <Dialog open={showSvgDialog} onOpenChange={handleOpenSvgDialogChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileCode className="h-5 w-5" /> Importar SVG
             </DialogTitle>
+            <DialogDescription>
+              Selecione um arquivo SVG e confirme a importação para adicionar ao canvas e salvar na biblioteca global.
+            </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4">
-            <div>
-              <Label className="text-xs mb-2 block">Upload de arquivo .svg</Label>
-              <Button
-                variant="outline"
-                className="w-full h-12 gap-2"
-                onClick={() => svgFileRef.current?.click()}
+            <div className="space-y-2">
+              <Label htmlFor="svg-upload" className="text-xs">Arquivo SVG</Label>
+              <Input
+                id="svg-upload"
+                type="file"
+                accept=".svg,image/svg+xml"
+                onChange={handleSelectSvgFile}
                 disabled={svgLoading}
-              >
-                {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Selecionar arquivo SVG
-              </Button>
+                className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+              />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">ou</span>
-              <Separator className="flex-1" />
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
+              {selectedSvgFile ? (
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground truncate">{selectedSvgFile.name}</p>
+                  <p className="text-muted-foreground">
+                    {(selectedSvgFile.size / 1024).toFixed(1)} KB selecionado para importação.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Nenhum arquivo SVG selecionado.</p>
+              )}
             </div>
-
-            <div>
-              <Label className="text-xs mb-2 block">Carregar de URL</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="https://example.com/icon.svg"
-                  value={svgUrl}
-                  onChange={(e) => setSvgUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSvgFromUrl()}
-                  className="h-10 text-sm"
-                />
-                <Button
-                  onClick={handleSvgFromUrl}
-                  disabled={!svgUrl.trim() || svgLoading}
-                  className="h-10 shrink-0"
-                >
-                  {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-muted-foreground">
-              O SVG será salvo na biblioteca global (acessível para todos os usuários) e adicionado ao canvas atual.
-            </p>
           </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleOpenSvgDialogChange(false)}
+              disabled={svgLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveSvgImport}
+              disabled={!selectedSvgFile || svgLoading}
+            >
+              {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Salvar importação
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
