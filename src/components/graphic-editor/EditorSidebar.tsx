@@ -633,57 +633,60 @@ export function EditorSidebar({
       </Tabs>
 
       {/* SVG Import Dialog */}
-      <Dialog open={showSvgDialog} onOpenChange={setShowSvgDialog}>
+      <Dialog open={showSvgDialog} onOpenChange={handleOpenSvgDialogChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileCode className="h-5 w-5" /> Importar SVG
             </DialogTitle>
+            <DialogDescription>
+              Selecione um arquivo SVG e confirme a importação para adicionar ao canvas e salvar na biblioteca global.
+            </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4">
-            <div>
-              <Label className="text-xs mb-2 block">Upload de arquivo .svg</Label>
-              <Button
-                variant="outline"
-                className="w-full h-12 gap-2"
-                onClick={() => svgFileRef.current?.click()}
+            <div className="space-y-2">
+              <Label htmlFor="svg-upload" className="text-xs">Arquivo SVG</Label>
+              <Input
+                id="svg-upload"
+                type="file"
+                accept=".svg,image/svg+xml"
+                onChange={handleSelectSvgFile}
                 disabled={svgLoading}
-              >
-                {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Selecionar arquivo SVG
-              </Button>
+                className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+              />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">ou</span>
-              <Separator className="flex-1" />
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
+              {selectedSvgFile ? (
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground truncate">{selectedSvgFile.name}</p>
+                  <p className="text-muted-foreground">
+                    {(selectedSvgFile.size / 1024).toFixed(1)} KB selecionado para importação.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Nenhum arquivo SVG selecionado.</p>
+              )}
             </div>
-
-            <div>
-              <Label className="text-xs mb-2 block">Carregar de URL</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="https://example.com/icon.svg"
-                  value={svgUrl}
-                  onChange={(e) => setSvgUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSvgFromUrl()}
-                  className="h-10 text-sm"
-                />
-                <Button
-                  onClick={handleSvgFromUrl}
-                  disabled={!svgUrl.trim() || svgLoading}
-                  className="h-10 shrink-0"
-                >
-                  {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-muted-foreground">
-              O SVG será salvo na biblioteca global (acessível para todos os usuários) e adicionado ao canvas atual.
-            </p>
           </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleOpenSvgDialogChange(false)}
+              disabled={svgLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveSvgImport}
+              disabled={!selectedSvgFile || svgLoading}
+            >
+              {svgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Salvar importação
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
