@@ -240,6 +240,7 @@ export function EditorSidebar({
   const handleOpenSvgDialogChange = (open: boolean) => {
     setShowSvgDialog(open);
     if (!open) {
+      selectedSvgFileRef.current = null;
       setSelectedSvgFile(null);
       setSvgLoading(false);
     }
