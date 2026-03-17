@@ -122,13 +122,6 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      if (mediaItem.type !== 'font') {
-        return new Response(
-          JSON.stringify({ error: 'Unsupported media type' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
       const range = req.headers.get('Range')
       const upstream = await fetch(mediaItem.file_url, {
         method: req.method,
