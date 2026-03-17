@@ -321,6 +321,15 @@ export function EditorSidebar({
                       {t.label}
                     </Button>
                   ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-14 flex-col gap-1 text-xs hover:bg-accent"
+                    onClick={() => setShowSvgDialog(true)}
+                  >
+                    <FileCode className="h-5 w-5 text-cyan-500" />
+                    Importar SVG
+                  </Button>
                 </div>
               </div>
 
