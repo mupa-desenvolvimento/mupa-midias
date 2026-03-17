@@ -34,16 +34,18 @@ const DeviceDetector = () => {
   useEffect(() => {
     const loadModels = async () => {
       try {
-        const tf = faceapi.tf as any;
-        if (tf && tf.setBackend) {
-          try { await tf.setBackend('webgl'); if (typeof tf.ready === 'function') await tf.ready(); } catch { try { await tf.setBackend('cpu'); if (typeof tf.ready === 'function') await tf.ready(); } catch {} }
-        }
         const MODEL_URL = "/models";
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
+        // Warm-up
+        try {
+          const dc = document.createElement('canvas'); dc.width = 20; dc.height = 20;
+          await faceapi.detectAllFaces(dc, new faceapi.TinyFaceDetectorOptions());
+        } catch {}
+
         setIsModelsLoaded(true);
         console.log("Modelos carregados com sucesso");
       } catch (error) {

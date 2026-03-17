@@ -168,24 +168,17 @@ export const useFaceDetection = (
     logDetectionRef.current = logDetection;
   }, [logDetection]);
 
-  // Load face-api.js models - use SSD MobileNet for better accuracy
+  // Load face-api.js models
   useEffect(() => {
     const loadModels = async () => {
       try {
         setIsLoading(true);
         
-        // Force CPU backend here: WebGL initializes but crashes during inference in production/PWA
-        const tf = faceapi.tf as any;
-        if (tf?.setBackend) {
-          await tf.setBackend('cpu');
-          if (typeof tf.ready === 'function') await tf.ready();
-          console.log('[FaceDetection] TF.js backend ready:', tf.getBackend?.() || 'cpu');
-        }
-        
-        // Use local models instead of fetching from GitHub
         const MODEL_URL = '/models';
         
+        // Load TinyFaceDetector (lighter) + SSD as fallback
         await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -193,8 +186,19 @@ export const useFaceDetection = (
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
         ]);
         
+        // Warm-up: run a dummy detection on a tiny canvas to force backend initialization
+        try {
+          const dummyCanvas = document.createElement('canvas');
+          dummyCanvas.width = 20;
+          dummyCanvas.height = 20;
+          await faceapi.detectAllFaces(dummyCanvas, new faceapi.TinyFaceDetectorOptions());
+          console.log('[FaceDetection] Warm-up successful, backend:', (faceapi.tf as any)?.getBackend?.());
+        } catch (warmupErr) {
+          console.warn('[FaceDetection] Warm-up failed, will retry on first frame:', warmupErr);
+        }
+        
         setIsModelsLoaded(true);
-        console.log('[FaceDetection] Models loaded successfully (SSD MobileNet + Expressions)');
+        console.log('[FaceDetection] Models loaded successfully');
       } catch (error) {
         console.error('[FaceDetection] Error loading models:', error);
       } finally {
@@ -327,17 +331,37 @@ export const useFaceDetection = (
     isDetectingRef.current = true;
 
     try {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Match canvas internal dimensions to CSS display size for proper overlay alignment
+      const displayWidth = canvas.clientWidth;
+      const displayHeight = canvas.clientHeight;
+      canvas.width = displayWidth;
+      canvas.height = displayHeight;
       
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Use SSD MobileNet with higher confidence threshold + expressions
+      // Calculate scale factors for object-cover video
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const canvasAspect = displayWidth / displayHeight;
+      let scaleX: number, scaleY: number, offsetX = 0, offsetY = 0;
+      
+      if (videoAspect > canvasAspect) {
+        // Video is wider - cropped horizontally
+        scaleY = displayHeight / video.videoHeight;
+        scaleX = scaleY;
+        offsetX = (displayWidth - video.videoWidth * scaleX) / 2;
+      } else {
+        // Video is taller - cropped vertically
+        scaleX = displayWidth / video.videoWidth;
+        scaleY = scaleX;
+        offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
+      }
+
+      // Use TinyFaceDetector for speed, with full pipeline
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
         .withFaceLandmarks()
         .withFaceDescriptors()
         .withAgeAndGender()
@@ -488,36 +512,42 @@ export const useFaceDetection = (
         const avgAge = calculateAverageAge(tracked.ageEstimates);
         const duration = (tracked.lastSeenAt.getTime() - tracked.firstSeenAt.getTime()) / 1000;
 
-        // Draw on canvas
+        // Draw on canvas with object-cover alignment
         const color = tracked.isRegistered ? '#00ff00' : '#ff6600';
+        
+        // Transform box coordinates to canvas space
+        const drawX = box.x * scaleX + offsetX;
+        const drawY = box.y * scaleY + offsetY;
+        const drawW = box.width * scaleX;
+        const drawH = box.height * scaleY;
         
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
         
         // Main label
         ctx.font = 'bold 14px Arial';
         const label = tracked.isRegistered ? tracked.personName! : `${gender} | ${avgAge} anos`;
-        const labelY = box.y > 50 ? box.y - 30 : box.y + box.height + 20;
+        const labelY = drawY > 50 ? drawY - 30 : drawY + drawH + 20;
         
         const textWidth = ctx.measureText(label).width;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(box.x - 2, labelY - 14, textWidth + 8, 20);
+        ctx.fillRect(drawX - 2, labelY - 14, textWidth + 8, 20);
         
         ctx.fillStyle = color;
-        ctx.fillText(label, box.x + 2, labelY);
+        ctx.fillText(label, drawX + 2, labelY);
         
         // Duration label
         ctx.font = '12px Arial';
         const durationLabel = `⏱ ${duration.toFixed(1)}s`;
-        const durationY = box.y > 50 ? box.y - 10 : box.y + box.height + 38;
+        const durationY = drawY > 50 ? drawY - 10 : drawY + drawH + 38;
         const durationWidth = ctx.measureText(durationLabel).width;
         
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(box.x - 2, durationY - 12, durationWidth + 8, 16);
+        ctx.fillRect(drawX - 2, durationY - 12, durationWidth + 8, 16);
         
         ctx.fillStyle = '#ffcc00';
-        ctx.fillText(durationLabel, box.x + 2, durationY);
+        ctx.fillText(durationLabel, drawX + 2, durationY);
       }
 
       updateActiveFacesState();

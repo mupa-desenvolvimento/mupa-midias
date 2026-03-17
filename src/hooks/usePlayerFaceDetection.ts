@@ -140,29 +140,27 @@ export const usePlayerFaceDetection = (
       try {
         setIsLoading(true);
 
-        // Explicitly initialize TF.js backend (face-api.js bundled tf may lack tf.ready())
-        const tf = faceapi.tf as any;
-        if (tf && tf.setBackend) {
-          try {
-            await tf.setBackend('webgl');
-            if (typeof tf.ready === 'function') await tf.ready();
-          } catch {
-            try {
-              await tf.setBackend('cpu');
-              if (typeof tf.ready === 'function') await tf.ready();
-            } catch {}
-          }
-        }
-
         const MODEL_URL = '/models';
         
         await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
+
+        // Warm-up detection to initialize backend
+        try {
+          const dummyCanvas = document.createElement('canvas');
+          dummyCanvas.width = 20;
+          dummyCanvas.height = 20;
+          await faceapi.detectAllFaces(dummyCanvas, new faceapi.TinyFaceDetectorOptions());
+          console.log('[PlayerDetection] Warm-up OK, backend:', (faceapi.tf as any)?.getBackend?.());
+        } catch (e) {
+          console.warn('[PlayerDetection] Warm-up failed:', e);
+        }
         
         setIsModelsLoaded(true);
         console.log('[PlayerDetection] Models loaded (including expressions)');

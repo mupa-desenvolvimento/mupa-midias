@@ -163,16 +163,17 @@ const MobileDemo = () => {
   useEffect(() => {
     const loadModels = async () => {
       try {
-        const tf = faceapi.tf as any;
-        if (tf && tf.setBackend) {
-          try { await tf.setBackend('webgl'); if (typeof tf.ready === 'function') await tf.ready(); } catch { try { await tf.setBackend('cpu'); if (typeof tf.ready === 'function') await tf.ready(); } catch {} }
-        }
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
           faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
         ]);
+        // Warm-up
+        try {
+          const dc = document.createElement('canvas'); dc.width = 20; dc.height = 20;
+          await faceapi.detectAllFaces(dc, new faceapi.SsdMobilenetv1Options());
+        } catch {}
         console.log("[MobileDemo] Models loaded successfully (SSD MobileNet)");
       } catch (e) {
         console.error("[MobileDemo] Error loading models:", e);
