@@ -512,36 +512,42 @@ export const useFaceDetection = (
         const avgAge = calculateAverageAge(tracked.ageEstimates);
         const duration = (tracked.lastSeenAt.getTime() - tracked.firstSeenAt.getTime()) / 1000;
 
-        // Draw on canvas
+        // Draw on canvas with object-cover alignment
         const color = tracked.isRegistered ? '#00ff00' : '#ff6600';
+        
+        // Transform box coordinates to canvas space
+        const drawX = box.x * scaleX + offsetX;
+        const drawY = box.y * scaleY + offsetY;
+        const drawW = box.width * scaleX;
+        const drawH = box.height * scaleY;
         
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
         
         // Main label
         ctx.font = 'bold 14px Arial';
         const label = tracked.isRegistered ? tracked.personName! : `${gender} | ${avgAge} anos`;
-        const labelY = box.y > 50 ? box.y - 30 : box.y + box.height + 20;
+        const labelY = drawY > 50 ? drawY - 30 : drawY + drawH + 20;
         
         const textWidth = ctx.measureText(label).width;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(box.x - 2, labelY - 14, textWidth + 8, 20);
+        ctx.fillRect(drawX - 2, labelY - 14, textWidth + 8, 20);
         
         ctx.fillStyle = color;
-        ctx.fillText(label, box.x + 2, labelY);
+        ctx.fillText(label, drawX + 2, labelY);
         
         // Duration label
         ctx.font = '12px Arial';
         const durationLabel = `⏱ ${duration.toFixed(1)}s`;
-        const durationY = box.y > 50 ? box.y - 10 : box.y + box.height + 38;
+        const durationY = drawY > 50 ? drawY - 10 : drawY + drawH + 38;
         const durationWidth = ctx.measureText(durationLabel).width;
         
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(box.x - 2, durationY - 12, durationWidth + 8, 16);
+        ctx.fillRect(drawX - 2, durationY - 12, durationWidth + 8, 16);
         
         ctx.fillStyle = '#ffcc00';
-        ctx.fillText(durationLabel, box.x + 2, durationY);
+        ctx.fillText(durationLabel, drawX + 2, durationY);
       }
 
       updateActiveFacesState();
