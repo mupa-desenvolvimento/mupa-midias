@@ -38,6 +38,7 @@ interface Props {
   onAddImageFromUrl: (url: string) => void;
   onAddSVGFromString?: (svg: string, name?: string) => Promise<any>;
   onAddSVGFromURL?: (url: string) => Promise<any>;
+  onSvgSaved?: () => Promise<void> | void;
   onDelete: () => void;
   onDuplicate: () => void;
   onBringToFront: () => void;
@@ -73,7 +74,7 @@ export function EditorSidebar({
   onAddText, onAddRect, onAddCircle, onAddLine, onAddTriangle,
   onAddStar, onAddPolygon,
   onAddImage, onAddImageFromUrl,
-  onAddSVGFromString, onAddSVGFromURL,
+  onAddSVGFromString, onAddSVGFromURL, onSvgSaved,
   onDelete, onDuplicate, onBringToFront, onSendToBack,
   onToggleGrid,
   hasSelection, showGrid,
@@ -112,12 +113,16 @@ export function EditorSidebar({
   const uploadSvgToGlobal = async (file: File): Promise<string | null> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      toast.error("Você precisa estar autenticado para importar SVGs.");
-      return null;
+      throw new Error("Você precisa estar autenticado para importar SVGs.");
     }
 
+    const normalizedName = file.name.toLowerCase().endsWith(".svg") ? file.name : `${file.name}.svg`;
+    const normalizedFile = new File([file], normalizedName, { type: "image/svg+xml" });
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", normalizedFile);
+    formData.append("fileName", normalizedFile.name);
+    formData.append("fileType", "image/svg+xml");
 
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`,
@@ -128,9 +133,11 @@ export function EditorSidebar({
       }
     );
 
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Erro ao salvar SVG no servidor.");
-    return result.file_url || result.url || null;
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || result.details || "Erro ao salvar SVG no servidor.");
+    }
+    return result.fileUrl || result.file_url || result.url || result.proxyUrl || null;
   };
 
   const handleSvgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,12 +157,10 @@ export function EditorSidebar({
 
     setSvgLoading(true);
     try {
-      // 1. Upload to R2/database globally
-      await uploadSvgToGlobal(file);
-
-      // 2. Add to canvas
       const text = await file.text();
       await onAddSVGFromString(text, file.name.replace(/\.svg$/i, ""));
+      await uploadSvgToGlobal(file);
+      await onSvgSaved?.();
       toast.success("SVG importado e salvo na biblioteca!");
       setShowSvgDialog(false);
     } catch (err: any) {
@@ -177,19 +182,27 @@ export function EditorSidebar({
 
     setSvgLoading(true);
     try {
-      // 1. Fetch SVG content
-      const response = await fetch(svgUrl.trim());
-      if (!response.ok) throw new Error(`Erro ao baixar SVG: HTTP ${response.status}`);
-      const blob = await response.blob();
-      const fileName = svgUrl.trim().split("/").pop()?.replace(/\.svg.*$/i, "") || "imported-svg";
-      const file = new File([blob], `${fileName}.svg`, { type: "image/svg+xml" });
+      await onAddSVGFromURL(svgUrl.trim());
 
-      // 2. Upload to R2/database globally
-      await uploadSvgToGlobal(file);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Você precisa estar autenticado para importar SVGs.");
 
-      // 3. Add to canvas
-      const text = await blob.text();
-      await onAddSVGFromString(text, fileName);
+      const formData = new FormData();
+      formData.append("sourceUrl", svgUrl.trim());
+      formData.append("fileType", "image/svg+xml");
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || result.details || "Falha ao salvar SVG da URL na biblioteca.");
+      }
+
+      await onSvgSaved?.();
       toast.success("SVG importado e salvo na biblioteca!");
       setSvgUrl("");
       setShowSvgDialog(false);
@@ -312,7 +325,7 @@ export function EditorSidebar({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                    className="h-6 px-2 gap-1 text-[10px] text-primary hover:text-primary hover:bg-accent"
                     onClick={() => setShowSvgDialog(true)}
                   >
                     <FileCode className="h-3.5 w-3.5" />
