@@ -131,6 +131,7 @@ export const usePlayerFaceDetection = (
   
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isSwitchingBackendRef = useRef(false);
   const trackedFacesRef = useRef<Map<string, TrackedFace>>(new Map());
   const pendingLogsRef = useRef<any[]>([]);
 
