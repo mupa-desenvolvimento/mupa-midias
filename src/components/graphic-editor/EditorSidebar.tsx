@@ -766,6 +766,7 @@ export function EditorSidebar({
 
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={() => handleOpenSvgDialogChange(false)}
               disabled={svgLoading}
@@ -773,6 +774,7 @@ export function EditorSidebar({
               Cancelar
             </Button>
             <Button
+              type="button"
               onClick={handleSaveSvgImport}
               disabled={!selectedSvgFile || svgLoading}
             >
