@@ -288,10 +288,6 @@ export function EditorSidebar({
                   ref={fileRef} type="file" accept="image/*"
                   onChange={handleFileUpload} className="hidden"
                 />
-                <input
-                  ref={svgFileRef} type="file" accept=".svg"
-                  onChange={handleSvgFileUpload} className="hidden"
-                />
               </div>
 
               <Separator />
