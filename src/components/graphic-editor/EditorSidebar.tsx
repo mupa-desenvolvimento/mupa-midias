@@ -297,12 +297,6 @@ export function EditorSidebar({
                   ref={fileRef} type="file" accept="image/*"
                   onChange={handleFileUpload} className="hidden"
                 />
-                <Button
-                  variant="outline" size="sm" className="w-full h-9 gap-1.5 text-xs mt-2"
-                  onClick={() => setShowSvgDialog(true)}
-                >
-                  <FileCode className="h-3.5 w-3.5" /> Importar SVG
-                </Button>
                 <input
                   ref={svgFileRef} type="file" accept=".svg"
                   onChange={handleSvgFileUpload} className="hidden"
