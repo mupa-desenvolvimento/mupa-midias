@@ -325,7 +325,7 @@ export function EditorSidebar({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                    className="h-6 px-2 gap-1 text-[10px] text-primary hover:text-primary hover:bg-accent"
                     onClick={() => setShowSvgDialog(true)}
                   >
                     <FileCode className="h-3.5 w-3.5" />
