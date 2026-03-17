@@ -87,6 +87,7 @@ export function EditorSidebar({
   galleryItems, galleryLoading,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const selectedSvgFileRef = useRef<File | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -165,29 +166,39 @@ export function EditorSidebar({
 
     try {
       validateSvgFile(file);
+      selectedSvgFileRef.current = file;
       setSelectedSvgFile(file);
     } catch (err: any) {
+      selectedSvgFileRef.current = null;
       setSelectedSvgFile(null);
       toast.error(err?.message || "Erro ao selecionar SVG.");
     }
   };
 
   const handleSaveSvgImport = async () => {
-    if (!selectedSvgFile || !onAddSVGFromString) {
-      toast.error("Selecione um arquivo SVG para importar.");
+    const file = selectedSvgFileRef.current ?? selectedSvgFile;
+
+    if (!file) {
+      toast.error("Selecione um arquivo SVG antes de salvar.");
+      return;
+    }
+
+    if (!onAddSVGFromString) {
+      toast.error("A importação de SVG não está disponível neste editor.");
       return;
     }
 
     setSvgLoading(true);
     try {
-      const svgName = selectedSvgFile.name.replace(/\.svg$/i, "");
-      const text = await selectedSvgFile.text();
+      const svgName = file.name.replace(/\.svg$/i, "");
+      const text = await file.text();
 
-      await uploadSvgToGlobal(selectedSvgFile);
+      await uploadSvgToGlobal(file);
       await onSvgSaved?.();
       await onAddSVGFromString(text, svgName);
 
       toast.success("SVG importado com sucesso!");
+      selectedSvgFileRef.current = null;
       setSelectedSvgFile(null);
       setShowSvgDialog(false);
     } catch (err: any) {
@@ -229,6 +240,7 @@ export function EditorSidebar({
   const handleOpenSvgDialogChange = (open: boolean) => {
     setShowSvgDialog(open);
     if (!open) {
+      selectedSvgFileRef.current = null;
       setSelectedSvgFile(null);
       setSvgLoading(false);
     }
@@ -754,6 +766,7 @@ export function EditorSidebar({
 
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={() => handleOpenSvgDialogChange(false)}
               disabled={svgLoading}
@@ -761,6 +774,7 @@ export function EditorSidebar({
               Cancelar
             </Button>
             <Button
+              type="button"
               onClick={handleSaveSvgImport}
               disabled={!selectedSvgFile || svgLoading}
             >
