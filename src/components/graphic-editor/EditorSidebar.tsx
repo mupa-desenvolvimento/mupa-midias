@@ -37,7 +37,6 @@ interface Props {
   onAddImage: (f: File) => void;
   onAddImageFromUrl: (url: string) => void;
   onAddSVGFromString?: (svg: string, name?: string) => Promise<any>;
-  onAddSVGFromURL?: (url: string) => Promise<any>;
   onSvgSaved?: () => Promise<void> | void;
   onDelete: () => void;
   onDuplicate: () => void;
