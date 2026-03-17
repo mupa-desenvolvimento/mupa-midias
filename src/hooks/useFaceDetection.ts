@@ -148,6 +148,7 @@ export const useFaceDetection = (
   const [isLoading, setIsLoading] = useState(false);
   const [totalSessionsToday, setTotalSessionsToday] = useState(0);
   
+  const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
   const lastDetectedPersonsRef = useRef<Set<string>>(new Set());
   const trackedFacesRef = useRef<Map<string, TrackedFaceData>>(new Map());
