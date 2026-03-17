@@ -527,7 +527,7 @@ export const useFaceDetection = (
     } finally {
       isDetectingRef.current = false;
     }
-  }, [videoRef, canvasRef, isModelsLoaded, isActive, registeredPeople, logDetection, findMatchingTrackedFace, updateActiveFacesState]);
+  }, [videoRef, canvasRef, isModelsLoaded, isActive, findMatchingTrackedFace, updateActiveFacesState]);
 
   // Start/stop detection based on isActive
   useEffect(() => {
