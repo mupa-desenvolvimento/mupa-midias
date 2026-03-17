@@ -331,17 +331,37 @@ export const useFaceDetection = (
     isDetectingRef.current = true;
 
     try {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Match canvas internal dimensions to CSS display size for proper overlay alignment
+      const displayWidth = canvas.clientWidth;
+      const displayHeight = canvas.clientHeight;
+      canvas.width = displayWidth;
+      canvas.height = displayHeight;
       
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Use SSD MobileNet with higher confidence threshold + expressions
+      // Calculate scale factors for object-cover video
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const canvasAspect = displayWidth / displayHeight;
+      let scaleX: number, scaleY: number, offsetX = 0, offsetY = 0;
+      
+      if (videoAspect > canvasAspect) {
+        // Video is wider - cropped horizontally
+        scaleY = displayHeight / video.videoHeight;
+        scaleX = scaleY;
+        offsetX = (displayWidth - video.videoWidth * scaleX) / 2;
+      } else {
+        // Video is taller - cropped vertically
+        scaleX = displayWidth / video.videoWidth;
+        scaleY = scaleX;
+        offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
+      }
+
+      // Use TinyFaceDetector for speed, with full pipeline
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
         .withFaceLandmarks()
         .withFaceDescriptors()
         .withAgeAndGender()
