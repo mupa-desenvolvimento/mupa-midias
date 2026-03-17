@@ -519,6 +519,7 @@ export default function Editor() {
     duplicateSelected,
     bringToFront,
     sendToBack,
+    addSVGFromString,
     layers,
     selectLayer,
     toggleLayerVisible,
