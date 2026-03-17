@@ -109,18 +109,40 @@ export function EditorSidebar({
     e.target.value = "";
   };
 
+  const uploadSvgToGlobal = async (file: File): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Você precisa estar autenticado para importar SVGs.");
+      return null;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      }
+    );
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Erro ao salvar SVG no servidor.");
+    return result.file_url || result.url || null;
+  };
+
   const handleSvgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !onAddSVGFromString) return;
     e.target.value = "";
 
-    // Validate file type
     if (!file.name.toLowerCase().endsWith('.svg') && !file.type.includes('svg')) {
       toast.error("Arquivo inválido. Selecione um arquivo .svg");
       return;
     }
 
-    // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
       return;
@@ -128,12 +150,16 @@ export function EditorSidebar({
 
     setSvgLoading(true);
     try {
+      // 1. Upload to R2/database globally
+      await uploadSvgToGlobal(file);
+
+      // 2. Add to canvas
       const text = await file.text();
       await onAddSVGFromString(text, file.name.replace(/\.svg$/i, ""));
-      toast.success("SVG importado com sucesso!");
+      toast.success("SVG importado e salvo na biblioteca!");
       setShowSvgDialog(false);
     } catch (err: any) {
-      toast.error(err?.message || "Erro ao importar SVG. Verifique se o arquivo é válido.");
+      toast.error(err?.message || "Erro ao importar SVG.");
     } finally {
       setSvgLoading(false);
     }
@@ -142,7 +168,6 @@ export function EditorSidebar({
   const handleSvgFromUrl = async () => {
     if (!svgUrl.trim() || !onAddSVGFromURL) return;
 
-    // Basic URL validation
     try {
       new URL(svgUrl.trim());
     } catch {
@@ -152,8 +177,20 @@ export function EditorSidebar({
 
     setSvgLoading(true);
     try {
-      await onAddSVGFromURL(svgUrl.trim());
-      toast.success("SVG importado com sucesso!");
+      // 1. Fetch SVG content
+      const response = await fetch(svgUrl.trim());
+      if (!response.ok) throw new Error(`Erro ao baixar SVG: HTTP ${response.status}`);
+      const blob = await response.blob();
+      const fileName = svgUrl.trim().split("/").pop()?.replace(/\.svg.*$/i, "") || "imported-svg";
+      const file = new File([blob], `${fileName}.svg`, { type: "image/svg+xml" });
+
+      // 2. Upload to R2/database globally
+      await uploadSvgToGlobal(file);
+
+      // 3. Add to canvas
+      const text = await blob.text();
+      await onAddSVGFromString(text, fileName);
+      toast.success("SVG importado e salvo na biblioteca!");
       setSvgUrl("");
       setShowSvgDialog(false);
     } catch (err: any) {
