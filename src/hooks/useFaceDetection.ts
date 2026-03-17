@@ -187,16 +187,8 @@ export const useFaceDetection = (
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
         ]);
         
-        // Warm-up: run a dummy detection on a tiny canvas to force backend initialization
-        try {
-          const dummyCanvas = document.createElement('canvas');
-          dummyCanvas.width = 20;
-          dummyCanvas.height = 20;
-          await faceapi.detectAllFaces(dummyCanvas, new faceapi.TinyFaceDetectorOptions());
-          console.log('[FaceDetection] Warm-up successful, backend:', (faceapi.tf as any)?.getBackend?.());
-        } catch (warmupErr) {
-          console.warn('[FaceDetection] Warm-up failed, will retry on first frame:', warmupErr);
-        }
+        const backend = await initializeFaceApiBackend(faceapi);
+        console.log('[FaceDetection] Warm-up successful, backend:', backend);
         
         setIsModelsLoaded(true);
         console.log('[FaceDetection] Models loaded successfully');
