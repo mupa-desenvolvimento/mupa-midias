@@ -430,39 +430,28 @@ const getActiveItems = (): CachedPlaylistItem[] => {
 };
 ```
 
-### syncWithServer() – Fluxo Completo:
+### syncWithServer() – Fluxo Simplificado com API REST:
 ```
-1. get_public_device_info(deviceCode) → device info
-2. Check override_media (se expires_at > now)
-3. device_group_members.select(device_id=device.id) → group_ids
-4. device_group_channels.select(group_id IN group_ids) → channel_ids
-5. get_public_playlists_data(playlist_ids, channel_ids) → playlists com itens
-6. Para cada item com type != "news"/"weather" e file_url != null:
+1. GET /device-api/content?device_code={code}&token={token}
+2. Resposta já contém: device info, override_media, playlists completas
+3. Para cada item com type in ["image","video"] e file_url != null:
    - Adiciona à lista de download
-7. Monta CachedPlaylist[] com items e channels
-8. Download de cada mídia (IndexedDB/Filesystem)
-   - Injeta blob_url em cada item
-9. Download override_media se existir
-10. Cleanup arquivos antigos
-11. Salva DeviceState no localStorage
-12. Heartbeat via device_heartbeat RPC
+4. Download de cada mídia para cache local
+   - Injeta localPath em cada item
+5. Download override_media se existir
+6. Cleanup arquivos antigos
+7. Salva estado no DataStore/Room
 ```
 
-### Heartbeat:
-```typescript
-// A cada 30 segundos via checkControlCommands():
-supabase.rpc('device_heartbeat', {
-  p_device_token: savedToken,
-  p_status: 'online',
-  p_current_playlist_id: null,
-});
+> **Nota:** O heartbeat é feito automaticamente pelo servidor quando o parâmetro `token` é enviado na URL.
 
-// Também verifica mudanças comparando:
-// - is_blocked
-// - blocked_message  
-// - override_media_id
-// - camera_enabled
-// - last_sync_requested_at (força re-sync se mudou)
+### Verificação de controle (a cada 30s):
+```kotlin
+// Pode usar o mesmo endpoint /content com token para heartbeat
+// Ou comparar campos do response com estado local:
+// - is_blocked → mostrar tela de bloqueio
+// - override_media → substituir conteúdo ativo
+// - last_sync_requested_at → se mudou, forçar re-sync
 ```
 
 ---
