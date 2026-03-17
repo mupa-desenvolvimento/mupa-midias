@@ -305,6 +305,10 @@ export const useFaceDetection = (
   }, [addAttentionRecord, updateActiveFacesState]);
 
   const detectFaces = useCallback(async () => {
+    if (isDetectingRef.current) {
+      return;
+    }
+
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded || !isActive) {
       console.log('[FaceDetection] Skip: ref=', !!videoRef.current, 'canvas=', !!canvasRef.current, 'models=', isModelsLoaded, 'active=', isActive);
       return;
@@ -317,6 +321,8 @@ export const useFaceDetection = (
       console.log('[FaceDetection] Skip: video dimensions', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
       return;
     }
+
+    isDetectingRef.current = true;
 
     try {
       canvas.width = video.videoWidth;
