@@ -159,6 +159,15 @@ export const useFaceDetection = (
   const registeredPeopleRef = useRef(registeredPeople);
   const logDetectionRef = useRef(logDetection);
 
+
+  useEffect(() => {
+    registeredPeopleRef.current = registeredPeople;
+  }, [registeredPeople]);
+
+  useEffect(() => {
+    logDetectionRef.current = logDetection;
+  }, [logDetection]);
+
   // Load face-api.js models - use SSD MobileNet for better accuracy
   useEffect(() => {
     const loadModels = async () => {
