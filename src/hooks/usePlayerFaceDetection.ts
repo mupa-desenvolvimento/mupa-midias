@@ -140,15 +140,17 @@ export const usePlayerFaceDetection = (
       try {
         setIsLoading(true);
 
-        // Explicitly initialize TF.js backend
+        // Explicitly initialize TF.js backend (face-api.js bundled tf may lack tf.ready())
         const tf = faceapi.tf as any;
         if (tf && tf.setBackend) {
           try {
             await tf.setBackend('webgl');
-            await tf.ready();
+            if (typeof tf.ready === 'function') await tf.ready();
           } catch {
-            await tf.setBackend('cpu');
-            await tf.ready();
+            try {
+              await tf.setBackend('cpu');
+              if (typeof tf.ready === 'function') await tf.ready();
+            } catch {}
           }
         }
 

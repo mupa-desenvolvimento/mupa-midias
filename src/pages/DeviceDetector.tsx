@@ -36,7 +36,7 @@ const DeviceDetector = () => {
       try {
         const tf = faceapi.tf as any;
         if (tf && tf.setBackend) {
-          try { await tf.setBackend('webgl'); await tf.ready(); } catch { await tf.setBackend('cpu'); await tf.ready(); }
+          try { await tf.setBackend('webgl'); if (typeof tf.ready === 'function') await tf.ready(); } catch { try { await tf.setBackend('cpu'); if (typeof tf.ready === 'function') await tf.ready(); } catch {} }
         }
         const MODEL_URL = "/models";
         await Promise.all([
