@@ -139,7 +139,19 @@ export const usePlayerFaceDetection = (
     const loadModels = async () => {
       try {
         setIsLoading(true);
-        // Use local models for better performance and offline support
+
+        // Explicitly initialize TF.js backend
+        const tf = faceapi.tf as any;
+        if (tf && tf.setBackend) {
+          try {
+            await tf.setBackend('webgl');
+            await tf.ready();
+          } catch {
+            await tf.setBackend('cpu');
+            await tf.ready();
+          }
+        }
+
         const MODEL_URL = '/models';
         
         await Promise.all([
@@ -147,7 +159,7 @@ export const usePlayerFaceDetection = (
           faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL), // Expressões/emoções
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
         
         setIsModelsLoaded(true);

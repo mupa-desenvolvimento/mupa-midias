@@ -162,21 +162,37 @@ export const useFaceDetection = (
       try {
         setIsLoading(true);
         
+        // Explicitly initialize TensorFlow.js backend before loading models
+        // This prevents "Cannot read properties of undefined (reading 'backend')" errors
+        const tf = faceapi.tf as any;
+        if (tf && tf.setBackend) {
+          try {
+            await tf.setBackend('webgl');
+            await tf.ready();
+            console.log('[FaceDetection] TF.js backend ready:', tf.getBackend());
+          } catch (backendErr) {
+            console.warn('[FaceDetection] WebGL backend failed, falling back to cpu:', backendErr);
+            await tf.setBackend('cpu');
+            await tf.ready();
+            console.log('[FaceDetection] TF.js CPU backend ready');
+          }
+        }
+        
         // Use local models instead of fetching from GitHub
         const MODEL_URL = '/models';
         
         await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL), // Better accuracy than TinyFace
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) // Load emotion detection model
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
         ]);
         
         setIsModelsLoaded(true);
-        console.log('Face-api.js models loaded successfully (SSD MobileNet + Expressions)');
+        console.log('[FaceDetection] Models loaded successfully (SSD MobileNet + Expressions)');
       } catch (error) {
-        console.error('Error loading face-api.js models:', error);
+        console.error('[FaceDetection] Error loading models:', error);
       } finally {
         setIsLoading(false);
       }
