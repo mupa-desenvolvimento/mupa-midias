@@ -1328,54 +1328,105 @@ export function useFabricCanvas() {
     };
   }, [deleteSelected, undo, redo, duplicateSelected]);
 
+  // Sanitize and validate SVG string before parsing
+  const sanitizeSVG = useCallback((raw: string): string => {
+    let svgStr = raw.trim();
+    // Remove BOM if present
+    if (svgStr.charCodeAt(0) === 0xFEFF) svgStr = svgStr.slice(1);
+    // Remove XML declaration
+    svgStr = svgStr.replace(/<\?xml[^?]*\?>\s*/gi, "");
+    // Remove DOCTYPE
+    svgStr = svgStr.replace(/<!DOCTYPE[^>]*>\s*/gi, "");
+    // Strip script tags for safety
+    svgStr = svgStr.replace(/<script[\s\S]*?<\/script>/gi, "");
+    // Ensure it contains an <svg> tag
+    if (!/<svg[\s>]/i.test(svgStr)) {
+      throw new Error("O arquivo não contém uma tag <svg> válida.");
+    }
+    // Add xmlns if missing
+    if (!svgStr.includes('xmlns=')) {
+      svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    return svgStr;
+  }, []);
+
+  const MAX_SVG_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+  const placeSVGOnCanvas = useCallback((c: Canvas, group: FabricObject, name: string) => {
+    const { x, y } = getViewportCenterInCanvasCoords(c);
+    const maxW = Math.min(500, c.width! * 0.6);
+    if (group.width && group.width > maxW) group.scaleToWidth(maxW);
+    group.set({ left: x - group.getScaledWidth() / 2, top: y - group.getScaledHeight() / 2 } as any);
+    (group as any).set("data", { layerId: makeLayerId(), layerName: name });
+    group.setCoords();
+    c.add(group);
+    c.setActiveObject(group);
+    c.renderAll();
+    refreshLayers(c);
+    return group;
+  }, [getViewportCenterInCanvasCoords, refreshLayers]);
+
   const addSVGFromString = useCallback(async (svgString: string, fileName?: string) => {
     const c = canvasRef.current;
     if (!c) throw new Error("Canvas não inicializado");
-    try {
-      const { objects, options } = await loadSVGFromString(svgString);
-      const validObjects = objects.filter(Boolean) as FabricObject[];
-      if (validObjects.length === 0) throw new Error("SVG vazio ou inválido");
-      const group = util.groupSVGElements(validObjects, options);
-      const { x, y } = getViewportCenterInCanvasCoords(c);
-      const maxW = Math.min(500, c.width! * 0.6);
-      if (group.width && group.width > maxW) group.scaleToWidth(maxW);
-      group.set({ left: x - group.getScaledWidth() / 2, top: y - group.getScaledHeight() / 2 } as any);
-      (group as any).set("data", { layerId: makeLayerId(), layerName: fileName || "SVG Importado" });
-      group.setCoords();
-      c.add(group);
-      c.setActiveObject(group);
-      c.renderAll();
-      refreshLayers(c);
-      return group;
-    } catch (err: any) {
-      throw new Error(err?.message || "Falha ao importar SVG");
+
+    // Size check
+    const byteSize = new Blob([svgString]).size;
+    if (byteSize > MAX_SVG_SIZE_BYTES) {
+      throw new Error(`Arquivo SVG muito grande (${(byteSize / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
     }
-  }, [getViewportCenterInCanvasCoords, refreshLayers]);
+
+    try {
+      const sanitized = sanitizeSVG(svgString);
+      const { objects, options } = await loadSVGFromString(sanitized);
+      const validObjects = objects.filter(Boolean) as FabricObject[];
+      if (validObjects.length === 0) throw new Error("SVG vazio — nenhum elemento gráfico encontrado.");
+      const group = util.groupSVGElements(validObjects, options);
+      return placeSVGOnCanvas(c, group, fileName || "SVG Importado");
+    } catch (err: any) {
+      const msg = err?.message || "Falha ao importar SVG";
+      if (msg.includes("Maximum call stack")) {
+        throw new Error("SVG muito complexo para importação direta. Tente simplificar o arquivo.");
+      }
+      throw new Error(msg);
+    }
+  }, [sanitizeSVG, placeSVGOnCanvas]);
 
   const addSVGFromURL = useCallback(async (url: string) => {
     const c = canvasRef.current;
     if (!c) throw new Error("Canvas não inicializado");
+
     try {
-      const { objects, options } = await loadSVGFromURL(url);
-      const validObjects = objects.filter(Boolean) as FabricObject[];
-      if (validObjects.length === 0) throw new Error("SVG vazio ou inválido");
-      const group = util.groupSVGElements(validObjects, options);
-      const { x, y } = getViewportCenterInCanvasCoords(c);
-      const maxW = Math.min(500, c.width! * 0.6);
-      if (group.width && group.width > maxW) group.scaleToWidth(maxW);
-      group.set({ left: x - group.getScaledWidth() / 2, top: y - group.getScaledHeight() / 2 } as any);
+      // First try fetching to avoid CORS issues with loadSVGFromURL
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Erro ao baixar SVG: HTTP ${response.status}`);
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("svg") && !contentType.includes("xml") && !contentType.includes("text")) {
+        throw new Error("A URL não retornou um arquivo SVG válido (content-type: " + contentType + ").");
+      }
+
+      const text = await response.text();
       const fileName = url.split("/").pop()?.replace(/\.svg.*$/i, "") || "SVG";
-      (group as any).set("data", { layerId: makeLayerId(), layerName: fileName });
-      group.setCoords();
-      c.add(group);
-      c.setActiveObject(group);
-      c.renderAll();
-      refreshLayers(c);
-      return group;
+      return await addSVGFromString(text, fileName);
     } catch (err: any) {
-      throw new Error(err?.message || "Falha ao carregar SVG da URL (verifique CORS)");
+      const msg = err?.message || "";
+      // If fetch failed due to CORS, try fabric's native loader as fallback
+      if (msg.includes("Failed to fetch") || msg.includes("CORS") || msg.includes("NetworkError")) {
+        try {
+          const { objects, options } = await loadSVGFromURL(url);
+          const validObjects = objects.filter(Boolean) as FabricObject[];
+          if (validObjects.length === 0) throw new Error("SVG vazio ou inacessível.");
+          const group = util.groupSVGElements(validObjects, options);
+          const fileName = url.split("/").pop()?.replace(/\.svg.*$/i, "") || "SVG";
+          return placeSVGOnCanvas(c, group, fileName);
+        } catch {
+          throw new Error("Não foi possível acessar o SVG. Verifique se a URL permite acesso externo (CORS).");
+        }
+      }
+      throw new Error(msg || "Falha ao carregar SVG da URL.");
     }
-  }, [getViewportCenterInCanvasCoords, refreshLayers]);
+  }, [addSVGFromString, placeSVGOnCanvas]);
 
   function makeLayerId() {
     return typeof crypto !== "undefined" && "randomUUID" in crypto
