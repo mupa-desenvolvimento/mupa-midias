@@ -999,7 +999,26 @@ export function useFabricCanvas() {
     const active = c.getActiveObject();
     if (!active) return;
 
-    if (prop === "shadow") {
+    // For fill/stroke on groups (imported SVGs), apply recursively to children
+    if ((prop === "fill" || prop === "stroke") && active.type === "group") {
+      const applyToChildren = (obj: FabricObject) => {
+        if ((obj as any)._objects) {
+          (obj as any)._objects.forEach((child: FabricObject) => applyToChildren(child));
+        } else {
+          // Only apply fill to objects that already have a fill (skip transparent/none)
+          if (prop === "fill") {
+            const currentFill = (obj as any).fill;
+            if (currentFill && currentFill !== "none" && currentFill !== "transparent") {
+              obj.set("fill" as keyof FabricObject, value);
+            }
+          } else {
+            obj.set(prop as keyof FabricObject, value);
+          }
+        }
+      };
+      applyToChildren(active);
+      active.set(prop as keyof FabricObject, value);
+    } else if (prop === "shadow") {
       active.set("shadow", value ? new Shadow(value) : null);
     } else {
       active.set(prop as keyof FabricObject, value);
