@@ -150,6 +150,7 @@ export const useFaceDetection = (
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
+  const isSwitchingBackendRef = useRef(false);
   const lastDetectedPersonsRef = useRef<Set<string>>(new Set());
   const trackedFacesRef = useRef<Map<string, TrackedFaceData>>(new Map());
   
