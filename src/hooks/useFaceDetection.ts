@@ -168,24 +168,17 @@ export const useFaceDetection = (
     logDetectionRef.current = logDetection;
   }, [logDetection]);
 
-  // Load face-api.js models - use SSD MobileNet for better accuracy
+  // Load face-api.js models
   useEffect(() => {
     const loadModels = async () => {
       try {
         setIsLoading(true);
         
-        // Force CPU backend here: WebGL initializes but crashes during inference in production/PWA
-        const tf = faceapi.tf as any;
-        if (tf?.setBackend) {
-          await tf.setBackend('cpu');
-          if (typeof tf.ready === 'function') await tf.ready();
-          console.log('[FaceDetection] TF.js backend ready:', tf.getBackend?.() || 'cpu');
-        }
-        
-        // Use local models instead of fetching from GitHub
         const MODEL_URL = '/models';
         
+        // Load TinyFaceDetector (lighter) + SSD as fallback
         await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -193,8 +186,19 @@ export const useFaceDetection = (
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
         ]);
         
+        // Warm-up: run a dummy detection on a tiny canvas to force backend initialization
+        try {
+          const dummyCanvas = document.createElement('canvas');
+          dummyCanvas.width = 20;
+          dummyCanvas.height = 20;
+          await faceapi.detectAllFaces(dummyCanvas, new faceapi.TinyFaceDetectorOptions());
+          console.log('[FaceDetection] Warm-up successful, backend:', (faceapi.tf as any)?.getBackend?.());
+        } catch (warmupErr) {
+          console.warn('[FaceDetection] Warm-up failed, will retry on first frame:', warmupErr);
+        }
+        
         setIsModelsLoaded(true);
-        console.log('[FaceDetection] Models loaded successfully (SSD MobileNet + Expressions)');
+        console.log('[FaceDetection] Models loaded successfully');
       } catch (error) {
         console.error('[FaceDetection] Error loading models:', error);
       } finally {
