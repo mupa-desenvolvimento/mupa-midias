@@ -344,7 +344,7 @@ export default function GraphicEditor() {
     setViewportSize,
   } = useFabricCanvas();
 
-  const { mediaItems, isLoading: galleryLoading } = useMediaItems(undefined);
+  const { mediaItems, isLoading: galleryLoading, refetch: refetchMediaItems } = useMediaItems(undefined);
 
   useEffect(() => {
     const el = canvasElRef.current;
