@@ -553,7 +553,6 @@ export default function GraphicEditor() {
           onAddImage={addImage}
           onAddImageFromUrl={addImageFromUrl}
           onAddSVGFromString={addSVGFromString}
-          onAddSVGFromURL={addSVGFromURL}
           onSvgSaved={async () => { await refetchMediaItems(); }}
           onDelete={deleteSelected}
           onDuplicate={duplicateSelected}
