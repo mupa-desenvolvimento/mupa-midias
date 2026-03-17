@@ -87,6 +87,7 @@ export function EditorSidebar({
   galleryItems, galleryLoading,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const selectedSvgFileRef = useRef<File | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
