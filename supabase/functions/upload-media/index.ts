@@ -401,7 +401,7 @@ Deno.serve(async (req: Request) => {
         name: mediaType === 'font' && fontFamily ? fontFamily : fileName,
         type: mediaType,
         file_url: publicFileUrl,
-        file_size: file.size,
+        file_size: fileSize,
         duration: duration || defaultDuration,
         resolution: resolution,
         status: 'active', // Always active once uploaded successfully
@@ -417,7 +417,8 @@ Deno.serve(async (req: Request) => {
           thumbnail_size: { width: THUMBNAIL_WIDTH, height: THUMBNAIL_HEIGHT },
           original_signed_url: uploadUrl,
           font_family: fontFamily,
-          original_file_name: fileName
+          original_file_name: fileName,
+          source_url: sourceUrl,
         }
       })
       .select()
@@ -438,14 +439,16 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ 
         success: true, 
         mediaItem,
+        mediaId: mediaItem.id,
         fileUrl: publicFileUrl,
         thumbnailUrl: publicThumbnailUrl,
+        proxyUrl: `${supabaseUrl}/functions/v1/upload-media?mediaId=${mediaItem.id}`,
         r2Key: fileKey,
         thumbnailGenerated,
         validation: {
           type: mediaType,
-          size: file.size,
-          contentType: fileType,
+          size: fileSize,
+          contentType: effectiveTypeLower || fileType,
           validatedAt: new Date().toISOString()
         }
       }),
