@@ -3,7 +3,7 @@ import * as faceapi from 'face-api.js';
 import { usePeopleRegistry } from './usePeopleRegistry';
 import { useDetectionLog } from './useDetectionLog';
 import { useAttentionHistory } from './useAttentionHistory';
-
+import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
 // Emotion types from face-api.js
 export type EmotionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised';
 
@@ -150,6 +150,7 @@ export const useFaceDetection = (
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
+  const isSwitchingBackendRef = useRef(false);
   const lastDetectedPersonsRef = useRef<Set<string>>(new Set());
   const trackedFacesRef = useRef<Map<string, TrackedFaceData>>(new Map());
   
@@ -186,16 +187,8 @@ export const useFaceDetection = (
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
         ]);
         
-        // Warm-up: run a dummy detection on a tiny canvas to force backend initialization
-        try {
-          const dummyCanvas = document.createElement('canvas');
-          dummyCanvas.width = 20;
-          dummyCanvas.height = 20;
-          await faceapi.detectAllFaces(dummyCanvas, new faceapi.TinyFaceDetectorOptions());
-          console.log('[FaceDetection] Warm-up successful, backend:', (faceapi.tf as any)?.getBackend?.());
-        } catch (warmupErr) {
-          console.warn('[FaceDetection] Warm-up failed, will retry on first frame:', warmupErr);
-        }
+        const backend = await initializeFaceApiBackend(faceapi);
+        console.log('[FaceDetection] Warm-up successful, backend:', backend);
         
         setIsModelsLoaded(true);
         console.log('[FaceDetection] Models loaded successfully');
@@ -311,7 +304,7 @@ export const useFaceDetection = (
   }, [addAttentionRecord, updateActiveFacesState]);
 
   const detectFaces = useCallback(async () => {
-    if (isDetectingRef.current) {
+    if (isDetectingRef.current || isSwitchingBackendRef.current) {
       return;
     }
 
@@ -556,6 +549,18 @@ export const useFaceDetection = (
       
     } catch (error) {
       console.error('[FaceDetection] Error during face detection:', error);
+
+      if (isFaceApiBackendError(error) && !isSwitchingBackendRef.current) {
+        isSwitchingBackendRef.current = true;
+        try {
+          const backend = await switchFaceApiToCpu(faceapi);
+          console.warn('[FaceDetection] Backend recovered with fallback:', backend);
+        } catch (fallbackError) {
+          console.error('[FaceDetection] CPU fallback failed:', fallbackError);
+        } finally {
+          isSwitchingBackendRef.current = false;
+        }
+      }
     } finally {
       isDetectingRef.current = false;
     }

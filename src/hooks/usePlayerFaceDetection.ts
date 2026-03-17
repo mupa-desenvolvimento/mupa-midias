@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 import { supabase } from '@/integrations/supabase/client';
-
+import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
 export interface DetectedFace {
   trackId: string;
   gender: 'masculino' | 'feminino' | 'indefinido';
@@ -131,6 +131,7 @@ export const usePlayerFaceDetection = (
   
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isSwitchingBackendRef = useRef(false);
   const trackedFacesRef = useRef<Map<string, TrackedFace>>(new Map());
   const pendingLogsRef = useRef<any[]>([]);
 
@@ -151,16 +152,8 @@ export const usePlayerFaceDetection = (
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
 
-        // Warm-up detection to initialize backend
-        try {
-          const dummyCanvas = document.createElement('canvas');
-          dummyCanvas.width = 20;
-          dummyCanvas.height = 20;
-          await faceapi.detectAllFaces(dummyCanvas, new faceapi.TinyFaceDetectorOptions());
-          console.log('[PlayerDetection] Warm-up OK, backend:', (faceapi.tf as any)?.getBackend?.());
-        } catch (e) {
-          console.warn('[PlayerDetection] Warm-up failed:', e);
-        }
+        const backend = await initializeFaceApiBackend(faceapi);
+        console.log('[PlayerDetection] Warm-up OK, backend:', backend);
         
         setIsModelsLoaded(true);
         console.log('[PlayerDetection] Models loaded (including expressions)');
@@ -397,6 +390,18 @@ export const usePlayerFaceDetection = (
       
     } catch (error) {
       console.error('[PlayerDetection] Detection error:', error);
+
+      if (isFaceApiBackendError(error) && !isSwitchingBackendRef.current) {
+        isSwitchingBackendRef.current = true;
+        try {
+          const backend = await switchFaceApiToCpu(faceapi);
+          console.warn('[PlayerDetection] Backend recovered with fallback:', backend);
+        } catch (fallbackError) {
+          console.error('[PlayerDetection] CPU fallback failed:', fallbackError);
+        } finally {
+          isSwitchingBackendRef.current = false;
+        }
+      }
     }
   }, [isModelsLoaded, isActive, findMatchingTrackedFace]);
 
