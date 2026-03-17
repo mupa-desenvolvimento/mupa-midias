@@ -5,11 +5,6 @@ import {
   Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
   Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode, Pencil, Check, X,
 } from "lucide-react";
-  Type, Square, Circle, Minus, Triangle, Upload, Search, Loader2,
-  Trash2, Copy, ArrowUpToLine, ArrowDownToLine, Star, Hexagon, Image as ImageIcon,
-  Layers, GalleryHorizontalEnd, Grid3X3, Wrench, Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown,
-  Monitor, Smartphone, SquareIcon, ChevronLeft, ChevronRight, FileCode,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
