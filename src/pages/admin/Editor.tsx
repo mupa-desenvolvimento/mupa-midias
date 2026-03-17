@@ -519,6 +519,7 @@ export default function Editor() {
     duplicateSelected,
     bringToFront,
     sendToBack,
+    addSVGFromString,
     layers,
     selectLayer,
     toggleLayerVisible,
@@ -731,6 +732,8 @@ export default function Editor() {
           onAddPolygon={addPolygon}
           onAddImage={addImage}
           onAddImageFromUrl={addImageFromUrl}
+          onAddSVGFromString={addSVGFromString}
+          onSvgSaved={() => undefined}
           onDelete={deleteSelected}
           onDuplicate={duplicateSelected}
           onBringToFront={bringToFront}
