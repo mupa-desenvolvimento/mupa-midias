@@ -324,6 +324,45 @@ export function EditorSidebar({
                     </Button>
                   ))}
                 </div>
+
+                {importedSvgItems.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">SVGs importados</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {importedSvgItems.map((item) => {
+                        const isImporting = importingLibrarySvgId === item.id;
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="group relative overflow-hidden rounded-md border border-border bg-muted/30 transition-colors hover:border-primary hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => handleAddLibrarySvg(item)}
+                            disabled={isImporting}
+                            title={item.name}
+                          >
+                            <div className="aspect-square flex items-center justify-center overflow-hidden bg-background">
+                              <img
+                                src={item.thumbnail_url || item.file_url || ""}
+                                alt={item.name}
+                                className="h-full w-full object-contain p-2"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="border-t border-border px-2 py-1 text-left">
+                              <p className="truncate text-[10px] font-medium text-foreground">{item.name}</p>
+                            </div>
+                            {isImporting && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Separator />
