@@ -504,6 +504,7 @@ export const useFaceDetection = (
   // Start/stop detection based on isActive
   useEffect(() => {
     if (isActive && isModelsLoaded) {
+      console.log('[FaceDetection] Starting detection interval');
       detectionIntervalRef.current = setInterval(detectFaces, DETECTION_INTERVAL_MS);
     } else {
       if (detectionIntervalRef.current) {
