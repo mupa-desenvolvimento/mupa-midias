@@ -529,20 +529,24 @@ export const useFaceDetection = (
 
   // Start/stop detection based on isActive
   useEffect(() => {
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
+
     if (isActive && isModelsLoaded) {
       console.log('[FaceDetection] Starting detection interval');
       detectionIntervalRef.current = setInterval(detectFaces, DETECTION_INTERVAL_MS);
     } else {
-      if (detectionIntervalRef.current) {
-        clearInterval(detectionIntervalRef.current);
-        detectionIntervalRef.current = null;
-      }
+      isDetectingRef.current = false;
     }
 
     return () => {
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
       }
+      isDetectingRef.current = false;
     };
   }, [isActive, isModelsLoaded, detectFaces]);
 
