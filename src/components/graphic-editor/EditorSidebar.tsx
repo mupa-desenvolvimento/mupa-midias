@@ -166,29 +166,39 @@ export function EditorSidebar({
 
     try {
       validateSvgFile(file);
+      selectedSvgFileRef.current = file;
       setSelectedSvgFile(file);
     } catch (err: any) {
+      selectedSvgFileRef.current = null;
       setSelectedSvgFile(null);
       toast.error(err?.message || "Erro ao selecionar SVG.");
     }
   };
 
   const handleSaveSvgImport = async () => {
-    if (!selectedSvgFile || !onAddSVGFromString) {
-      toast.error("Selecione um arquivo SVG para importar.");
+    const file = selectedSvgFileRef.current ?? selectedSvgFile;
+
+    if (!file) {
+      toast.error("Selecione um arquivo SVG antes de salvar.");
+      return;
+    }
+
+    if (!onAddSVGFromString) {
+      toast.error("A importação de SVG não está disponível neste editor.");
       return;
     }
 
     setSvgLoading(true);
     try {
-      const svgName = selectedSvgFile.name.replace(/\.svg$/i, "");
-      const text = await selectedSvgFile.text();
+      const svgName = file.name.replace(/\.svg$/i, "");
+      const text = await file.text();
 
-      await uploadSvgToGlobal(selectedSvgFile);
+      await uploadSvgToGlobal(file);
       await onSvgSaved?.();
       await onAddSVGFromString(text, svgName);
 
       toast.success("SVG importado com sucesso!");
+      selectedSvgFileRef.current = null;
       setSelectedSvgFile(null);
       setShowSvgDialog(false);
     } catch (err: any) {
