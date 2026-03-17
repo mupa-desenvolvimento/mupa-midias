@@ -156,6 +156,17 @@ export const useFaceDetection = (
   const { registeredPeople } = usePeopleRegistry();
   const { logDetection } = useDetectionLog();
   const { addAttentionRecord } = useAttentionHistory();
+  const registeredPeopleRef = useRef(registeredPeople);
+  const logDetectionRef = useRef(logDetection);
+
+
+  useEffect(() => {
+    registeredPeopleRef.current = registeredPeople;
+  }, [registeredPeople]);
+
+  useEffect(() => {
+    logDetectionRef.current = logDetection;
+  }, [logDetection]);
 
   // Load face-api.js models - use SSD MobileNet for better accuracy
   useEffect(() => {
@@ -163,22 +174,12 @@ export const useFaceDetection = (
       try {
         setIsLoading(true);
         
-        // Explicitly initialize TensorFlow.js backend before loading models
-        // face-api.js bundles its own tf.js which may not have tf.ready()
+        // Force CPU backend here: WebGL initializes but crashes during inference in production/PWA
         const tf = faceapi.tf as any;
-        if (tf && tf.setBackend) {
-          try {
-            await tf.setBackend('webgl');
-            if (typeof tf.ready === 'function') await tf.ready();
-            console.log('[FaceDetection] TF.js backend ready:', tf.getBackend?.() || 'webgl');
-          } catch (backendErr) {
-            console.warn('[FaceDetection] WebGL backend failed, falling back to cpu:', backendErr);
-            try {
-              await tf.setBackend('cpu');
-              if (typeof tf.ready === 'function') await tf.ready();
-            } catch {}
-            console.log('[FaceDetection] TF.js CPU backend ready');
-          }
+        if (tf?.setBackend) {
+          await tf.setBackend('cpu');
+          if (typeof tf.ready === 'function') await tf.ready();
+          console.log('[FaceDetection] TF.js backend ready:', tf.getBackend?.() || 'cpu');
         }
         
         // Use local models instead of fetching from GitHub
@@ -399,7 +400,7 @@ export const useFaceDetection = (
         // Identify registered person
         let identifiedPerson: { id: string; name: string; cpf: string; confidence: number } | null = null;
         if (detection.descriptor) {
-          for (const person of registeredPeople) {
+          for (const person of registeredPeopleRef.current) {
             try {
               // Use averageDescriptor for comparison with multiple captures
               const distance = faceapi.euclideanDistance(detection.descriptor, person.averageDescriptor);
@@ -467,7 +468,7 @@ export const useFaceDetection = (
         
         // Log registered person detection (only once per session)
         if (isRegistered && !lastDetectedPersonsRef.current.has(identifiedPerson!.id)) {
-          logDetection(
+          logDetectionRef.current(
             identifiedPerson!.id,
             identifiedPerson!.name,
             identifiedPerson!.cpf,
@@ -526,7 +527,7 @@ export const useFaceDetection = (
     } finally {
       isDetectingRef.current = false;
     }
-  }, [videoRef, canvasRef, isModelsLoaded, isActive, registeredPeople, logDetection, findMatchingTrackedFace, updateActiveFacesState]);
+  }, [videoRef, canvasRef, isModelsLoaded, isActive, findMatchingTrackedFace, updateActiveFacesState]);
 
   // Start/stop detection based on isActive
   useEffect(() => {
