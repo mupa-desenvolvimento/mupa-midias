@@ -597,7 +597,6 @@ export default function GraphicEditor() {
         >
           {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
         </Button>
-        </Button>
       </div>
 
       {/* Main area */}
