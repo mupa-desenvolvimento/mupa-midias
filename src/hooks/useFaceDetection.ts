@@ -163,17 +163,19 @@ export const useFaceDetection = (
         setIsLoading(true);
         
         // Explicitly initialize TensorFlow.js backend before loading models
-        // This prevents "Cannot read properties of undefined (reading 'backend')" errors
+        // face-api.js bundles its own tf.js which may not have tf.ready()
         const tf = faceapi.tf as any;
         if (tf && tf.setBackend) {
           try {
             await tf.setBackend('webgl');
-            await tf.ready();
-            console.log('[FaceDetection] TF.js backend ready:', tf.getBackend());
+            if (typeof tf.ready === 'function') await tf.ready();
+            console.log('[FaceDetection] TF.js backend ready:', tf.getBackend?.() || 'webgl');
           } catch (backendErr) {
             console.warn('[FaceDetection] WebGL backend failed, falling back to cpu:', backendErr);
-            await tf.setBackend('cpu');
-            await tf.ready();
+            try {
+              await tf.setBackend('cpu');
+              if (typeof tf.ready === 'function') await tf.ready();
+            } catch {}
             console.log('[FaceDetection] TF.js CPU backend ready');
           }
         }
