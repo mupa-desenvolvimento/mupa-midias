@@ -400,7 +400,7 @@ export const useFaceDetection = (
         // Identify registered person
         let identifiedPerson: { id: string; name: string; cpf: string; confidence: number } | null = null;
         if (detection.descriptor) {
-          for (const person of registeredPeople) {
+          for (const person of registeredPeopleRef.current) {
             try {
               // Use averageDescriptor for comparison with multiple captures
               const distance = faceapi.euclideanDistance(detection.descriptor, person.averageDescriptor);
