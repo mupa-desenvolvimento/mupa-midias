@@ -113,14 +113,27 @@ export function EditorSidebar({
     const file = e.target.files?.[0];
     if (!file || !onAddSVGFromString) return;
     e.target.value = "";
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.svg') && !file.type.includes('svg')) {
+      toast.error("Arquivo inválido. Selecione um arquivo .svg");
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
+      return;
+    }
+
     setSvgLoading(true);
     try {
       const text = await file.text();
       await onAddSVGFromString(text, file.name.replace(/\.svg$/i, ""));
-      toast.success("SVG importado!");
+      toast.success("SVG importado com sucesso!");
       setShowSvgDialog(false);
     } catch (err: any) {
-      toast.error(err?.message || "SVG inválido");
+      toast.error(err?.message || "Erro ao importar SVG. Verifique se o arquivo é válido.");
     } finally {
       setSvgLoading(false);
     }
@@ -128,14 +141,23 @@ export function EditorSidebar({
 
   const handleSvgFromUrl = async () => {
     if (!svgUrl.trim() || !onAddSVGFromURL) return;
+
+    // Basic URL validation
+    try {
+      new URL(svgUrl.trim());
+    } catch {
+      toast.error("URL inválida. Informe uma URL completa (ex: https://...)");
+      return;
+    }
+
     setSvgLoading(true);
     try {
       await onAddSVGFromURL(svgUrl.trim());
-      toast.success("SVG importado!");
+      toast.success("SVG importado com sucesso!");
       setSvgUrl("");
       setShowSvgDialog(false);
     } catch (err: any) {
-      toast.error(err?.message || "Falha ao carregar SVG (verifique CORS)");
+      toast.error(err?.message || "Falha ao carregar SVG da URL.");
     } finally {
       setSvgLoading(false);
     }
