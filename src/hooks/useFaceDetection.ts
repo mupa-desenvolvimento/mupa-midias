@@ -376,18 +376,39 @@ export const useFaceDetection = (
 
       for (let index = 0; index < detections.length; index++) {
         const detection = detections[index];
-        
-        // Skip faces not looking at camera
-        if (!isFacingCamera(detection.landmarks)) {
-          continue;
-        }
-        
         const box = detection.detection.box;
         const rawAge = detection.age;
         const genderProbability = detection.genderProbability;
         const genderString = detection.gender;
         const gender = getGender(genderString, genderProbability);
         const detectionConfidence = detection.detection.score;
+        const isLooking = isFacingCamera(detection.landmarks);
+
+        // Transform box coordinates to canvas space
+        const drawX = box.x * scaleX + offsetX;
+        const drawY = box.y * scaleY + offsetY;
+        const drawW = box.width * scaleX;
+        const drawH = box.height * scaleY;
+
+        // Always draw the raw detection box, even if the face is not yet considered "looking"
+        const previewColor = isLooking ? '#00ff88' : '#facc15';
+        ctx.strokeStyle = previewColor;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
+
+        ctx.font = 'bold 14px Arial';
+        const previewLabel = isLooking ? `${gender} | ${Math.round(rawAge)} anos` : 'Face detectada';
+        const previewLabelY = drawY > 50 ? drawY - 12 : drawY + drawH + 20;
+        const previewTextWidth = ctx.measureText(previewLabel).width;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(drawX - 2, previewLabelY - 14, previewTextWidth + 8, 20);
+        ctx.fillStyle = previewColor;
+        ctx.fillText(previewLabel, drawX + 2, previewLabelY);
+
+        // Keep the business logic filter for tracking/logging only
+        if (!isLooking) {
+          continue;
+        }
 
         // Extract emotion data
         const expressions = detection.expressions;
@@ -426,9 +447,8 @@ export const useFaceDetection = (
         if (detection.descriptor) {
           for (const person of registeredPeopleRef.current) {
             try {
-              // Use averageDescriptor for comparison with multiple captures
               const distance = faceapi.euclideanDistance(detection.descriptor, person.averageDescriptor);
-              if (distance < 0.55) { // Stricter threshold
+              if (distance < 0.55) {
                 identifiedPerson = {
                   id: person.id,
                   name: person.name,
@@ -446,28 +466,23 @@ export const useFaceDetection = (
         const isRegistered = !!identifiedPerson;
         
         if (trackId && existingTracked) {
-          // Update existing tracked face
           existingTracked.lastSeenAt = now;
           existingTracked.descriptor = detection.descriptor;
           existingTracked.ageEstimates.push(rawAge);
-          // Keep only last 10 age estimates
           if (existingTracked.ageEstimates.length > 10) {
             existingTracked.ageEstimates.shift();
           }
           existingTracked.confidence = detectionConfidence;
           existingTracked.position = { x: box.x, y: box.y, width: box.width, height: box.height };
           
-          // Update person info if now identified
           if (identifiedPerson && !existingTracked.personId) {
             existingTracked.personId = identifiedPerson.id;
             existingTracked.personName = identifiedPerson.name;
             existingTracked.personCpf = identifiedPerson.cpf;
             existingTracked.isRegistered = true;
           }
-          // Update emotion data
           existingTracked.emotion = emotionData;
         } else {
-          // Create new tracked face
           trackId = isRegistered ? identifiedPerson!.id : `track_${now.getTime()}_${index}`;
           
           trackedFacesRef.current.set(trackId, {
@@ -490,7 +505,6 @@ export const useFaceDetection = (
 
         currentTrackIds.add(trackId);
         
-        // Log registered person detection (only once per session)
         if (isRegistered && !lastDetectedPersonsRef.current.has(identifiedPerson!.id)) {
           logDetectionRef.current(
             identifiedPerson!.id,
@@ -502,31 +516,20 @@ export const useFaceDetection = (
           lastDetectedPersonsRef.current.add(identifiedPerson!.id);
           setTimeout(() => {
             lastDetectedPersonsRef.current.delete(identifiedPerson!.id);
-          }, 30000); // 30 seconds before allowing new log
+          }, 30000);
         }
 
-        // Get current data for drawing
         const tracked = trackedFacesRef.current.get(trackId);
         if (!tracked) continue;
         
         const avgAge = calculateAverageAge(tracked.ageEstimates);
         const duration = (tracked.lastSeenAt.getTime() - tracked.firstSeenAt.getTime()) / 1000;
-
-        // Draw on canvas with object-cover alignment
         const color = tracked.isRegistered ? '#00ff00' : '#ff6600';
-        
-        // Transform box coordinates to canvas space
-        const drawX = box.x * scaleX + offsetX;
-        const drawY = box.y * scaleY + offsetY;
-        const drawW = box.width * scaleX;
-        const drawH = box.height * scaleY;
-        
+
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
         ctx.strokeRect(drawX, drawY, drawW, drawH);
         
-        // Main label
-        ctx.font = 'bold 14px Arial';
         const label = tracked.isRegistered ? tracked.personName! : `${gender} | ${avgAge} anos`;
         const labelY = drawY > 50 ? drawY - 30 : drawY + drawH + 20;
         
@@ -537,7 +540,6 @@ export const useFaceDetection = (
         ctx.fillStyle = color;
         ctx.fillText(label, drawX + 2, labelY);
         
-        // Duration label
         ctx.font = '12px Arial';
         const durationLabel = `⏱ ${duration.toFixed(1)}s`;
         const durationY = drawY > 50 ? drawY - 10 : drawY + drawH + 38;
