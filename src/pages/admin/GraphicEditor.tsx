@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronDown, ChevronUp, Circle, Eye, EyeOff, GripVertical, Image as ImageIcon, Lock, Maximize, Minimize, Minus, Square, Star, Triangle, Type, Unlock } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Circle, Download, Eye, EyeOff, GripVertical, Image as ImageIcon, Lock, Maximize, Minimize, Minus, Square, Star, Triangle, Type, Unlock } from "lucide-react";
 import { useFabricCanvas } from "@/components/graphic-editor/useFabricCanvas";
 import { EditorTopbar } from "@/components/graphic-editor/EditorTopbar";
 import { EditorSidebar } from "@/components/graphic-editor/EditorSidebar";
