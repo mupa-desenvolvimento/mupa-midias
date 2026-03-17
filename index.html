@@ -25,6 +25,12 @@
     />
 
     <link rel="icon" type="image/x-icon" href="https://storage.googleapis.com/gpt-engineer-file-uploads/kqrRuPz304ckV2bn5HmQpveeQQo1/uploads/1770088671693-favicon.ico">
+    <link rel="manifest" href="/manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
+    </script>
     
     
     

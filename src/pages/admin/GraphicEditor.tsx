@@ -512,6 +512,29 @@ export default function GraphicEditor() {
     }));
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = useCallback(async () => {
+    if (!deferredPrompt) {
+      toast.info("Para instalar, abra no Chrome e acesse novamente.");
+      return;
+    }
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === "accepted") {
+      toast.success("App instalado com sucesso!");
+    }
+    setDeferredPrompt(null);
+  }, [deferredPrompt]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
