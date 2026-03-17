@@ -265,6 +265,172 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ─── GET /device-api/content?device_code=XXXXX ───
+    // Rota pública: retorna toda a programação do dispositivo pelo device_code
+    if (path === 'content' && req.method === 'GET') {
+      const deviceCode = url.searchParams.get('device_code') || ''
+      if (!deviceCode) {
+        return new Response(
+          JSON.stringify({ error: 'device_code é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // 1. Busca device info via RPC (SECURITY DEFINER)
+      const { data: deviceRows, error: deviceError } = await supabase.rpc('get_public_device_info', {
+        p_device_code: deviceCode,
+      })
+
+      if (deviceError) throw deviceError
+
+      const device = Array.isArray(deviceRows) ? deviceRows[0] : deviceRows
+      if (!device) {
+        return new Response(
+          JSON.stringify({ error: `Dispositivo "${deviceCode}" não encontrado` }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // 2. Override media
+      let overrideMedia: any = null
+      const overrideData: any = device.override_media_data
+      if (overrideData && device.override_media_expires_at) {
+        const expiresAt = new Date(device.override_media_expires_at as string)
+        if (expiresAt > new Date()) {
+          overrideMedia = {
+            id: overrideData.id,
+            name: overrideData.name,
+            type: overrideData.type,
+            file_url: overrideData.file_url,
+            duration: overrideData.duration ?? 10,
+            expires_at: device.override_media_expires_at,
+          }
+        }
+      }
+
+      // 3. Busca playlist IDs e channel IDs vinculados ao dispositivo
+      const relevantPlaylistIds: string[] = []
+      let relevantChannelIds: string[] = []
+
+      if (device.current_playlist_id) {
+        relevantPlaylistIds.push(device.current_playlist_id)
+      }
+
+      const { data: groupMembers } = await supabase
+        .from('device_group_members')
+        .select('group_id')
+        .eq('device_id', device.id)
+
+      if (groupMembers && groupMembers.length > 0) {
+        const groupIds = groupMembers.map((g: any) => g.group_id)
+        const { data: groupChannels } = await supabase
+          .from('device_group_channels')
+          .select('distribution_channel_id')
+          .in('group_id', groupIds)
+
+        if (groupChannels) {
+          relevantChannelIds = groupChannels.map((c: any) => c.distribution_channel_id)
+        }
+      }
+
+      // 4. Busca playlists completas via RPC
+      let playlistsData: any[] = []
+      if (relevantPlaylistIds.length > 0 || relevantChannelIds.length > 0) {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_public_playlists_data', {
+          p_playlist_ids: relevantPlaylistIds.length > 0 ? relevantPlaylistIds : null,
+          p_channel_ids: relevantChannelIds.length > 0 ? relevantChannelIds : null,
+        })
+        if (!rpcError && rpcData) {
+          playlistsData = Array.isArray(rpcData) ? rpcData : []
+        }
+      }
+
+      // 5. Formata response
+      const mapItem = (item: any) => ({
+        id: item.id,
+        media_id: item.media_id,
+        position: item.position,
+        duration_override: item.duration_override,
+        start_date: item.start_date ?? null,
+        end_date: item.end_date ?? null,
+        start_time: item.start_time ?? null,
+        end_time: item.end_time ?? null,
+        days_of_week: item.days_of_week ?? null,
+        media: item.media ? {
+          id: item.media.id,
+          name: item.media.name,
+          type: item.media.type,
+          file_url: item.media.file_url,
+          duration: item.media.duration ?? 10,
+          metadata: item.media.metadata ?? null,
+        } : null,
+      })
+
+      const playlists = playlistsData.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description ?? null,
+        is_active: p.is_active,
+        has_channels: p.has_channels ?? false,
+        start_date: p.start_date ?? null,
+        end_date: p.end_date ?? null,
+        days_of_week: p.days_of_week ?? null,
+        start_time: p.start_time ?? null,
+        end_time: p.end_time ?? null,
+        priority: p.priority ?? 0,
+        content_scale: p.content_scale ?? null,
+        items: (p.playlist_items || []).map(mapItem),
+        channels: (p.playlist_channels || []).map((ch: any) => ({
+          id: ch.id,
+          name: ch.name,
+          is_active: ch.is_active,
+          is_fallback: ch.is_fallback ?? false,
+          position: ch.position,
+          start_date: ch.start_date ?? null,
+          end_date: ch.end_date ?? null,
+          start_time: ch.start_time,
+          end_time: ch.end_time,
+          days_of_week: ch.days_of_week ?? null,
+          items: (ch.playlist_channel_items || []).map(mapItem),
+        })),
+      }))
+
+      const response = {
+        version: 1,
+        generated_at: new Date().toISOString(),
+        device: {
+          id: device.id,
+          device_code: deviceCode,
+          name: device.name,
+          store_id: device.store_id,
+          company_id: device.company_id,
+          company_slug: device.company_slug ?? null,
+          store_code: device.store_code ?? null,
+          camera_enabled: device.camera_enabled ?? false,
+          is_blocked: device.is_blocked ?? false,
+          blocked_message: device.blocked_message ?? null,
+          last_sync_requested_at: device.last_sync_requested_at ?? null,
+        },
+        override_media: overrideMedia,
+        playlists,
+      }
+
+      // Heartbeat automático
+      const savedToken = url.searchParams.get('token')
+      if (savedToken) {
+        supabase.rpc('device_heartbeat', {
+          p_device_token: savedToken,
+          p_status: 'online',
+          p_current_playlist_id: device.current_playlist_id || null,
+        }).catch(() => {})
+      }
+
+      return new Response(
+        JSON.stringify(response),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     // 1. Validate Company
     if (path === 'validate-company' && req.method === 'POST') {
       const { cod_user } = await req.json()
