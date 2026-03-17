@@ -73,7 +73,7 @@ export function EditorSidebar({
   onAddText, onAddRect, onAddCircle, onAddLine, onAddTriangle,
   onAddStar, onAddPolygon,
   onAddImage, onAddImageFromUrl,
-  onAddSVGFromString, onAddSVGFromURL, onSvgSaved,
+  onAddSVGFromString, onSvgSaved,
   onDelete, onDuplicate, onBringToFront, onSendToBack,
   onToggleGrid,
   hasSelection, showGrid,
