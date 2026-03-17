@@ -1,0 +1,18 @@
+{
+  "name": "Mupa Creator",
+  "short_name": "Creator",
+  "description": "Mupa Graphic Editor - Crie artes para digital signage",
+  "start_url": "/admin/graphic-editor",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#085CF0",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronDown, ChevronUp, Circle, Eye, EyeOff, GripVertical, Image as ImageIcon, Lock, Maximize, Minimize, Minus, Square, Star, Triangle, Type, Unlock } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Circle, Download, Eye, EyeOff, GripVertical, Image as ImageIcon, Lock, Maximize, Minimize, Minus, Square, Star, Triangle, Type, Unlock } from "lucide-react";
 import { useFabricCanvas } from "@/components/graphic-editor/useFabricCanvas";
 import { EditorTopbar } from "@/components/graphic-editor/EditorTopbar";
 import { EditorSidebar } from "@/components/graphic-editor/EditorSidebar";
@@ -512,6 +512,29 @@ export default function GraphicEditor() {
     }));
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = useCallback(async () => {
+    if (!deferredPrompt) {
+      toast.info("Para instalar, abra no Chrome e acesse novamente.");
+      return;
+    }
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === "accepted") {
+      toast.success("App instalado com sucesso!");
+    }
+    setDeferredPrompt(null);
+  }, [deferredPrompt]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -558,6 +581,14 @@ export default function GraphicEditor() {
             onOpenTemplates={() => setShowTemplatesDialog(true)}
           />
         </div>
+        <Button
+          variant="ghost" size="icon"
+          className="h-14 w-12 rounded-none border-l border-border shrink-0"
+          onClick={handleInstall}
+          title="Instalar como App"
+        >
+          <Download className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost" size="icon"
           className="h-14 w-12 rounded-none border-l border-border shrink-0"
