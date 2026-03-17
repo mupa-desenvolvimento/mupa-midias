@@ -558,6 +558,14 @@ export default function GraphicEditor() {
             onOpenTemplates={() => setShowTemplatesDialog(true)}
           />
         </div>
+        <Button
+          variant="ghost" size="icon"
+          className="h-14 w-12 rounded-none border-l border-border shrink-0"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Sair do Fullscreen" : "Fullscreen"}
+        >
+          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+        </Button>
       </div>
 
       {/* Main area */}
