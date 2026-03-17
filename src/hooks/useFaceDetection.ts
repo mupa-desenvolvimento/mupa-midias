@@ -317,6 +317,10 @@ export const useFaceDetection = (
         .withAgeAndGender()
         .withFaceExpressions();
 
+      if (detections.length > 0) {
+        console.log(`[FaceDetection] Detected ${detections.length} face(s)`);
+      }
+
       const now = new Date();
       const currentTrackIds = new Set<string>();
 
