@@ -61,77 +61,135 @@
 
 ---
 
-## 2. Supabase – Endpoints e RPCs <a name="2-supabase"></a>
+## 2. API REST – Endpoints <a name="2-supabase"></a>
 
-### RPC: `get_public_device_info(p_device_code text)`
-**Retorna:** `{ id, name, store_id, current_playlist_id, company_id, is_blocked, blocked_message, camera_enabled, override_media_id, override_media_expires_at, last_sync_requested_at, store_code, company_slug, override_media_data }`
+### ⭐ ENDPOINT PRINCIPAL: Conteúdo do Dispositivo (substitui múltiplas chamadas RPC)
 
-- `override_media_data` é JSONB: `{ id, name, type, file_url, duration }`
-- Função SECURITY DEFINER (contorna RLS)
+O app nativo deve consumir **um único endpoint REST** que retorna toda a programação consolidada:
 
-### RPC: `get_public_playlists_data(p_playlist_ids uuid[], p_channel_ids uuid[])`
-**Retorna:** Array de playlists com estrutura aninhada:
-```json
-[{
-  "id": "uuid",
-  "name": "string",
-  "description": "string|null",
-  "is_active": true,
-  "has_channels": true,
-  "start_date": "date|null",
-  "end_date": "date|null",
-  "days_of_week": [0,1,2,3,4,5,6],
-  "start_time": "HH:MM|null",
-  "end_time": "HH:MM|null",
-  "priority": 0,
-  "content_scale": "string|null",
-  "playlist_items": [{
-    "id": "uuid",
-    "media_id": "uuid",
-    "position": 0,
-    "duration_override": null,
-    "start_date": "date|null",
-    "end_date": "date|null",
-    "start_time": "time|null",
-    "end_time": "time|null",
-    "days_of_week": [0,1,2,3,4,5,6],
-    "media": {
-      "id": "uuid",
-      "name": "string",
-      "type": "image|video|weather|news|motivational|curiosity|birthday|nutrition|instagram|campaign",
-      "file_url": "string|null",
-      "duration": 10,
-      "metadata": {}
-    }
-  }],
-  "playlist_channels": [{
-    "id": "uuid",
-    "name": "string",
-    "is_active": true,
-    "is_fallback": false,
-    "position": 0,
-    "start_date": "date|null",
-    "end_date": "date|null",
-    "start_time": "HH:MM",
-    "end_time": "HH:MM",
-    "days_of_week": [0,1,2,3,4,5,6],
-    "playlist_channel_items": [/* mesma estrutura dos playlist_items */]
-  }]
-}]
+```
+GET https://bgcnvyoseexfmrynqbfb.supabase.co/functions/v1/device-api/content?device_code={DEVICE_CODE}&token={DEVICE_TOKEN}
 ```
 
-### RPC: `register_device(p_device_code, p_name, p_store_id, p_company_id, p_group_id, p_store_code)`
-**Retorna:** `{ device_id, device_token, message }`
+**Parâmetros:**
+| Param | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| `device_code` | ✅ | Código do dispositivo (8 caracteres) |
+| `token` | ❌ | Device token — se enviado, faz heartbeat automático |
 
-### RPC: `device_heartbeat(p_device_token, p_status, p_current_playlist_id)`
-**Retorna:** `{ success: true }`
+**Response (200):**
+```json
+{
+  "version": 1,
+  "generated_at": "2026-03-17T12:00:00.000Z",
+  "device": {
+    "id": "uuid",
+    "device_code": "ABCD1234",
+    "name": "Terminal 01",
+    "store_id": "uuid|null",
+    "company_id": "uuid|null",
+    "company_slug": "string|null",
+    "store_code": "string|null",
+    "camera_enabled": false,
+    "is_blocked": false,
+    "blocked_message": "string|null",
+    "last_sync_requested_at": "iso-datetime|null"
+  },
+  "override_media": {
+    "id": "uuid",
+    "name": "Promo Urgente",
+    "type": "video",
+    "file_url": "https://...",
+    "duration": 30,
+    "expires_at": "iso-datetime"
+  },
+  "playlists": [{
+    "id": "uuid",
+    "name": "Playlist Principal",
+    "description": "string|null",
+    "is_active": true,
+    "has_channels": true,
+    "start_date": "YYYY-MM-DD|null",
+    "end_date": "YYYY-MM-DD|null",
+    "days_of_week": [0,1,2,3,4,5,6],
+    "start_time": "HH:MM|null",
+    "end_time": "HH:MM|null",
+    "priority": 10,
+    "content_scale": "string|null",
+    "items": [{
+      "id": "uuid",
+      "media_id": "uuid",
+      "position": 0,
+      "duration_override": null,
+      "start_date": "YYYY-MM-DD|null",
+      "end_date": "YYYY-MM-DD|null",
+      "start_time": "HH:MM|null",
+      "end_time": "HH:MM|null",
+      "days_of_week": null,
+      "media": {
+        "id": "uuid",
+        "name": "Banner.jpg",
+        "type": "image",
+        "file_url": "https://...",
+        "duration": 10,
+        "metadata": {}
+      }
+    }],
+    "channels": [{
+      "id": "uuid",
+      "name": "Canal Manhã",
+      "is_active": true,
+      "is_fallback": false,
+      "position": 0,
+      "start_date": null,
+      "end_date": null,
+      "start_time": "06:00",
+      "end_time": "12:00",
+      "days_of_week": null,
+      "items": [/* mesma estrutura dos items acima */]
+    }]
+  }]
+}
+```
 
-### Tabelas consultadas diretamente (SELECT com RLS pública):
-- `companies` → `SELECT id, slug, name, code, tenant_id WHERE is_active=true AND code=?`
-- `stores` → `SELECT id, code, name WHERE is_active=true AND tenant_id=?`
-- `device_groups` → `SELECT id, name, description, store_id, screen_type, tenant_id`
-- `device_group_members` → `SELECT group_id WHERE device_id=?`
-- `device_group_channels` → `SELECT distribution_channel_id WHERE group_id IN (?)`
+**Erros:**
+- `400` → `{ "error": "device_code é obrigatório" }`
+- `404` → `{ "error": "Dispositivo \"XXX\" não encontrado" }`
+
+### Kotlin — Como consumir:
+```kotlin
+// Usando Ktor ou OkHttp:
+val BASE_URL = "https://bgcnvyoseexfmrynqbfb.supabase.co/functions/v1/device-api"
+
+suspend fun fetchContent(deviceCode: String, token: String?): ContentResponse {
+    val url = "$BASE_URL/content?device_code=$deviceCode" +
+        (token?.let { "&token=$it" } ?: "")
+    val response = httpClient.get(url)
+    return json.decodeFromString<ContentResponse>(response.bodyAsText())
+}
+```
+
+### Endpoints auxiliares (Setup do dispositivo):
+
+| Método | Endpoint | Body/Params | Retorno |
+|--------|----------|-------------|---------|
+| `POST` | `/device-api/validate-company` | `{ "cod_user": "123ABC" }` | `{ "company_id", "company_name" }` |
+| `POST` | `/device-api/stores` | `{ "company_id": "uuid" }` | `[{ "id", "code", "name" }]` |
+| `POST` | `/device-api/groups` | `{ "store_id": "uuid", "tenant_id": "uuid" }` | `[{ "id", "name", "description" }]` |
+| `POST` | `/device-api/register` | `{ "device_code", "name", "store_id", "company_id", "group_id", "store_code" }` | `{ "device_id", "device_token" }` |
+| `POST` | `/device-api/heartbeat` | `{ "device_token", "status", "current_playlist_id?" }` | `{ "success": true }` |
+
+### Fluxo simplificado no app nativo:
+```
+1. App abre → verifica DataStore por device_code
+2. Se não tem → Tela Setup (usa endpoints auxiliares acima)
+3. Se tem → GET /device-api/content?device_code=XXX&token=YYY
+4. Processa resposta → filtra playlists/channels ativos → reproduz
+5. A cada 5 min → repete GET /content (sync + heartbeat automático)
+6. Realtime (opcional) → websocket para atualizações instantâneas
+```
+
+> **IMPORTANTE:** O endpoint `/content` já faz toda a resolução de grupos, canais e playlists no servidor. O app nativo **NÃO precisa** fazer múltiplas queries separadas como o app React fazia.
 
 ---
 
@@ -372,39 +430,28 @@ const getActiveItems = (): CachedPlaylistItem[] => {
 };
 ```
 
-### syncWithServer() – Fluxo Completo:
+### syncWithServer() – Fluxo Simplificado com API REST:
 ```
-1. get_public_device_info(deviceCode) → device info
-2. Check override_media (se expires_at > now)
-3. device_group_members.select(device_id=device.id) → group_ids
-4. device_group_channels.select(group_id IN group_ids) → channel_ids
-5. get_public_playlists_data(playlist_ids, channel_ids) → playlists com itens
-6. Para cada item com type != "news"/"weather" e file_url != null:
+1. GET /device-api/content?device_code={code}&token={token}
+2. Resposta já contém: device info, override_media, playlists completas
+3. Para cada item com type in ["image","video"] e file_url != null:
    - Adiciona à lista de download
-7. Monta CachedPlaylist[] com items e channels
-8. Download de cada mídia (IndexedDB/Filesystem)
-   - Injeta blob_url em cada item
-9. Download override_media se existir
-10. Cleanup arquivos antigos
-11. Salva DeviceState no localStorage
-12. Heartbeat via device_heartbeat RPC
+4. Download de cada mídia para cache local
+   - Injeta localPath em cada item
+5. Download override_media se existir
+6. Cleanup arquivos antigos
+7. Salva estado no DataStore/Room
 ```
 
-### Heartbeat:
-```typescript
-// A cada 30 segundos via checkControlCommands():
-supabase.rpc('device_heartbeat', {
-  p_device_token: savedToken,
-  p_status: 'online',
-  p_current_playlist_id: null,
-});
+> **Nota:** O heartbeat é feito automaticamente pelo servidor quando o parâmetro `token` é enviado na URL.
 
-// Também verifica mudanças comparando:
-// - is_blocked
-// - blocked_message  
-// - override_media_id
-// - camera_enabled
-// - last_sync_requested_at (força re-sync se mudou)
+### Verificação de controle (a cada 30s):
+```kotlin
+// Pode usar o mesmo endpoint /content com token para heartbeat
+// Ou comparar campos do response com estado local:
+// - is_blocked → mostrar tela de bloqueio
+// - override_media → substituir conteúdo ativo
+// - last_sync_requested_at → se mudou, forçar re-sync
 ```
 
 ---
