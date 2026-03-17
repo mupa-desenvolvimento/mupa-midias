@@ -687,7 +687,7 @@ export function EditorSidebar({
             </div>
 
             <p className="text-[10px] text-muted-foreground">
-              O SVG importado aparecerá no painel de layers. Você pode escalar, rotacionar e alterar cores dos paths.
+              O SVG será salvo na biblioteca global (acessível para todos os usuários) e adicionado ao canvas atual.
             </p>
           </div>
         </DialogContent>
