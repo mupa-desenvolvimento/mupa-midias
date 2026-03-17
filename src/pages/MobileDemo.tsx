@@ -163,6 +163,10 @@ const MobileDemo = () => {
   useEffect(() => {
     const loadModels = async () => {
       try {
+        const tf = faceapi.tf as any;
+        if (tf && tf.setBackend) {
+          try { await tf.setBackend('webgl'); await tf.ready(); } catch { await tf.setBackend('cpu'); await tf.ready(); }
+        }
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
