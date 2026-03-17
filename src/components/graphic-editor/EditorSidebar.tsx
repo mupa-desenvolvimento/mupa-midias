@@ -101,6 +101,7 @@ export function EditorSidebar({
   const [showSvgDialog, setShowSvgDialog] = useState(false);
   const [svgLoading, setSvgLoading] = useState(false);
   const [selectedSvgFile, setSelectedSvgFile] = useState<File | null>(null);
+  const [importingLibrarySvgId, setImportingLibrarySvgId] = useState<string | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,6 +117,16 @@ export function EditorSidebar({
     if (file.size > 10 * 1024 * 1024) {
       throw new Error(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
     }
+  };
+
+  const isSvgLibraryItem = (item: MediaGalleryItem) => {
+    const normalizedName = item.name.toLowerCase();
+    const normalizedUrl = `${item.file_url || ""} ${item.thumbnail_url || ""}`.toLowerCase();
+
+    return (
+      item.type === "image" &&
+      (normalizedName.endsWith(".svg") || normalizedUrl.includes(".svg") || normalizedUrl.includes("image/svg+xml"))
+    );
   };
 
   const uploadSvgToGlobal = async (file: File): Promise<string | null> => {
@@ -169,17 +180,49 @@ export function EditorSidebar({
 
     setSvgLoading(true);
     try {
+      const svgName = selectedSvgFile.name.replace(/\.svg$/i, "");
       const text = await selectedSvgFile.text();
-      await onAddSVGFromString(text, selectedSvgFile.name.replace(/\.svg$/i, ""));
+
       await uploadSvgToGlobal(selectedSvgFile);
       await onSvgSaved?.();
-      toast.success("SVG importado e salvo na biblioteca!");
+      await onAddSVGFromString(text, svgName);
+
+      toast.success("SVG importado com sucesso!");
       setSelectedSvgFile(null);
       setShowSvgDialog(false);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao importar SVG.");
     } finally {
       setSvgLoading(false);
+    }
+  };
+
+  const handleAddLibrarySvg = async (item: MediaGalleryItem) => {
+    if (!onAddSVGFromString || !item.file_url) return;
+
+    setImportingLibrarySvgId(item.id);
+    try {
+      let response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-media?mediaId=${item.id}`);
+
+      if (!response.ok) {
+        response = await fetch(item.file_url);
+      }
+
+      if (!response.ok) {
+        throw new Error("Não foi possível carregar o SVG salvo.");
+      }
+
+      const svgText = await response.text();
+      if (!/<svg[\s>]/i.test(svgText)) {
+        throw new Error("O arquivo salvo não contém um SVG válido.");
+      }
+
+      await onAddSVGFromString(svgText, item.name.replace(/\.svg$/i, ""));
+      toast.success("SVG adicionado ao canvas!");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao adicionar SVG salvo.");
+    } finally {
+      setImportingLibrarySvgId(null);
     }
   };
 
@@ -245,6 +288,10 @@ export function EditorSidebar({
     { icon: Star, label: "Estrela", action: onAddStar, color: "text-yellow-500" },
     { icon: Hexagon, label: "Polígono", action: onAddPolygon, color: "text-purple-500" },
   ];
+
+  const importedSvgItems = galleryItems.filter(
+    (item) => isSvgLibraryItem(item) && item.file_url
+  );
 
   const filteredGallery = galleryItems.filter(
     (item) =>
@@ -320,6 +367,45 @@ export function EditorSidebar({
                     </Button>
                   ))}
                 </div>
+
+                {importedSvgItems.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">SVGs importados</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {importedSvgItems.map((item) => {
+                        const isImporting = importingLibrarySvgId === item.id;
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="group relative overflow-hidden rounded-md border border-border bg-muted/30 transition-colors hover:border-primary hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => handleAddLibrarySvg(item)}
+                            disabled={isImporting}
+                            title={item.name}
+                          >
+                            <div className="aspect-square flex items-center justify-center overflow-hidden bg-background">
+                              <img
+                                src={item.thumbnail_url || item.file_url || ""}
+                                alt={item.name}
+                                className="h-full w-full object-contain p-2"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="border-t border-border px-2 py-1 text-left">
+                              <p className="truncate text-[10px] font-medium text-foreground">{item.name}</p>
+                            </div>
+                            {isImporting && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Separator />
