@@ -152,16 +152,8 @@ export const usePlayerFaceDetection = (
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
 
-        // Warm-up detection to initialize backend
-        try {
-          const dummyCanvas = document.createElement('canvas');
-          dummyCanvas.width = 20;
-          dummyCanvas.height = 20;
-          await faceapi.detectAllFaces(dummyCanvas, new faceapi.TinyFaceDetectorOptions());
-          console.log('[PlayerDetection] Warm-up OK, backend:', (faceapi.tf as any)?.getBackend?.());
-        } catch (e) {
-          console.warn('[PlayerDetection] Warm-up failed:', e);
-        }
+        const backend = await initializeFaceApiBackend(faceapi);
+        console.log('[PlayerDetection] Warm-up OK, backend:', backend);
         
         setIsModelsLoaded(true);
         console.log('[PlayerDetection] Models loaded (including expressions)');
