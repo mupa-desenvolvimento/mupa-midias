@@ -149,6 +149,7 @@ export const useFaceDetection = (
   const [totalSessionsToday, setTotalSessionsToday] = useState(0);
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isDetectingRef = useRef(false);
   const lastDetectedPersonsRef = useRef<Set<string>>(new Set());
   const trackedFacesRef = useRef<Map<string, TrackedFaceData>>(new Map());
   
@@ -305,6 +306,10 @@ export const useFaceDetection = (
   }, [addAttentionRecord, updateActiveFacesState]);
 
   const detectFaces = useCallback(async () => {
+    if (isDetectingRef.current) {
+      return;
+    }
+
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded || !isActive) {
       console.log('[FaceDetection] Skip: ref=', !!videoRef.current, 'canvas=', !!canvasRef.current, 'models=', isModelsLoaded, 'active=', isActive);
       return;
@@ -317,6 +322,8 @@ export const useFaceDetection = (
       console.log('[FaceDetection] Skip: video dimensions', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
       return;
     }
+
+    isDetectingRef.current = true;
 
     try {
       canvas.width = video.videoWidth;
@@ -516,25 +523,31 @@ export const useFaceDetection = (
       
     } catch (error) {
       console.error('[FaceDetection] Error during face detection:', error);
+    } finally {
+      isDetectingRef.current = false;
     }
   }, [videoRef, canvasRef, isModelsLoaded, isActive, registeredPeople, logDetection, findMatchingTrackedFace, updateActiveFacesState]);
 
   // Start/stop detection based on isActive
   useEffect(() => {
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
+
     if (isActive && isModelsLoaded) {
       console.log('[FaceDetection] Starting detection interval');
       detectionIntervalRef.current = setInterval(detectFaces, DETECTION_INTERVAL_MS);
     } else {
-      if (detectionIntervalRef.current) {
-        clearInterval(detectionIntervalRef.current);
-        detectionIntervalRef.current = null;
-      }
+      isDetectingRef.current = false;
     }
 
     return () => {
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
       }
+      isDetectingRef.current = false;
     };
   }, [isActive, isModelsLoaded, detectFaces]);
 
