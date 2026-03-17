@@ -1366,18 +1366,52 @@ export function useFabricCanvas() {
     return group;
   }, [getViewportCenterInCanvasCoords, refreshLayers]);
 
+  const addSVGAsImage = useCallback(async (svgString: string, fileName?: string) => {
+    const c = canvasRef.current;
+    if (!c) throw new Error("Canvas não inicializado");
+
+    const sanitized = sanitizeSVG(svgString);
+    const blob = new Blob([sanitized], { type: "image/svg+xml;charset=utf-8" });
+    const objectUrl = URL.createObjectURL(blob);
+
+    try {
+      const imgEl = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Não foi possível renderizar o SVG como imagem."));
+        img.src = objectUrl;
+      });
+
+      const { x, y } = getViewportCenterInCanvasCoords(c);
+      const fImg = new FabricImage(imgEl, { left: x, top: y });
+      const maxW = Math.min(500, c.width! * 0.6);
+      if (fImg.width && fImg.width > maxW) fImg.scaleToWidth(maxW);
+      fImg.set({ left: x - fImg.getScaledWidth() / 2, top: y - fImg.getScaledHeight() / 2 } as any);
+      (fImg as any).set("data", { layerId: makeLayerId(), layerName: fileName || "SVG Importado" });
+      fImg.setCoords();
+      c.add(fImg);
+      c.setActiveObject(fImg);
+      c.renderAll();
+      refreshLayers(c);
+      return fImg;
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }, [getViewportCenterInCanvasCoords, refreshLayers, sanitizeSVG]);
+
   const addSVGFromString = useCallback(async (svgString: string, fileName?: string) => {
     const c = canvasRef.current;
     if (!c) throw new Error("Canvas não inicializado");
 
-    // Size check
     const byteSize = new Blob([svgString]).size;
     if (byteSize > MAX_SVG_SIZE_BYTES) {
       throw new Error(`Arquivo SVG muito grande (${(byteSize / 1024 / 1024).toFixed(1)}MB). Limite: 10MB.`);
     }
 
+    const sanitized = sanitizeSVG(svgString);
+
     try {
-      const sanitized = sanitizeSVG(svgString);
       const { objects, options } = await loadSVGFromString(sanitized);
       const validObjects = objects.filter(Boolean) as FabricObject[];
       if (validObjects.length === 0) throw new Error("SVG vazio — nenhum elemento gráfico encontrado.");
@@ -1385,48 +1419,50 @@ export function useFabricCanvas() {
       return placeSVGOnCanvas(c, group, fileName || "SVG Importado");
     } catch (err: any) {
       const msg = err?.message || "Falha ao importar SVG";
-      if (msg.includes("Maximum call stack")) {
-        throw new Error("SVG muito complexo para importação direta. Tente simplificar o arquivo.");
+
+      if (
+        msg.includes("Maximum call stack") ||
+        msg.includes("call stack") ||
+        msg.includes("parsing") ||
+        msg.includes("attribute") ||
+        msg.includes("Unsupported")
+      ) {
+        return addSVGAsImage(sanitized, fileName || "SVG Importado");
       }
-      throw new Error(msg);
+
+      try {
+        return await addSVGAsImage(sanitized, fileName || "SVG Importado");
+      } catch {
+        throw new Error(msg || "Falha ao importar SVG. O arquivo pode estar corrompido ou usar recursos não suportados.");
+      }
     }
-  }, [sanitizeSVG, placeSVGOnCanvas]);
+  }, [sanitizeSVG, placeSVGOnCanvas, addSVGAsImage]);
 
   const addSVGFromURL = useCallback(async (url: string) => {
     const c = canvasRef.current;
     if (!c) throw new Error("Canvas não inicializado");
 
     try {
-      // First try fetching to avoid CORS issues with loadSVGFromURL
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Erro ao baixar SVG: HTTP ${response.status}`);
 
-      const contentType = response.headers.get("content-type") || "";
+      const blob = await response.blob();
+      const contentType = response.headers.get("content-type") || blob.type || "";
       if (!contentType.includes("svg") && !contentType.includes("xml") && !contentType.includes("text")) {
-        throw new Error("A URL não retornou um arquivo SVG válido (content-type: " + contentType + ").");
+        throw new Error(`A URL não retornou um SVG válido (${contentType || "content-type ausente"}).`);
       }
 
-      const text = await response.text();
+      const text = await blob.text();
       const fileName = url.split("/").pop()?.replace(/\.svg.*$/i, "") || "SVG";
       return await addSVGFromString(text, fileName);
     } catch (err: any) {
       const msg = err?.message || "";
-      // If fetch failed due to CORS, try fabric's native loader as fallback
       if (msg.includes("Failed to fetch") || msg.includes("CORS") || msg.includes("NetworkError")) {
-        try {
-          const { objects, options } = await loadSVGFromURL(url);
-          const validObjects = objects.filter(Boolean) as FabricObject[];
-          if (validObjects.length === 0) throw new Error("SVG vazio ou inacessível.");
-          const group = util.groupSVGElements(validObjects, options);
-          const fileName = url.split("/").pop()?.replace(/\.svg.*$/i, "") || "SVG";
-          return placeSVGOnCanvas(c, group, fileName);
-        } catch {
-          throw new Error("Não foi possível acessar o SVG. Verifique se a URL permite acesso externo (CORS).");
-        }
+        throw new Error("Não foi possível acessar o SVG pela URL. Verifique se o arquivo é público e se o servidor libera CORS.");
       }
       throw new Error(msg || "Falha ao carregar SVG da URL.");
     }
-  }, [addSVGFromString, placeSVGOnCanvas]);
+  }, [addSVGFromString]);
 
   function makeLayerId() {
     return typeof crypto !== "undefined" && "randomUUID" in crypto
