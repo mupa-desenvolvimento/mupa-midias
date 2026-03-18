@@ -78,7 +78,7 @@ export function useBirthdayPeople() {
       }
 
       // Get tenant_id from user mapping
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await (supabase.auth as any).getUser();
       if (!user) throw new Error("Não autenticado");
 
       const { data: mapping } = await supabase

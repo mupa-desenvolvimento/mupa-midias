@@ -279,7 +279,7 @@ export const FaceCapture = ({
       const video = videoRef.current;
       
       // Capturar apenas a região da face com margem
-      const box = detection.detection.box;
+      const box = (detection.detection as any).box;
       const margin = box.width * 0.4;
       const x = Math.max(0, box.x - margin);
       const y = Math.max(0, box.y - margin);

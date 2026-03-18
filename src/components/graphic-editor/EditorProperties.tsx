@@ -499,7 +499,7 @@ export function EditorProperties({
     const id = systemFamilyToId.get(current);
     if (!id) return;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
       if (!session) {
         toast.error("Você precisa estar autenticado para remover fontes do sistema");
         return;

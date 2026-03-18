@@ -327,7 +327,7 @@ export function StoreImportDialog({ open, onOpenChange, onImportComplete }: Stor
       setImportLogId(log.id);
 
       // Get session for auth header
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await (supabase.auth as any).getSession();
       
       // Call edge function
       const response = await supabase.functions.invoke('import-stores', {
