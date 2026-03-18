@@ -128,7 +128,7 @@ export default function CanvaCallback() {
         let result = await response.json();
 
         if (response.status === 401) {
-          const { data: refreshedSessionData, error: refreshError } = await supabase.auth.refreshSession();
+          const { data: refreshedSessionData, error: refreshError } = await (supabase.auth as any).refreshSession();
           if (!refreshError && refreshedSessionData.session) {
             response = await exchangeRequest(refreshedSessionData.session.access_token);
             result = await response.json();
