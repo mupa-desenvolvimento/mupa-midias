@@ -25,6 +25,7 @@ interface CreateTenantData {
   max_users?: number;
   max_devices?: number;
   max_stores?: number;
+  license_plan?: 'lite' | 'standard' | 'enterprise';
 }
 
 export function useTenants() {
