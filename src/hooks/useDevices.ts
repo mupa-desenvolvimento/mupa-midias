@@ -76,7 +76,7 @@ export const useDevices = () => {
   const { tenantId, companyId, isSuperAdmin } = useUserTenant();
 
   const { data: devices = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["devices", companyId, isSuperAdmin],
+    queryKey: ["devices", tenantId, isSuperAdmin],
     queryFn: async () => {
       const fullSelect = `
         *,
