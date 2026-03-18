@@ -4,16 +4,19 @@ import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 import { cn } from "@/lib/utils"
 
 interface ScrollAreaProps extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
+  className?: string;
+  style?: React.CSSProperties;
   showScrollbar?: "always" | "auto" | "hover";
 }
 
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   ScrollAreaProps
->(({ className, children, showScrollbar = "auto", ...props }, ref) => (
+>(({ className, children, showScrollbar = "auto", style, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn("relative overflow-hidden", className)}
+    style={style}
     {...props}
   >
     <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>

@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "predev": "node scripts/prepare-hero-videos.cjs",
-    "dev": "vite --host --port 8080",
+    "dev": "./node_modules/.bin/vite --host --port 8080",
     "prebuild": "node scripts/prepare-hero-videos.cjs",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "./node_modules/.bin/vite build",
+    "build:dev": "./node_modules/.bin/vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "./node_modules/.bin/vite preview",
     "prepare:hero-videos": "node scripts/prepare-hero-videos.cjs"
   },
   "dependencies": {
