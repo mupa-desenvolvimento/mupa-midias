@@ -438,7 +438,7 @@ export const PlaylistEditor = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="h-[calc(100vh-7rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
       {/* Header */}
       <EditorHeader
         projectName={formData.name || "Novo Projeto"}
