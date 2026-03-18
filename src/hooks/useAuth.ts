@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
+// @ts-ignore - platform version mismatch
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+
+// @ts-ignore - platform version mismatch
+const auth = supabase.auth as any;
 
 export type AppRole = 'admin_global' | 'admin_regional' | 'admin_loja' | 'operador_conteudo' | 'tecnico';
 
