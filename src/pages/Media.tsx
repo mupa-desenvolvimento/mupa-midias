@@ -1,4 +1,5 @@
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import { useTenantLicense } from "@/hooks/useTenantLicense";
 import { FolderPlus, ChevronLeft, ChevronRight, Folder as FolderIcon, HardDrive, Plus, Image as ImageIcon, Video, Clock, Grid2x2, Loader2, Play, Eye, MoreVertical, Pencil, Trash2, LayoutGrid, LayoutList, AlertTriangle, Upload, Filter, SortAsc, SortDesc } from "lucide-react";
 import { useFolders, Folder as FolderType } from "@/hooks/useFolders";
 import { FolderSidebar } from "@/components/media/FolderSidebar";
@@ -45,6 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Media = () => {
   const { toast } = useToast();
+  const { isLite } = useTenantLicense();
   const [searchTerm, setSearchTerm] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -283,14 +285,16 @@ const Media = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col gap-4 overflow-hidden min-w-0">
-            {/* Storage Warning */}
-            <Alert className="bg-red-50 border-red-200 shadow-sm shrink-0">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <AlertTitle className="text-red-800 font-semibold ml-2">Atenção</AlertTitle>
-              <AlertDescription className="text-red-700 ml-2">
-                Mídias não utilizadas por mais de 30 dias serão removidas automaticamente do sistema.
-              </AlertDescription>
-            </Alert>
+            {/* Storage Warning - hidden for Lite plans */}
+            {!isLite && (
+              <Alert className="bg-red-50 border-red-200 shadow-sm shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <AlertTitle className="text-red-800 font-semibold ml-2">Atenção</AlertTitle>
+                <AlertDescription className="text-red-700 ml-2">
+                  Mídias não utilizadas por mais de 30 dias serão removidas automaticamente do sistema.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="flex flex-col gap-4 shrink-0">
             {/* Navigation and Actions */}
