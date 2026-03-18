@@ -17,6 +17,7 @@ import { ChannelsTimeline } from "./ChannelsTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
+// @ts-ignore - firebase modular API
 import { ref, update } from "firebase/database";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

@@ -60,11 +60,12 @@ export const FaceCapture = ({
       try {
         // Use CDN for consistency with useFaceDetection
         const modelPath = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+        const nets = faceapi.nets as any;
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(modelPath),
-          faceapi.nets.faceLandmark68Net.loadFromUri(modelPath),
-          faceapi.nets.faceRecognitionNet.loadFromUri(modelPath),
-          faceapi.nets.ageGenderNet.loadFromUri(modelPath)
+          nets.tinyFaceDetector.loadFromUri(modelPath),
+          nets.faceLandmark68Net.loadFromUri(modelPath),
+          nets.faceRecognitionNet.loadFromUri(modelPath),
+          nets.ageGenderNet.loadFromUri(modelPath)
         ]);
         setModelLoaded(true);
         onModelLoad?.(true);

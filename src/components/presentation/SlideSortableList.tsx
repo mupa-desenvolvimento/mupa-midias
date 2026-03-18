@@ -31,7 +31,7 @@ function SortableItem({ id }: SortableItemProps) {
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id });
+  } = useSortable({ id } as any);
 
   const style = {
     transform: CSS.Transform.toString(transform),

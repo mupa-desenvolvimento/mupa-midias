@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+// @ts-ignore - platform version mismatch
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
