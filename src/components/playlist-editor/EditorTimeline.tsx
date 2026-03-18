@@ -258,8 +258,8 @@ export const EditorTimeline = ({
   return (
     <div
       className={cn(
-        "flex flex-col bg-muted/50 border-t border-border transition-all flex-shrink-0",
-        isExpanded ? "h-40" : "h-10",
+        "flex flex-col bg-muted/50 border-t border-border transition-all duration-300 ease-in-out flex-shrink-0",
+        isExpanded ? "h-48" : "h-10",
       )}
     >
       {/* Timeline Header */}
