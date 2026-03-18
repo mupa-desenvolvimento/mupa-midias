@@ -54,7 +54,7 @@ export function useLiteProducts() {
       // If no image_url, try Mupa API
       let imageUrl = product.image_url;
       if (!imageUrl && product.ean) {
-        imageUrl = `${MUPA_API}/produto-imagem/${product.ean}`;
+        imageUrl = getImageProxyUrl(product.ean);
       }
 
       const record = {
