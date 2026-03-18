@@ -503,7 +503,7 @@ export const PlaylistEditor = () => {
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {/* Center - Canvas/Preview (only show in legacy mode) */}
         {activeTab === "legacy" && (
