@@ -112,7 +112,8 @@ const WebViewPlayer = () => {
   const handleDismissProduct = useCallback(() => {
     setShowProductOverlay(false);
     clearProduct();
-  }, [clearProduct]);
+    stopTTS();
+  }, [clearProduct, stopTTS]);
 
   const handleEanSubmit = useCallback((ean: string) => {
     lookupProduct(ean);

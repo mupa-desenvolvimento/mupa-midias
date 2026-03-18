@@ -559,7 +559,8 @@ const OfflinePlayer = () => {
   const handleDismissProduct = useCallback(() => {
     setTerminalMode("player");
     clearProduct();
-  }, [clearProduct]);
+    stopTTS();
+  }, [clearProduct, stopTTS]);
 
   const handleEanSubmit = useCallback((ean: string) => {
     lookupProduct(ean);
