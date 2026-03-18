@@ -3,6 +3,40 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 declare const Deno: any;
 
+const MUPA_IMAGE_API = "http://srv-mupa.ddns.net:5050/produto-imagem";
+
+/**
+ * Fetch product image URL from Mupa API and persist it to lite_products.
+ */
+async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${MUPA_IMAGE_API}/${ean}`, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!res.ok) { await res.text(); return null; }
+    const data = await res.json();
+    const imageUrl = data.imagem_url || data.image_url || null;
+    
+    if (imageUrl) {
+      console.log(`[Image] Resolved for ${ean}: ${imageUrl}`);
+      // Persist to lite_products so we don't fetch again
+      supabase
+        .from('lite_products')
+        .update({ image_url: imageUrl })
+        .eq('ean', ean)
+        .eq('company_id', companyId)
+        .then(() => console.log(`[Image] Saved to lite_products for ${ean}`));
+    }
+    
+    return imageUrl;
+  } catch (e) {
+    console.error(`[Image] Error fetching for ${ean}:`, e);
+    return null;
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -225,7 +259,7 @@ Deno.serve(async (req: Request) => {
           original_price: originalPrice,
           is_offer: isOffer,
           savings_percent: savingsPercent,
-          image_url: p.image,
+          image_url: p.image || await resolveProductImage(normalizedEan, supabase, device.company_id),
           store_code: storeCode,
           description: p.description // Legacy
         };
@@ -321,10 +355,10 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((normalPrice - promoPrice) / normalPrice) * 100);
         }
 
-        // Gerar URL de imagem se não existir
+        // Buscar URL de imagem se não existir
         let imageUrl = liteProduct.image_url;
         if (!imageUrl) {
-          imageUrl = `http://srv-mupa.ddns.net:5050/produto-imagem/${normalizedEan}`;
+          imageUrl = await resolveProductImage(normalizedEan, supabase, device.company_id);
         }
 
         const productData = {
