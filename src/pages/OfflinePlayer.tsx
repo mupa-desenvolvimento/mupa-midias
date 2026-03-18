@@ -726,12 +726,8 @@ const OfflinePlayer = () => {
           channelName={activeChannel?.name}
           isOnline={deviceState?.is_online}
           isFullscreen={isFullscreen}
-          isSyncing={isSyncing}
-          formattedTime={formattedTime}
-          formattedDate={formattedDate}
           onToggleFullscreen={toggleFullscreen}
           onSync={syncWithServer}
-          showClock
           showSyncButton
         >
           <button
