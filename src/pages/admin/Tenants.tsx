@@ -93,7 +93,19 @@ const Tenants = () => {
       max_users: 50,
       max_devices: 100,
       max_stores: 500,
+      license_plan: 'lite',
     });
+  };
+
+  const PLAN_DEFAULTS = {
+    lite: { max_users: 5, max_devices: 3, max_stores: 3 },
+    standard: { max_users: 50, max_devices: 100, max_stores: 500 },
+    enterprise: { max_users: 500, max_devices: 1000, max_stores: 5000 },
+  };
+
+  const handlePlanChange = (plan: 'lite' | 'standard' | 'enterprise') => {
+    const defaults = PLAN_DEFAULTS[plan];
+    setFormData(prev => ({ ...prev, license_plan: plan, ...defaults }));
   };
 
   const handleCreate = async () => {
