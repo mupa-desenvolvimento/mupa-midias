@@ -571,13 +571,6 @@ const OfflinePlayer = () => {
           isSyncing={isSyncing}
           debugInfo={debugInfo}
         />
-        <TerminalModeSwitcher
-          activeMode={terminalMode}
-          onModeChange={handleModeChange}
-          visible={true}
-          peopleCount={todayCount}
-          facesDetected={activeFaces.length}
-        />
       </div>
     );
   }
