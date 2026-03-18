@@ -78,7 +78,7 @@ export default function CanvaCallback() {
             currentSession = refreshedData.session;
 
             if (currentSession) {
-              const { data: refreshedUserData, error: refreshedUserError } = await supabase.auth.getUser();
+              const { data: refreshedUserData, error: refreshedUserError } = await (supabase.auth as any).getUser();
               if (!refreshedUserError && refreshedUserData.user) {
                 session = currentSession;
                 break;
