@@ -181,16 +181,25 @@ const AppSidebar = () => {
     return (
       <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
         <SidebarContent className="flex items-center justify-center p-6">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-3">
+            <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
             <p className="text-sm font-semibold text-destructive">Licença expirada</p>
-            <p className="text-xs text-muted-foreground">Entre em contato para renovar seu plano.</p>
+            <p className="text-xs text-muted-foreground">Renove seu plano para continuar usando a plataforma.</p>
+            <Button
+              size="sm"
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
+              onClick={() => navigate("/admin/settings?tab=license")}
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              Renovar Licença
+            </Button>
           </div>
         </SidebarContent>
       </Sidebar>
     );
   }
 
-  return (
+  const planLabel = license?.plan === 'lite' ? 'LITE' : license?.plan === 'standard' ? 'STANDARD' : license?.plan === 'enterprise' ? 'ENTERPRISE' : null;
     <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
       <SidebarHeader className="p-3">
         <div className="gap-2 flex items-center justify-center">
