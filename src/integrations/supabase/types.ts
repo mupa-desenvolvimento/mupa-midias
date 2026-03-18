@@ -2770,6 +2770,74 @@ export type Database = {
           },
         ]
       }
+      tenant_licenses: {
+        Row: {
+          allow_video_upload: boolean
+          coupon_code: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_device_groups: number
+          max_devices: number
+          max_media_uploads: number
+          max_playlists: number
+          max_stores: number
+          plan: Database["public"]["Enums"]["license_plan"]
+          starts_at: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_video_upload?: boolean
+          coupon_code?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          max_device_groups?: number
+          max_devices?: number
+          max_media_uploads?: number
+          max_playlists?: number
+          max_stores?: number
+          plan?: Database["public"]["Enums"]["license_plan"]
+          starts_at?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_video_upload?: boolean
+          coupon_code?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          max_device_groups?: number
+          max_devices?: number
+          max_media_uploads?: number
+          max_playlists?: number
+          max_stores?: number
+          plan?: Database["public"]["Enums"]["license_plan"]
+          starts_at?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_licenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string | null
@@ -2993,6 +3061,14 @@ export type Database = {
         Args: { check_tenant_id: string; check_user_id: string }
         Returns: boolean
       }
+      check_tenant_limit: {
+        Args: {
+          p_current_count: number
+          p_resource: string
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
       create_tenant_schema: {
         Args: { p_schema_name: string; p_tenant_id: string }
         Returns: undefined
@@ -3037,6 +3113,7 @@ export type Database = {
         Args: { p_channel_ids: string[]; p_playlist_ids: string[] }
         Returns: Json
       }
+      get_tenant_license: { Args: { p_tenant_id: string }; Returns: Json }
       get_user_tenant_id: { Args: { check_user_id?: string }; Returns: string }
       get_user_tenant_id_strict: {
         Args: { check_user_id?: string }
@@ -3106,6 +3183,7 @@ export type Database = {
         | "instagram_store"
         | "refer_earn"
         | "accessibility_info"
+      license_plan: "lite" | "standard" | "enterprise"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3254,6 +3332,7 @@ export const Constants = {
         "refer_earn",
         "accessibility_info",
       ],
+      license_plan: ["lite", "standard", "enterprise"],
     },
   },
 } as const

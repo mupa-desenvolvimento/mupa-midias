@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUserCompany } from "@/hooks/useUserCompany";
+import { useTenantLicense } from "@/hooks/useTenantLicense";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -153,6 +154,7 @@ const AppSidebar = () => {
   const { user, signOut } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const { company } = useUserCompany();
+  const { isLite, isExpired, isMenuItemAllowed, isSectionAllowed } = useTenantLicense();
   const { resolvedTheme } = useTheme();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -168,6 +170,22 @@ const AppSidebar = () => {
 
   const isAutoContentActive = location.pathname.startsWith("/admin/auto-content");
   const isSuperAdminActive = superAdminItems.some((i) => location.pathname.startsWith(i.url));
+
+  const filteredMenuItems = menuItems.filter((item) => isMenuItemAllowed(item.url));
+
+  // If license is expired, show a blocked overlay
+  if (isExpired) {
+    return (
+      <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
+        <SidebarContent className="flex items-center justify-center p-6">
+          <div className="text-center space-y-2">
+            <p className="text-sm font-semibold text-destructive">Licença expirada</p>
+            <p className="text-xs text-muted-foreground">Entre em contato para renovar seu plano.</p>
+          </div>
+        </SidebarContent>
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
@@ -190,7 +208,7 @@ const AppSidebar = () => {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
-              {menuItems.map((item) =>
+              {filteredMenuItems.map((item) =>
               <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="p-0">
                     <SidebarNavItem item={item} />
@@ -202,6 +220,7 @@ const AppSidebar = () => {
         </SidebarGroup>
 
         {/* Auto Content — collapsible */}
+        {isSectionAllowed('auto_content') &&
         <SidebarGroup>
           <Collapsible defaultOpen={isAutoContentActive}>
             <CollapsibleTrigger className="w-full">
@@ -225,6 +244,7 @@ const AppSidebar = () => {
             </CollapsibleContent>
           </Collapsible>
         </SidebarGroup>
+        }
 
         {/* Company settings */}
         {company &&
@@ -234,11 +254,13 @@ const AppSidebar = () => {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-0.5">
+                {!isLite &&
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild className="p-0">
                     <SidebarNavItem item={{ title: "Tela de Consulta", url: `/admin/companies/${company.id}/display-config`, icon: Palette }} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                }
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild className="p-0">
                     <SidebarNavItem item={{ title: "Consultas de Produtos", url: "/admin/product-analytics", icon: ShoppingBag }} />
