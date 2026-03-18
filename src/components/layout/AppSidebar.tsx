@@ -254,11 +254,13 @@ const AppSidebar = () => {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-0.5">
+                {!isLite &&
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild className="p-0">
                     <SidebarNavItem item={{ title: "Tela de Consulta", url: `/admin/companies/${company.id}/display-config`, icon: Palette }} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                }
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild className="p-0">
                     <SidebarNavItem item={{ title: "Consultas de Produtos", url: "/admin/product-analytics", icon: ShoppingBag }} />
