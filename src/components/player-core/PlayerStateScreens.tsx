@@ -189,21 +189,3 @@ export const ActiveSessionScreen = ({ deviceName, message }: ActiveSessionScreen
     </p>
   </div>
 );
-  const percent = total > 0 ? (downloaded / total) * 100 : 0;
-
-  return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-8">
-      <Download className="w-16 h-16 mb-6 text-primary animate-bounce" />
-      <h1 className="text-2xl font-semibold mb-2">Baixando Conteúdos</h1>
-      <p className="text-white/60 mb-6 text-center">
-        {current || "Preparando arquivos..."}
-      </p>
-      <div className="w-full max-w-md">
-        <Progress value={percent} className="h-2" />
-        <p className="text-center text-sm mt-2 text-white/60">
-          {downloaded} de {total} arquivos
-        </p>
-      </div>
-    </div>
-  );
-};
