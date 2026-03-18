@@ -23,6 +23,7 @@ interface ProductDisplayProps {
   onImageLoad: () => void;
   imageLoaded: boolean;
   settings?: Partial<ProductDisplaySettings>;
+  preloadedSrc?: string | null;
 }
 
 const hexToRgb = (hex: string): RGB => {
@@ -42,6 +43,7 @@ export const ProductDisplay = ({
   onImageLoad,
   imageLoaded,
   settings,
+  preloadedSrc,
 }: ProductDisplayProps) => {
   const formatPrice = (price: number) => {
     const [reais, centavos] = price.toFixed(2).split(".");
@@ -274,22 +276,29 @@ export const ProductDisplay = ({
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {product.image_url ? (
+      {(preloadedSrc || product.image_url) ? (
         <motion.img
-          src={product.image_url}
+          src={preloadedSrc || product.image_url || ""}
           alt={product.name}
           className="max-w-[80%] max-h-[80vh] object-contain relative z-10"
           style={{
             filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.12))",
           }}
           onLoad={onImageLoad}
+          onError={(e) => {
+            // If preloaded src failed, try original URL
+            const target = e.currentTarget;
+            if (preloadedSrc && product.image_url && target.src !== product.image_url) {
+              target.src = product.image_url;
+            }
+          }}
           crossOrigin="anonymous"
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: imageLoaded ? 1 : 0.85, opacity: imageLoaded ? 1 : 0 }}
           transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 120 }}
         />
       ) : (
-        <div className="w-64 h-64 bg-slate-50 rounded-2xl flex items-center justify-center">
+        <div className="w-64 h-64 rounded-2xl flex items-center justify-center bg-slate-50">
           <Package className="w-24 h-24 text-slate-200" />
         </div>
       )}

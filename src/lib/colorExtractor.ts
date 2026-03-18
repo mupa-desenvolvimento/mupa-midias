@@ -83,95 +83,139 @@ const getLuminance = (rgb: RGB): number => {
   return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
 };
 
-export const extractColors = (imageUrl: string): Promise<ExtractedColors> => {
-  return new Promise((resolve) => {
+/**
+ * Preloads an image and returns the HTMLImageElement for reuse
+ */
+export const preloadImage = (imageUrl: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      
-      if (!ctx) {
-        resolve(getDefaultColors());
-        return;
-      }
+    const timeout = setTimeout(() => {
+      img.src = "";
+      reject(new Error("Image load timeout"));
+    }, 12000);
 
-      // Usar uma amostra pequena para performance
-      const sampleSize = 50;
-      canvas.width = sampleSize;
-      canvas.height = sampleSize;
-      
-      ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
-      
-      const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
-      const pixels = imageData.data;
-      
-      // Coletar cores
-      const colorCounts: Map<string, { rgb: RGB; count: number; saturation: number }> = new Map();
-      
-      for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-        const a = pixels[i + 3];
-        
-        // Ignorar pixels transparentes ou quase brancos/pretos
-        if (a < 128) continue;
-        const luminance = (r + g + b) / 3;
-        if (luminance < 20 || luminance > 235) continue;
-        
-        // Quantizar cores para agrupar similares
-        const qr = Math.round(r / 16) * 16;
-        const qg = Math.round(g / 16) * 16;
-        const qb = Math.round(b / 16) * 16;
-        const key = `${qr},${qg},${qb}`;
-        
-        const [, saturation] = rgbToHsl(r, g, b);
-        
-        const existing = colorCounts.get(key);
-        if (existing) {
-          existing.count++;
-        } else {
-          colorCounts.set(key, { rgb: { r: qr, g: qg, b: qb }, count: 1, saturation });
-        }
-      }
-      
-      // Ordenar por frequência
-      const sortedColors = Array.from(colorCounts.values())
-        .sort((a, b) => b.count - a.count);
-      
-      if (sortedColors.length === 0) {
-        resolve(getDefaultColors());
-        return;
-      }
-      
-      // Cor dominante = mais frequente com saturação razoável
-      const dominant = sortedColors.find(c => c.saturation > 20)?.rgb || sortedColors[0].rgb;
-      
-      // Cor vibrante = maior saturação
-      const vibrant = sortedColors
-        .sort((a, b) => b.saturation - a.saturation)[0]?.rgb || dominant;
-      
-      // Cor muted = versão dessaturada da dominante
-      const [h, , l] = rgbToHsl(dominant.r, dominant.g, dominant.b);
-      const muted = hslToRgb(h, 30, Math.min(l, 40));
-      
-      const isDark = getLuminance(dominant) < 0.5;
-      
-      resolve({ dominant, vibrant, muted, isDark });
+    img.onload = () => {
+      clearTimeout(timeout);
+      resolve(img);
     };
     
     img.onerror = () => {
-      resolve(getDefaultColors());
+      clearTimeout(timeout);
+      // Retry once without crossOrigin (won't allow canvas extraction but will display)
+      const fallback = new Image();
+      const fallbackTimeout = setTimeout(() => {
+        fallback.src = "";
+        reject(new Error("Image load failed"));
+      }, 10000);
+
+      fallback.onload = () => {
+        clearTimeout(fallbackTimeout);
+        resolve(fallback);
+      };
+      fallback.onerror = () => {
+        clearTimeout(fallbackTimeout);
+        reject(new Error("Image load failed after retry"));
+      };
+      fallback.src = imageUrl;
     };
     
     img.src = imageUrl;
   });
 };
 
-const getDefaultColors = (): ExtractedColors => ({
-  dominant: { r: 30, g: 58, b: 95 },  // Azul escuro padrão
+/**
+ * Extract colors from an already loaded HTMLImageElement (no extra download)
+ */
+export const extractColorsFromElement = (img: HTMLImageElement): ExtractedColors => {
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    
+    if (!ctx) return getDefaultColors();
+
+    const sampleSize = 40;
+    canvas.width = sampleSize;
+    canvas.height = sampleSize;
+    
+    ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+    
+    let imageData: ImageData;
+    try {
+      imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
+    } catch {
+      // Canvas tainted (CORS) – return defaults
+      console.warn("[ColorExtractor] Canvas tainted, using defaults");
+      return getDefaultColors();
+    }
+
+    return processPixelData(imageData);
+  } catch {
+    return getDefaultColors();
+  }
+};
+
+/**
+ * Legacy: Extract colors from URL (downloads image internally)
+ */
+export const extractColors = (imageUrl: string): Promise<ExtractedColors> => {
+  return new Promise((resolve) => {
+    preloadImage(imageUrl)
+      .then((img) => resolve(extractColorsFromElement(img)))
+      .catch(() => resolve(getDefaultColors()));
+  });
+};
+
+function processPixelData(imageData: ImageData): ExtractedColors {
+  const pixels = imageData.data;
+  const colorCounts: Map<string, { rgb: RGB; count: number; saturation: number }> = new Map();
+  
+  for (let i = 0; i < pixels.length; i += 4) {
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+    const a = pixels[i + 3];
+    
+    if (a < 128) continue;
+    const luminance = (r + g + b) / 3;
+    if (luminance < 20 || luminance > 235) continue;
+    
+    const qr = Math.round(r / 16) * 16;
+    const qg = Math.round(g / 16) * 16;
+    const qb = Math.round(b / 16) * 16;
+    const key = `${qr},${qg},${qb}`;
+    
+    const [, saturation] = rgbToHsl(r, g, b);
+    
+    const existing = colorCounts.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      colorCounts.set(key, { rgb: { r: qr, g: qg, b: qb }, count: 1, saturation });
+    }
+  }
+  
+  const sortedColors = Array.from(colorCounts.values())
+    .sort((a, b) => b.count - a.count);
+  
+  if (sortedColors.length === 0) return getDefaultColors();
+  
+  const dominant = sortedColors.find(c => c.saturation > 20)?.rgb || sortedColors[0].rgb;
+  
+  const vibrant = [...sortedColors]
+    .sort((a, b) => b.saturation - a.saturation)[0]?.rgb || dominant;
+  
+  const [h, , l] = rgbToHsl(dominant.r, dominant.g, dominant.b);
+  const muted = hslToRgb(h, 30, Math.min(l, 40));
+  
+  const isDark = getLuminance(dominant) < 0.5;
+  
+  return { dominant, vibrant, muted, isDark };
+}
+
+export const getDefaultColors = (): ExtractedColors => ({
+  dominant: { r: 30, g: 58, b: 95 },
   vibrant: { r: 59, g: 130, b: 246 },
   muted: { r: 30, g: 41, b: 59 },
   isDark: true,
