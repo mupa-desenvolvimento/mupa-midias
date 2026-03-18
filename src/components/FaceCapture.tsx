@@ -82,7 +82,7 @@ export const FaceCapture = ({
     videoWidth: number,
     videoHeight: number
   ): FaceQuality => {
-    const box = detection.detection.box;
+    const box = (detection.detection as any).box;
     const landmarks = detection.landmarks;
     
     // Verificar se face está centralizada (centro da face deve estar perto do centro do vídeo)
