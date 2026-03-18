@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTenant } from "./useUserTenant";
 import type { Json } from "@/integrations/supabase/types";
 
 export interface Device {
@@ -72,9 +73,10 @@ export interface DeviceUpdate {
 export const useDevices = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { companyId, isSuperAdmin } = useUserTenant();
 
   const { data: devices = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["devices"],
+    queryKey: ["devices", companyId, isSuperAdmin],
     queryFn: async () => {
       const fullSelect = `
         *,
@@ -109,14 +111,24 @@ export const useDevices = () => {
         current_playlist:playlists(id, name)
       `;
 
+      const buildQuery = (select: string) => {
+        let query = supabase
+          .from("devices")
+          .select(select)
+          .order("created_at", { ascending: false });
+
+        // Filter by company for non-super-admins
+        if (!isSuperAdmin && companyId) {
+          query = query.eq("company_id", companyId);
+        }
+
+        return query;
+      };
+
       let data: any[] | null = null;
       let queryError: any = null;
 
-      const full = await supabase
-        .from("devices")
-        .select(fullSelect)
-        .order("created_at", { ascending: false });
-
+      const full = await buildQuery(fullSelect);
       data = full.data as any[] | null;
       queryError = full.error;
 
@@ -131,17 +143,10 @@ export const useDevices = () => {
           msg.includes("api_integrations");
 
         if (shouldFallback) {
-          const fallbackV2 = await supabase
-            .from("devices")
-            .select(fallbackSelectV2)
-            .order("created_at", { ascending: false });
+          const fallbackV2 = await buildQuery(fallbackSelectV2);
 
           if (fallbackV2.error) {
-            const fallbackV1 = await supabase
-              .from("devices")
-              .select(fallbackSelect)
-              .order("created_at", { ascending: false });
-
+            const fallbackV1 = await buildQuery(fallbackSelect);
             data = fallbackV1.data as any[] | null;
             queryError = fallbackV1.error;
           } else {
@@ -153,8 +158,6 @@ export const useDevices = () => {
 
       if (queryError) throw queryError;
       
-      // Transform relations that might be arrays into single objects if needed
-      // Supabase JS sometimes returns arrays for relations depending on how it's inferred
       const transformedData = (data || []).map((device: any) => ({
         ...device,
         price_check_integration: Array.isArray(device.price_check_integration) 
@@ -171,9 +174,15 @@ export const useDevices = () => {
 
   const createDevice = useMutation({
     mutationFn: async (device: DeviceInsert) => {
+      // Auto-assign company_id if not set
+      const deviceData = { ...device };
+      if (!isSuperAdmin && companyId && !deviceData.company_id) {
+        deviceData.company_id = companyId;
+      }
+
       const { data, error } = await supabase
         .from("devices")
-        .insert([device])
+        .insert([deviceData])
         .select()
         .single();
 

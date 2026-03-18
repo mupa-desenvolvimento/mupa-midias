@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTenant } from "./useUserTenant";
 import type { Json } from "@/integrations/supabase/types";
 
 export interface Playlist {
@@ -20,6 +21,7 @@ export interface Playlist {
   has_channels: boolean;
   created_at: string;
   updated_at: string;
+  tenant_id?: string | null;
 }
 
 export interface PlaylistWithChannel extends Playlist {
@@ -41,16 +43,18 @@ export interface PlaylistInsert {
   priority?: number;
   fallback_media_id?: string | null;
   has_channels?: boolean;
+  tenant_id?: string | null;
 }
 
 export const usePlaylists = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { tenantId, isSuperAdmin } = useUserTenant();
 
   const { data: playlists = [], isLoading, error } = useQuery({
-    queryKey: ["playlists"],
+    queryKey: ["playlists", tenantId, isSuperAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("playlists")
         .select(`
           *,
@@ -58,6 +62,11 @@ export const usePlaylists = () => {
         `)
         .order("created_at", { ascending: false });
 
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as PlaylistWithChannel[];
     },
@@ -65,9 +74,14 @@ export const usePlaylists = () => {
 
   const createPlaylist = useMutation({
     mutationFn: async (playlist: PlaylistInsert) => {
+      const playlistData = { ...playlist };
+      if (!isSuperAdmin && tenantId && !playlistData.tenant_id) {
+        playlistData.tenant_id = tenantId;
+      }
+
       const { data, error } = await supabase
         .from("playlists")
-        .insert([playlist])
+        .insert([playlistData])
         .select()
         .single();
 

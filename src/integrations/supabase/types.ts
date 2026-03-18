@@ -1280,6 +1280,7 @@ export type Database = {
           name: string
           resolution: string | null
           status: string
+          tenant_id: string | null
           thumbnail_url: string | null
           type: string
           updated_at: string
@@ -1295,6 +1296,7 @@ export type Database = {
           name: string
           resolution?: string | null
           status?: string
+          tenant_id?: string | null
           thumbnail_url?: string | null
           type?: string
           updated_at?: string
@@ -1310,6 +1312,7 @@ export type Database = {
           name?: string
           resolution?: string | null
           status?: string
+          tenant_id?: string | null
           thumbnail_url?: string | null
           type?: string
           updated_at?: string
@@ -1320,6 +1323,13 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1840,6 +1850,7 @@ export type Database = {
           schedule: Json | null
           start_date: string | null
           start_time: string | null
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1859,6 +1870,7 @@ export type Database = {
           schedule?: Json | null
           start_date?: string | null
           start_time?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1878,6 +1890,7 @@ export type Database = {
           schedule?: Json | null
           start_date?: string | null
           start_time?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1893,6 +1906,13 @@ export type Database = {
             columns: ["fallback_media_id"]
             isOneToOne: false
             referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlists_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]

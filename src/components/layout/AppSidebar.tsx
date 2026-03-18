@@ -20,7 +20,9 @@ import {
   Brain,
   QrCode,
   Link,
-  ChevronDown } from
+  ChevronDown,
+  Crown,
+  AlertTriangle } from
 "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +31,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUserCompany } from "@/hooks/useUserCompany";
 import { useTenantLicense } from "@/hooks/useTenantLicense";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import packageJson from "../../../package.json";
@@ -154,7 +157,7 @@ const AppSidebar = () => {
   const { user, signOut } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const { company } = useUserCompany();
-  const { isLite, isExpired, isMenuItemAllowed, isSectionAllowed } = useTenantLicense();
+  const { isLite, isExpired, isMenuItemAllowed, isSectionAllowed, license } = useTenantLicense();
   const { resolvedTheme } = useTheme();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -178,14 +181,25 @@ const AppSidebar = () => {
     return (
       <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
         <SidebarContent className="flex items-center justify-center p-6">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-3">
+            <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
             <p className="text-sm font-semibold text-destructive">Licença expirada</p>
-            <p className="text-xs text-muted-foreground">Entre em contato para renovar seu plano.</p>
+            <p className="text-xs text-muted-foreground">Renove seu plano para continuar usando a plataforma.</p>
+            <Button
+              size="sm"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              onClick={() => navigate("/admin/settings?tab=license")}
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              Renovar Licença
+            </Button>
           </div>
         </SidebarContent>
       </Sidebar>
     );
   }
+
+  const planLabel = license?.plan === 'lite' ? 'LITE' : license?.plan === 'standard' ? 'STANDARD' : license?.plan === 'enterprise' ? 'ENTERPRISE' : null;
 
   return (
     <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
@@ -298,6 +312,35 @@ const AppSidebar = () => {
           </SidebarGroup>
         }
       </SidebarContent>
+
+      {/* License upgrade/info banner */}
+      {!isSuperAdmin && planLabel && !collapsed && (
+        <div className="px-3 py-2 border-t border-sidebar-border/30">
+          <div className="rounded-lg bg-sidebar-accent/30 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold tracking-wider uppercase text-sidebar-foreground/50">Plano</span>
+              <Badge variant={isLite ? "secondary" : "default"} className="text-[10px] px-1.5 py-0">
+                {planLabel}
+              </Badge>
+            </div>
+            {isLite && (
+              <Button
+                size="sm"
+                className="w-full h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={() => navigate("/admin/settings?tab=license")}
+              >
+                <Crown className="h-3.5 w-3.5 mr-1.5" />
+                Fazer Upgrade
+              </Button>
+            )}
+            {!isLite && license?.expires_at && (
+              <p className="text-[10px] text-sidebar-foreground/50 text-center">
+                Expira em {new Date(license.expires_at).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <SidebarFooter className="p-3 border-t border-sidebar-border/30">
         <div className="flex items-center gap-2">
