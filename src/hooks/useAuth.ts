@@ -77,7 +77,7 @@ export function useAuth() {
       if (cancelled) return;
 
       if (error && isInvalidRefreshToken(error)) {
-        await supabase.auth.signOut();
+        await auth.signOut();
         if (cancelled) return;
         resetAuthState();
         return;
