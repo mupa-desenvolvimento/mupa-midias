@@ -46,7 +46,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarFooter,
-  SidebarTrigger,
   useSidebar } from
 "@/components/ui/sidebar";
 import {
@@ -204,13 +203,20 @@ const AppSidebar = () => {
   return (
     <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
       <SidebarHeader className="p-3">
-        <div className="gap-2 flex items-center justify-center">
-          <SidebarTrigger className="h-8 w-8 shrink-0" />
-          <img
-            src={resolvedTheme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"}
-            alt="MupaMídias"
-            className="h-8 group-data-[collapsible=icon]:hidden transition-opacity duration-200" />
-          
+        <div className="flex items-center justify-center">
+          {collapsed ? (
+            <img
+              src={resolvedTheme === "dark" ? "/Artboard 15.svg" : "/Artboard 2.svg"}
+              alt="MupaMídias"
+              className="h-8 w-8 shrink-0"
+            />
+          ) : (
+            <img
+              src={resolvedTheme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"}
+              alt="MupaMídias"
+              className="h-8 transition-opacity duration-200"
+            />
+          )}
         </div>
       </SidebarHeader>
 
