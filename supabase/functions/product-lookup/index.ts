@@ -3,6 +3,82 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 declare const Deno: any;
 
+const MUPA_IMAGE_API = "http://srv-mupa.ddns.net:5050/produto-imagem";
+const R2_PUBLIC_URL = Deno.env.get("CLOUDFLARE_R2_PUBLIC_URL") || "";
+const R2_BUCKET = Deno.env.get("CLOUDFLARE_R2_BUCKET_NAME") || "";
+const R2_ACCESS_KEY = Deno.env.get("CLOUDFLARE_R2_ACCESS_KEY_ID") || "";
+const R2_SECRET_KEY = Deno.env.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY") || "";
+const R2_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
+
+/**
+ * Fetch product image from Mupa API, upload to R2 for caching, return public URL.
+ * Returns null on any failure (non-blocking).
+ */
+async function resolveAndCacheImage(ean: string): Promise<string | null> {
+  try {
+    // 1. Fetch image URL from Mupa API
+    const controller1 = new AbortController();
+    const t1 = setTimeout(() => controller1.abort(), 5000);
+    const apiRes = await fetch(`${MUPA_IMAGE_API}/${ean}`, { signal: controller1.signal });
+    clearTimeout(t1);
+
+    if (!apiRes.ok) { await apiRes.text(); return null; }
+    const apiData = await apiRes.json();
+    const sourceUrl = apiData.imagem_url || apiData.image_url;
+    if (!sourceUrl) return null;
+
+    console.log(`[Image] Mupa API returned: ${sourceUrl}`);
+
+    // 2. Download the image
+    const controller2 = new AbortController();
+    const t2 = setTimeout(() => controller2.abort(), 8000);
+    const imgRes = await fetch(sourceUrl, { signal: controller2.signal });
+    clearTimeout(t2);
+
+    if (!imgRes.ok) { await imgRes.text(); return sourceUrl; } // fallback to source URL
+    const imgBuffer = await imgRes.arrayBuffer();
+    const contentType = imgRes.headers.get("content-type") || "image/png";
+    const ext = contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg" : "png";
+
+    // 3. Upload to R2
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY || !R2_SECRET_KEY || !R2_BUCKET) {
+      console.log("[Image] R2 not configured, returning source URL");
+      return sourceUrl;
+    }
+
+    const fileKey = `product-images/${ean}.${ext}`;
+    const r2Url = `https://${R2_BUCKET}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${fileKey}`;
+
+    // Simple S3-compatible PUT (unsigned for R2 with access keys)
+    const now = new Date();
+    const dateStamp = now.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    
+    // Use basic auth header approach for R2
+    const putRes = await fetch(r2Url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": contentType,
+        "X-Amz-Content-Sha256": "UNSIGNED-PAYLOAD",
+        "X-Amz-Date": dateStamp,
+      },
+      body: imgBuffer,
+    });
+
+    if (putRes.ok) {
+      const publicUrl = `${R2_PUBLIC_URL}/${fileKey}`;
+      console.log(`[Image] Cached to R2: ${publicUrl}`);
+      return publicUrl;
+    } else {
+      await putRes.text();
+      console.warn("[Image] R2 upload failed, returning source URL");
+      return sourceUrl;
+    }
+  } catch (e) {
+    console.error(`[Image] Error resolving image for ${ean}:`, e);
+    return null;
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
