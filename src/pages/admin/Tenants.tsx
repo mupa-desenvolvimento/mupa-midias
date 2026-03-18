@@ -143,6 +143,7 @@ const Tenants = () => {
         max_users: formData.max_users,
         max_devices: formData.max_devices,
         max_stores: formData.max_stores,
+        license_plan: formData.license_plan,
       });
       setIsEditOpen(false);
       setSelectedTenant(null);
