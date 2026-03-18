@@ -99,6 +99,52 @@ const OfflinePlayer = () => {
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const { formattedTime, formattedDate } = useClock();
 
+  // Android: hide status bar, navigation bar, and prevent keyboard from appearing
+  useEffect(() => {
+    const enterImmersiveMode = async () => {
+      // Capacitor native: hide status bar
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { StatusBar } = await import('@capacitor/status-bar');
+          await StatusBar.hide();
+        } catch (e) {
+          console.warn('[Player] StatusBar hide failed:', e);
+        }
+      }
+
+      // WebView/Browser: request fullscreen for immersive experience
+      try {
+        const el = document.documentElement as any;
+        if (el.requestFullscreen) {
+          await el.requestFullscreen().catch(() => {});
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        }
+      } catch (e) {
+        console.warn('[Player] Fullscreen request failed:', e);
+      }
+
+      // Prevent virtual keyboard: blur any focused input and set inputs to readonly temporarily
+      document.querySelectorAll('input, textarea').forEach((el) => {
+        (el as HTMLElement).blur();
+      });
+    };
+
+    enterImmersiveMode();
+
+    // Re-enter immersive mode when app regains focus (Android pulls down status bar)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        enterImmersiveMode();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const [activePlayer, setActivePlayer] = useState<"A" | "B">("A");
   const [nextReadySlot, setNextReadySlot] = useState<"A" | "B" | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
