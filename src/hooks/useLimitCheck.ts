@@ -52,7 +52,6 @@ export function useLimitCheck() {
       let count = 0;
 
       if (resource === "devices" && tenantId) {
-        // Devices filter by company_id, get all companies for tenant
         const { data: companies } = await supabase
           .from("companies")
           .select("id")
@@ -61,15 +60,33 @@ export function useLimitCheck() {
         if (companyIds.length === 0) return true;
 
         const { count: c } = await supabase
-          .from(table)
+          .from("devices")
           .select("id", { count: "exact", head: true })
           .in("company_id", companyIds);
         count = c || 0;
-      } else {
+      } else if (resource === "playlists") {
         const { count: c } = await supabase
-          .from(table)
+          .from("playlists")
           .select("id", { count: "exact", head: true })
-          .eq(filterCol, filterId);
+          .eq("tenant_id", filterId);
+        count = c || 0;
+      } else if (resource === "media") {
+        const { count: c } = await supabase
+          .from("media_items")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", filterId);
+        count = c || 0;
+      } else if (resource === "stores") {
+        const { count: c } = await supabase
+          .from("stores")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", filterId);
+        count = c || 0;
+      } else if (resource === "device_groups") {
+        const { count: c } = await supabase
+          .from("device_groups")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", filterId);
         count = c || 0;
       }
 
