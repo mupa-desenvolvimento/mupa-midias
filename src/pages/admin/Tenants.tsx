@@ -43,6 +43,7 @@ const Tenants = () => {
     max_users: 50,
     max_devices: 100,
     max_stores: 500,
+    license_plan: 'lite' as 'lite' | 'standard' | 'enterprise',
   });
 
   const {
