@@ -257,5 +257,6 @@ export function useTenants() {
     updateTenant,
     toggleTenantStatus,
     deleteTenant,
+    getTenantLicense,
   };
 }
