@@ -187,7 +187,7 @@ const AppSidebar = () => {
             <p className="text-xs text-muted-foreground">Renove seu plano para continuar usando a plataforma.</p>
             <Button
               size="sm"
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               onClick={() => navigate("/admin/settings?tab=license")}
             >
               <Crown className="h-4 w-4 mr-2" />
