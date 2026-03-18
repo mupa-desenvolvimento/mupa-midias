@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { AlertCircle, Package, Loader2 } from "lucide-react";
-import { extractColors, rgbToString, rgbToRgba, type ExtractedColors } from "@/lib/colorExtractor";
+import { preloadImage, extractColorsFromElement, getDefaultColors, rgbToString, rgbToRgba, type ExtractedColors } from "@/lib/colorExtractor";
 import { ProductDisplay } from "./ProductDisplay";
 import type { ProductDisplaySettings } from "@/hooks/useProductDisplaySettings";
 
@@ -27,12 +27,7 @@ interface ProductLookupContainerProps {
   isPortrait?: boolean;
 }
 
-const defaultColors: ExtractedColors = {
-  dominant: { r: 30, g: 58, b: 95 },
-  vibrant: { r: 59, g: 130, b: 246 },
-  muted: { r: 15, g: 23, b: 42 },
-  isDark: true,
-};
+const defaultColors: ExtractedColors = getDefaultColors();
 
 export const ProductLookupContainer = ({
   product,
@@ -47,29 +42,56 @@ export const ProductLookupContainer = ({
   const [countdown, setCountdown] = useState(timeout);
   const [colors, setColors] = useState<ExtractedColors>(defaultColors);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [preloadedSrc, setPreloadedSrc] = useState<string | null>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const effectiveInputRef = inputRef || hiddenInputRef;
+  const preloadAbortRef = useRef<boolean>(false);
 
-  // Foca no input quando produto é carregado
+  // Focus input when product loads
   useEffect(() => {
     if (product && effectiveInputRef.current) {
       effectiveInputRef.current.focus();
     }
   }, [product, effectiveInputRef]);
 
-  // Extrair cores quando produto muda
+  // Preload image + extract colors in single pass
   useEffect(() => {
-    if (product?.image_url) {
-      setImageLoaded(false);
-      extractColors(product.image_url).then((extractedColors) => {
-        setColors(extractedColors);
-      });
-    } else {
+    if (!product?.image_url) {
       setColors(defaultColors);
+      setImageLoaded(false);
+      setPreloadedSrc(null);
+      return;
     }
+
+    preloadAbortRef.current = false;
+    setImageLoaded(false);
+    setPreloadedSrc(null);
+
+    const url = product.image_url;
+    
+    preloadImage(url)
+      .then((img) => {
+        if (preloadAbortRef.current) return;
+        // Extract colors from the already-loaded image element (no extra download)
+        const extracted = extractColorsFromElement(img);
+        setColors(extracted);
+        setPreloadedSrc(url);
+        setImageLoaded(true);
+      })
+      .catch((err) => {
+        console.warn("[ProductLookup] Image preload failed:", err);
+        if (preloadAbortRef.current) return;
+        setColors(defaultColors);
+        // Still set the src so the <img> tag can try loading it
+        setPreloadedSrc(url);
+      });
+
+    return () => {
+      preloadAbortRef.current = true;
+    };
   }, [product?.image_url]);
 
-  // Countdown para retorno automático
+  // Countdown for auto-dismiss
   useEffect(() => {
     if (isLoading) {
       setCountdown(timeout);
@@ -91,12 +113,12 @@ export const ProductLookupContainer = ({
     return () => clearInterval(interval);
   }, [product, error, isLoading, timeout, onDismiss]);
 
-  // Reset countdown quando produto muda
+  // Reset countdown on product change
   useEffect(() => {
     setCountdown(timeout);
   }, [product?.ean, timeout]);
 
-  // Estado de carregamento
+  // Loading state
   if (isLoading) {
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -109,18 +131,17 @@ export const ProductLookupContainer = ({
     );
   }
 
-  // Estado de erro
+  // Error state
   if (error) {
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-red-950/20 to-slate-900 flex flex-col">
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center max-w-2xl">
-          <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-14 h-14 text-red-400" />
-          </div>
-          <h2 className="text-4xl font-bold text-white mb-4">Produto Não Encontrado</h2>
-          <p className="text-white/70 text-xl mb-8">{error}</p>
-          
+            <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-14 h-14 text-red-400" />
+            </div>
+            <h2 className="text-4xl font-bold text-white mb-4">Produto Não Encontrado</h2>
+            <p className="text-white/70 text-xl mb-8">{error}</p>
             <div className="flex flex-col items-center gap-4">
               <p className="text-white/40 text-sm">
                 Retornando automaticamente em {countdown}s
@@ -128,8 +149,6 @@ export const ProductLookupContainer = ({
             </div>
           </div>
         </div>
-        
-        {/* Barra de progresso */}
         <div className="h-1 bg-white/10">
           <div
             className="h-full bg-red-500 transition-all duration-1000 ease-linear"
@@ -140,7 +159,7 @@ export const ProductLookupContainer = ({
     );
   }
 
-  // Estado de produto encontrado
+  // Product found
   if (product) {
     return (
       <ProductDisplay
@@ -151,6 +170,7 @@ export const ProductLookupContainer = ({
         onImageLoad={() => setImageLoaded(true)}
         imageLoaded={imageLoaded}
         settings={displaySettings}
+        preloadedSrc={preloadedSrc}
       />
     );
   }
