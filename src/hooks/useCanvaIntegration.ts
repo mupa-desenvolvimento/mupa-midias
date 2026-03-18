@@ -148,7 +148,7 @@ interface FolderBreadcrumb {
    const checkConnection = useCallback(async () => {
      try {
        setIsLoading(true);
-       const { data: { session } } = await supabase.auth.getSession();
+       const { data: { session } } = await (supabase.auth as any).getSession();
        if (!session) {
          setIsConnected(false);
          return;

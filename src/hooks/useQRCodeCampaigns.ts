@@ -67,7 +67,7 @@ export function useQRCodeCampaigns() {
 
   const createCampaign = useMutation({
     mutationFn: async (campaign: Partial<QRCodeCampaign>) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await (supabase.auth as any).getUser();
       if (!user) throw new Error("Não autenticado");
 
       const { data, error } = await supabase

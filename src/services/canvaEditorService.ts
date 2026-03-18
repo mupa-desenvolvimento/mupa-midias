@@ -61,7 +61,7 @@
     */
    async exportDesign(designId: string, format: 'png' | 'jpg' | 'mp4'): Promise<Blob | null> {
      try {
-       const { data: userData } = await supabase.auth.getUser();
+       const { data: userData } = await (supabase.auth as any).getUser();
        if (!userData?.user?.id) return null;
        
        const { data, error } = await supabase.functions.invoke('canva-auth?action=export_design', {

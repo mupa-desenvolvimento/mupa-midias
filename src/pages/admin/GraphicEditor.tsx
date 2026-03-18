@@ -474,7 +474,7 @@ export default function GraphicEditor() {
     const blob = await res.blob();
     const file = new File([blob], `${fileName}.png`, { type: "image/png" });
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await (supabase.auth as any).getSession();
     if (!session) throw new Error("Não autenticado");
 
     const formData = new FormData();

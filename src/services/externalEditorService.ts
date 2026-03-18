@@ -54,7 +54,7 @@ import type { Json } from "@/integrations/supabase/types";
     * Create a new editor session in the database
     */
    async createSession(params: CreateSessionParams): Promise<EditorSession | null> {
-     const { data: userData } = await supabase.auth.getUser();
+     const { data: userData } = await (supabase.auth as any).getUser();
      if (!userData.user) {
        console.error('User not authenticated');
        return null;

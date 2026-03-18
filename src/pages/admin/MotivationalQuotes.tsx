@@ -52,7 +52,7 @@ export default function MotivationalQuotes() {
   const seedMutation = useMutation({
     mutationFn: async () => {
       setSeeding(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await (supabase.auth as any).getSession();
       if (!session) throw new Error("Não autenticado");
 
       const res = await fetch(
