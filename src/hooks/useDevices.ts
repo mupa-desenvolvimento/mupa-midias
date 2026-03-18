@@ -73,7 +73,7 @@ export interface DeviceUpdate {
 export const useDevices = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { companyId, isSuperAdmin } = useUserTenant();
+  const { tenantId, companyId, isSuperAdmin } = useUserTenant();
 
   const { data: devices = [], isLoading, error, refetch } = useQuery({
     queryKey: ["devices", companyId, isSuperAdmin],
