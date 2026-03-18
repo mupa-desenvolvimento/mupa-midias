@@ -2987,6 +2987,39 @@ export type Database = {
         }
         Relationships: []
       }
+      tts_audio_cache: {
+        Row: {
+          audio_url: string
+          created_at: string | null
+          id: string
+          last_used_at: string | null
+          text_content: string
+          text_hash: string
+          use_count: number | null
+          voice_id: string
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          text_content: string
+          text_hash: string
+          use_count?: number | null
+          voice_id?: string
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          text_content?: string
+          text_hash?: string
+          use_count?: number | null
+          voice_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           created_at: string
