@@ -111,15 +111,29 @@ export const useDevices = () => {
         current_playlist:playlists(id, name)
       `;
 
+      // Get all company IDs for the tenant to filter devices properly
+      let tenantCompanyIds: string[] = [];
+      if (!isSuperAdmin && tenantId) {
+        const { data: companies } = await supabase
+          .from("companies")
+          .select("id")
+          .eq("tenant_id", tenantId);
+        tenantCompanyIds = (companies || []).map(c => c.id);
+        if (tenantCompanyIds.length === 0) return [] as DeviceWithRelations[];
+      }
+
       const buildQuery = (select: string) => {
         let query = supabase
           .from("devices")
           .select(select)
           .order("created_at", { ascending: false });
 
-        // Filter by company for non-super-admins
-        if (!isSuperAdmin && companyId) {
-          query = query.eq("company_id", companyId);
+        // Filter by ALL companies belonging to the tenant
+        if (!isSuperAdmin && tenantCompanyIds.length > 0) {
+          query = query.in("company_id", tenantCompanyIds);
+        } else if (!isSuperAdmin) {
+          // No tenant = no devices
+          return null;
         }
 
         return query;
