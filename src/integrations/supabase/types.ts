@@ -1268,6 +1268,87 @@ export type Database = {
           },
         ]
       }
+      lite_products: {
+        Row: {
+          club_price: number | null
+          company_id: string
+          created_at: string
+          custom_field_name: string | null
+          custom_field_value: string | null
+          de_por_price: number | null
+          description: string
+          discount_4th_item: number | null
+          ean: string
+          id: string
+          image_url: string | null
+          internal_code: string | null
+          is_active: boolean
+          leve_x_pague_y: string | null
+          normal_price: number
+          other_price: number | null
+          promo_price: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          club_price?: number | null
+          company_id: string
+          created_at?: string
+          custom_field_name?: string | null
+          custom_field_value?: string | null
+          de_por_price?: number | null
+          description: string
+          discount_4th_item?: number | null
+          ean: string
+          id?: string
+          image_url?: string | null
+          internal_code?: string | null
+          is_active?: boolean
+          leve_x_pague_y?: string | null
+          normal_price?: number
+          other_price?: number | null
+          promo_price?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          club_price?: number | null
+          company_id?: string
+          created_at?: string
+          custom_field_name?: string | null
+          custom_field_value?: string | null
+          de_por_price?: number | null
+          description?: string
+          discount_4th_item?: number | null
+          ean?: string
+          id?: string
+          image_url?: string | null
+          internal_code?: string | null
+          is_active?: boolean
+          leve_x_pague_y?: string | null
+          normal_price?: number
+          other_price?: number | null
+          promo_price?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lite_products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lite_products_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_items: {
         Row: {
           created_at: string
