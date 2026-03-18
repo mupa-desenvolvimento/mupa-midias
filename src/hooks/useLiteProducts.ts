@@ -25,7 +25,8 @@ export interface LiteProduct {
   updated_at: string;
 }
 
-const MUPA_API = "http://srv-mupa.ddns.net:5050";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const getImageProxyUrl = (ean: string) => `${SUPABASE_URL}/functions/v1/product-image-proxy?ean=${ean}`;
 
 export function useLiteProducts() {
   const { tenantId, companyId } = useUserTenant();
