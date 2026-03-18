@@ -21,25 +21,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTheme } from "@/hooks/useTheme";
+import { useTenantLicense } from "@/hooks/useTenantLicense";
+import { LiteProductUpload } from "@/components/settings/LiteProductUpload";
 
 const Settings = () => {
   const { company } = useUserCompany();
   const { config, toggleOption, updateConfig } = usePresentationConfig();
   const { integrations, updateIntegration } = usePriceCheckIntegrations();
   const { theme, setTheme } = useTheme();
+  const { isLite } = useTenantLicense();
 
   const handleIntegrationChange = (id: string) => {
-    // Set all others to inactive and this one to active
     if (!integrations) return;
-    
-    // Deactivate current active integration(s)
     integrations.forEach(i => {
       if (i.id !== id && i.status === 'active') {
         updateIntegration.mutate({ id: i.id, status: 'inactive' });
       }
     });
-    
-    // Activate the selected one
     updateIntegration.mutate({ id, status: 'active' });
   };
 
@@ -47,6 +45,70 @@ const Settings = () => {
     navigator.clipboard.writeText(text);
     toast.success("Código copiado!");
   };
+
+  // LITE plan: show only product upload and device code
+  if (isLite) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <p className="text-muted-foreground">Configurações do plano Lite</p>
+        </div>
+
+        <Tabs defaultValue="products" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="products">Produtos</TabsTrigger>
+            <TabsTrigger value="device-code">Código do Dispositivo</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="products">
+            <LiteProductUpload />
+          </TabsContent>
+
+          <TabsContent value="device-code">
+            <Card>
+              <CardHeader>
+                <CardTitle>Código de Vinculação</CardTitle>
+                <CardDescription>Código da empresa para conectar novos dispositivos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {company?.code ? (
+                  <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg bg-muted/30 space-y-4">
+                    <div className="p-3 bg-primary/10 rounded-full">
+                      <Smartphone className="w-8 h-8 text-primary" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">Seu código de acesso é:</p>
+                      <div className="flex items-center justify-center gap-3">
+                        <code className="text-4xl font-mono font-bold tracking-widest text-foreground">
+                          {company.code}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => copyToClipboard(company.code)}
+                          title="Copiar código"
+                          className="h-10 w-10"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
+                        Insira este código ao configurar um novo dispositivo no player.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Carregando informações da empresa...
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
