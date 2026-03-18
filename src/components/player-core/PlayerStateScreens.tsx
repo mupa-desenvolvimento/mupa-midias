@@ -163,3 +163,47 @@ export const DownloadScreen = ({ downloaded, total, current }: DownloadScreenPro
     </div>
   );
 };
+
+interface ActiveSessionScreenProps {
+  deviceName?: string | null;
+  message?: string | null;
+}
+
+export const ActiveSessionScreen = ({ deviceName, message }: ActiveSessionScreenProps) => (
+  <div className="min-h-screen bg-gradient-to-br from-yellow-950 via-black to-yellow-950 flex flex-col items-center justify-center text-white p-8">
+    <div className="bg-yellow-500/20 p-8 rounded-full mb-8 animate-pulse">
+      <Monitor className="w-24 h-24 text-yellow-500" />
+    </div>
+    <h1 className="text-4xl font-bold mb-4 text-yellow-400">Dispositivo em Uso</h1>
+    <p className="text-xl text-white/80 text-center max-w-lg mb-6">
+      {message || "Este dispositivo já está reproduzindo conteúdo em outra sessão."}
+    </p>
+    {deviceName && (
+      <div className="text-white/40 text-sm mt-4 flex items-center gap-2">
+        <Monitor className="w-4 h-4" />
+        <span>{deviceName}</span>
+      </div>
+    )}
+    <p className="text-white/30 text-xs mt-2">
+      Feche a outra sessão para acessar este dispositivo
+    </p>
+  </div>
+);
+  const percent = total > 0 ? (downloaded / total) * 100 : 0;
+
+  return (
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-8">
+      <Download className="w-16 h-16 mb-6 text-primary animate-bounce" />
+      <h1 className="text-2xl font-semibold mb-2">Baixando Conteúdos</h1>
+      <p className="text-white/60 mb-6 text-center">
+        {current || "Preparando arquivos..."}
+      </p>
+      <div className="w-full max-w-md">
+        <Progress value={percent} className="h-2" />
+        <p className="text-center text-sm mt-2 text-white/60">
+          {downloaded} de {total} arquivos
+        </p>
+      </div>
+    </div>
+  );
+};

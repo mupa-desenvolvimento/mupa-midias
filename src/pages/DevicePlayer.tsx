@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useDevicePlayerData } from "@/hooks/useDevicePlayerData";
 import { useAutoHideControls, useFullscreen, useMediaRotation } from "@/hooks/player";
+import { useDeviceSession } from "@/hooks/useDeviceSession";
 import {
   MediaRenderer,
   PlayerProgressBar,
@@ -12,11 +13,13 @@ import {
   DeviceNotFoundScreen,
   BlockedScreen,
   EmptyContentScreen,
+  ActiveSessionScreen,
 } from "@/components/player-core";
 
 const DevicePlayer = () => {
   const { deviceId } = useParams<{ deviceId: string }>();
   const { data, isLoading, error } = useDevicePlayerData(deviceId);
+  const deviceSession = useDeviceSession(deviceId);
   const { showControls } = useAutoHideControls();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const [isPortrait, setIsPortrait] = useState(() => 
@@ -49,6 +52,14 @@ const DevicePlayer = () => {
 
   const activeMedia = mediaItems[currentIndex] || null;
   const isVideo = activeMedia?.type === "video";
+
+  // Session availability check
+  if (deviceSession.status === "loading") {
+    return <LoadingScreen message="Verificando disponibilidade..." subMessage={`Dispositivo: ${deviceId}`} />;
+  }
+  if (deviceSession.status === "blocked") {
+    return <ActiveSessionScreen deviceName={deviceSession.deviceName} message={deviceSession.errorMessage} />;
+  }
 
   if (isLoading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={(error as Error).message} />;

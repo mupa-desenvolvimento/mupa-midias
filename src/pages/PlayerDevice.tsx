@@ -2,13 +2,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
+import { useDeviceSession } from "@/hooks/useDeviceSession";
 import { Loader2, Monitor, AlertTriangle } from "lucide-react";
 import { pushHandlerService } from "@/modules/push-handler";
 import { kioskService } from "@/modules/kiosk-controller";
+import { ActiveSessionScreen } from "@/components/player-core";
 
 const PlayerDevice = () => {
   const [searchParams] = useSearchParams();
   const deviceId = searchParams.get("id");
+  const deviceSession = useDeviceSession(deviceId);
 
   // Initialize Services (Push & Kiosk)
   useEffect(() => {
@@ -103,6 +106,19 @@ const PlayerDevice = () => {
         <p className="text-white/60">Adicione ?id=SEU_CODIGO na URL.</p>
       </div>
     );
+  }
+
+  // 1.5 Session availability check
+  if (deviceSession.status === "loading") {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
+        <Loader2 className="w-12 h-12 animate-spin text-purple-500 mb-4" />
+        <p className="text-white/60">Verificando disponibilidade...</p>
+      </div>
+    );
+  }
+  if (deviceSession.status === "blocked") {
+    return <ActiveSessionScreen deviceName={deviceSession.deviceName} message={deviceSession.errorMessage} />;
   }
 
   // 2. Loading
