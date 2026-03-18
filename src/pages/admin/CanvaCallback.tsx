@@ -74,7 +74,7 @@ export default function CanvaCallback() {
               break;
             }
 
-            const { data: refreshedData } = await supabase.auth.refreshSession();
+            const { data: refreshedData } = await (supabase.auth as any).refreshSession();
             currentSession = refreshedData.session;
 
             if (currentSession) {
