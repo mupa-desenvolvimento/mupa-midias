@@ -355,10 +355,10 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((normalPrice - promoPrice) / normalPrice) * 100);
         }
 
-        // Gerar URL de imagem se não existir
+        // Buscar URL de imagem se não existir
         let imageUrl = liteProduct.image_url;
         if (!imageUrl) {
-          imageUrl = `http://srv-mupa.ddns.net:5050/produto-imagem/${normalizedEan}`;
+          imageUrl = await resolveProductImage(normalizedEan, supabase, device.company_id);
         }
 
         const productData = {
