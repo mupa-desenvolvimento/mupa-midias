@@ -58,7 +58,7 @@ export default function CanvaCallback() {
         const maxAttempts = 10;
 
         while (!session && attempts < maxAttempts) {
-          const { data } = await supabase.auth.getSession();
+          const { data } = await (supabase.auth as any).getSession();
           let currentSession = data.session;
 
           if (currentSession?.expires_at && currentSession.expires_at * 1000 <= Date.now() + 60_000) {
