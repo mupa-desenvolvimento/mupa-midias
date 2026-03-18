@@ -36,8 +36,8 @@ import { DeviceWithRelations } from "@/hooks/useDevices";
 import { useMediaItems } from "@/hooks/useMediaItems";
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
+// @ts-ignore - firebase modular API
 import { ref, update } from "firebase/database";
-// @ts-ignore - firebase v12 modular API
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";

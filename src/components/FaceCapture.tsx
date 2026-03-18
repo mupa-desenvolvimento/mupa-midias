@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Camera, RotateCcw, CheckCircle2, AlertCircle, User, Sparkles } from 'lucide-react';
+// @ts-ignore - face-api.js types
 import * as faceapi from 'face-api.js';
 import { cn } from '@/lib/utils';
 
