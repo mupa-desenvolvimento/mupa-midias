@@ -395,6 +395,17 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
+    // Get user's tenant_id for proper data isolation
+    let userTenantId: string | null = null
+    const { data: tenantMapping } = await supabaseAdmin
+      .from('user_tenant_mappings')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (tenantMapping?.tenant_id) {
+      userTenantId = tenantMapping.tenant_id
+    }
+
     const { data: mediaItem, error: insertError } = await supabaseAdmin
       .from('media_items')
       .insert({
@@ -404,9 +415,10 @@ Deno.serve(async (req: Request) => {
         file_size: fileSize,
         duration: duration || defaultDuration,
         resolution: resolution,
-        status: 'active', // Always active once uploaded successfully
+        status: 'active',
         thumbnail_url: publicThumbnailUrl,
         folder_id: folderId,
+        tenant_id: userTenantId,
         metadata: {
           r2_key: fileKey,
           thumbnail_key: thumbnailKey,
