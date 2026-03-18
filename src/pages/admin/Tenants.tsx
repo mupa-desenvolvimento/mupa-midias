@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus } from 'lucide-react';
+import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +43,7 @@ const Tenants = () => {
     max_users: 50,
     max_devices: 100,
     max_stores: 500,
+    license_plan: 'lite' as 'lite' | 'standard' | 'enterprise',
   });
 
   const {
@@ -91,7 +93,19 @@ const Tenants = () => {
       max_users: 50,
       max_devices: 100,
       max_stores: 500,
+      license_plan: 'lite',
     });
+  };
+
+  const PLAN_DEFAULTS = {
+    lite: { max_users: 5, max_devices: 3, max_stores: 3 },
+    standard: { max_users: 50, max_devices: 100, max_stores: 500 },
+    enterprise: { max_users: 500, max_devices: 1000, max_stores: 5000 },
+  };
+
+  const handlePlanChange = (plan: 'lite' | 'standard' | 'enterprise') => {
+    const defaults = PLAN_DEFAULTS[plan];
+    setFormData(prev => ({ ...prev, license_plan: plan, ...defaults }));
   };
 
   const handleCreate = async () => {
@@ -114,6 +128,7 @@ const Tenants = () => {
       max_users: tenant.max_users || 50,
       max_devices: tenant.max_devices || 100,
       max_stores: tenant.max_stores || 500,
+      license_plan: 'standard',
     });
     setIsEditOpen(true);
   };
@@ -534,6 +549,39 @@ const Tenants = () => {
                 placeholder="empresa-abc"
                 className="font-mono"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Plano de Licença</Label>
+              <Select value={formData.license_plan} onValueChange={(v) => handlePlanChange(v as 'lite' | 'standard' | 'enterprise')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lite">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-amber-500" />
+                      LITE — Demonstração / Consulta de Preço
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="standard">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-primary" />
+                      STANDARD — Uso completo
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="enterprise">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-purple-500" />
+                      ENTERPRISE — Ilimitado
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.license_plan === 'lite' && (
+                <p className="text-xs text-muted-foreground">
+                  Limites: 1 playlist, 3 dispositivos, 5 imagens, 3 lojas, 1 grupo. Sem vídeo. Renova a cada 3 meses.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">

@@ -25,6 +25,7 @@ interface CreateTenantData {
   max_users?: number;
   max_devices?: number;
   max_stores?: number;
+  license_plan?: 'lite' | 'standard' | 'enterprise';
 }
 
 export function useTenants() {
@@ -84,6 +85,39 @@ export function useTenants() {
         // Rollback tenant creation if schema creation fails
         await supabase.from('tenants').delete().eq('id', tenant.id);
         throw schemaError;
+      }
+
+      // Create license record
+      const plan = data.license_plan || 'standard';
+      const expiresAt = new Date();
+      if (plan === 'lite') {
+        expiresAt.setMonth(expiresAt.getMonth() + 3); // 3 months for LITE
+      } else {
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1); // 1 year for others
+      }
+
+      const licenseDefaults = {
+        lite: { max_playlists: 1, max_devices: 3, max_media_uploads: 5, max_stores: 3, max_device_groups: 1, allow_video_upload: false },
+        standard: { max_playlists: 50, max_devices: 100, max_media_uploads: 500, max_stores: 500, max_device_groups: 50, allow_video_upload: true },
+        enterprise: { max_playlists: 9999, max_devices: 9999, max_media_uploads: 9999, max_stores: 9999, max_device_groups: 9999, allow_video_upload: true },
+      };
+
+      const limits = licenseDefaults[plan];
+
+      const { error: licenseError } = await supabase
+        .from('tenant_licenses')
+        .insert({
+          tenant_id: tenant.id,
+          plan: plan,
+          is_active: true,
+          expires_at: expiresAt.toISOString(),
+          ...limits,
+        });
+
+      if (licenseError) {
+        console.error('Error creating license:', licenseError);
+        // Don't rollback tenant, just warn
+        toast.error('Cliente criado, mas houve erro ao criar a licença');
       }
 
       await fetchTenants();
