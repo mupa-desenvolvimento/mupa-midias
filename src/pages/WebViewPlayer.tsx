@@ -7,6 +7,7 @@ import { setupKioskMode } from "@/utils/nativeBridge";
 import { Capacitor } from "@capacitor/core";
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
 import { useProductLookup } from "@/hooks/useProductLookup";
+import { useProductTTS } from "@/hooks/useProductTTS";
 import { useProductDisplaySettingsBySlug } from "@/hooks/useProductDisplaySettings";
 import { ProductLookupContainer } from "@/components/player/ProductLookupContainer";
 import { EanInput } from "@/components/player/EanInput";
