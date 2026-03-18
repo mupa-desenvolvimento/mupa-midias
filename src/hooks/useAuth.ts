@@ -53,7 +53,7 @@ export function useAuth() {
       });
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = auth.onAuthStateChange(
       (event, session) => {
         setAuthState(prev => ({
           ...prev,
