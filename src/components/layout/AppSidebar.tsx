@@ -154,6 +154,7 @@ const AppSidebar = () => {
   const { user, signOut } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const { company } = useUserCompany();
+  const { isLite, isExpired, isMenuItemAllowed, isSectionAllowed } = useTenantLicense();
   const { resolvedTheme } = useTheme();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
