@@ -29,7 +29,7 @@ interface TenantFilters {
 }
 
 const Tenants = () => {
-  const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant } = useTenants();
+  const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant, getTenantLicense } = useTenants();
   const { isSuperAdmin, isLoading: isCheckingAdmin } = useSuperAdmin();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -120,15 +120,16 @@ const Tenants = () => {
     }
   };
 
-  const handleEdit = (tenant: Tenant) => {
+  const handleEdit = async (tenant: Tenant) => {
     setSelectedTenant(tenant);
+    const currentPlan = await getTenantLicense(tenant.id);
     setFormData({
       name: tenant.name,
       slug: tenant.slug,
       max_users: tenant.max_users || 50,
       max_devices: tenant.max_devices || 100,
       max_stores: tenant.max_stores || 500,
-      license_plan: 'standard',
+      license_plan: currentPlan,
     });
     setIsEditOpen(true);
   };
@@ -142,6 +143,7 @@ const Tenants = () => {
         max_users: formData.max_users,
         max_devices: formData.max_devices,
         max_stores: formData.max_stores,
+        license_plan: formData.license_plan,
       });
       setIsEditOpen(false);
       setSelectedTenant(null);
@@ -650,6 +652,34 @@ const Tenants = () => {
                 disabled
                 className="font-mono bg-muted"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Plano de Licença</Label>
+              <Select value={formData.license_plan} onValueChange={(v) => handlePlanChange(v as 'lite' | 'standard' | 'enterprise')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lite">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-amber-500" />
+                      LITE
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="standard">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-primary" />
+                      STANDARD
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="enterprise">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-purple-500" />
+                      ENTERPRISE
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
