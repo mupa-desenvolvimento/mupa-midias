@@ -43,6 +43,39 @@ const WebViewPlayer = () => {
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const { formattedTime } = useClock();
 
+  // Android: hide status bar, navigation bar, and prevent keyboard
+  useEffect(() => {
+    const enterImmersiveMode = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { StatusBar } = await import('@capacitor/status-bar');
+          await StatusBar.hide();
+        } catch (e) {
+          console.warn('[WebViewPlayer] StatusBar hide failed:', e);
+        }
+      }
+      try {
+        const el = document.documentElement as any;
+        if (el.requestFullscreen) {
+          await el.requestFullscreen().catch(() => {});
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        }
+      } catch (e) {
+        console.warn('[WebViewPlayer] Fullscreen request failed:', e);
+      }
+      document.querySelectorAll('input, textarea').forEach((el) => {
+        (el as HTMLElement).blur();
+      });
+    };
+    enterImmersiveMode();
+    const handleVisibilityChange = () => {
+      if (!document.hidden) enterImmersiveMode();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   const [updateMessage, setUpdateMessage] = useState("");
   const [showProductOverlay, setShowProductOverlay] = useState(false);
