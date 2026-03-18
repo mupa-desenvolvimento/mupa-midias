@@ -687,7 +687,7 @@ const OfflinePlayer = () => {
           isLoading={isProductLoading}
           error={productError}
           onDismiss={handleDismissProduct}
-          timeout={8}
+          timeout={9999}
           displaySettings={displaySettings || undefined}
           isPortrait={isPortrait}
         />
