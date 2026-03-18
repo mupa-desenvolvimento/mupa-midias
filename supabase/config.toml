@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.instagram-oauth]
 verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = false
