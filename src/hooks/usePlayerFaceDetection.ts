@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 import { supabase } from '@/integrations/supabase/client';
 import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
+
 export interface DetectedFace {
   trackId: string;
   gender: 'masculino' | 'feminino' | 'indefinido';
@@ -19,7 +20,8 @@ interface TrackedFace {
   descriptor: Float32Array;
   firstSeenAt: Date;
   lastSeenAt: Date;
-  gender: 'masculino' | 'feminino' | 'indefinido';
+  gender: 'male' | 'female' | 'unknown'; // DB-compatible values
+  genderDisplay: 'masculino' | 'feminino' | 'indefinido';
   ageEstimates: number[];
   emotions: { expression: string; probability: number }[];
   confidence: number;
@@ -33,11 +35,21 @@ interface CurrentContent {
 }
 
 const FACE_MATCH_THRESHOLD = 0.45;
-const FACE_TIMEOUT_MS = 2000;
-const DETECTION_INTERVAL_MS = 800;
-const MIN_ATTENTION_DURATION = 1; // Segundos mínimos para registrar
+const FACE_TIMEOUT_MS = 2500;
+const DETECTION_INTERVAL_MS = 1000; // 1s for lighter CPU load
+const MIN_ATTENTION_DURATION = 1;
+const BATCH_SEND_INTERVAL_MS = 10_000; // Send logs every 10s
+const MAX_PENDING_LOGS = 50;
 
 const getAgeGroup = (age: number): string => {
+  if (age <= 12) return 'child';
+  if (age <= 18) return 'teen';
+  if (age <= 25) return 'young_adult';
+  if (age <= 50) return 'adult';
+  return 'senior';
+};
+
+const getAgeGroupDisplay = (age: number): string => {
   if (age <= 12) return '0-12';
   if (age <= 18) return '13-18';
   if (age <= 25) return '19-25';
@@ -46,11 +58,11 @@ const getAgeGroup = (age: number): string => {
   return '51+';
 };
 
-const getGender = (gender: string, probability: number): 'masculino' | 'feminino' | 'indefinido' => {
-  if (probability < 0.7) return 'indefinido';
-  if (gender === 'female') return 'feminino';
-  if (gender === 'male') return 'masculino';
-  return 'indefinido';
+const getGender = (gender: string, probability: number): { db: 'male' | 'female' | 'unknown'; display: 'masculino' | 'feminino' | 'indefinido' } => {
+  if (probability < 0.7) return { db: 'unknown', display: 'indefinido' };
+  if (gender === 'female') return { db: 'female', display: 'feminino' };
+  if (gender === 'male') return { db: 'male', display: 'masculino' };
+  return { db: 'unknown', display: 'indefinido' };
 };
 
 const calculateAverageAge = (estimates: number[]): number => {
@@ -104,6 +116,8 @@ const isFacingCamera = (landmarks: faceapi.FaceLandmarks68): boolean => {
   
   const noseTip = positions[30];
   const eyeDistance = Math.abs(rightEyeCenter.x - leftEyeCenter.x);
+  if (eyeDistance < 1) return false; // Avoid division by zero
+  
   const eyesCenterX = (leftEyeCenter.x + rightEyeCenter.x) / 2;
   const noseOffset = Math.abs(noseTip.x - eyesCenterX);
   const turnRatio = noseOffset / eyeDistance;
@@ -126,26 +140,31 @@ export const usePlayerFaceDetection = (
   const [totalDetectionsToday, setTotalDetectionsToday] = useState(0);
   
   const internalVideoRef = useRef<HTMLVideoElement | null>(null);
-  // Use external ref if provided, otherwise use internal
   const videoRef = externalVideoRef || internalVideoRef;
   
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isDetectingRef = useRef(false); // Concurrency lock
   const isSwitchingBackendRef = useRef(false);
   const trackedFacesRef = useRef<Map<string, TrackedFace>>(new Map());
   const pendingLogsRef = useRef<any[]>([]);
+  const currentContentRef = useRef(currentContent);
 
-  // Load models including expression detection
+  // Keep currentContent ref fresh without re-triggering effects
+  useEffect(() => {
+    currentContentRef.current = currentContent;
+  }, [currentContent]);
+
+  // Load ONLY lightweight models (no SSD)
   useEffect(() => {
     const loadModels = async () => {
       try {
         setIsLoading(true);
-
         const MODEL_URL = '/models';
         
+        // Only load TinyFaceDetector (fast) + needed pipelines
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
@@ -153,10 +172,8 @@ export const usePlayerFaceDetection = (
         ]);
 
         const backend = await initializeFaceApiBackend(faceapi);
-        console.log('[PlayerDetection] Warm-up OK, backend:', backend);
-        
+        console.log('[PlayerDetection] Models loaded, backend:', backend);
         setIsModelsLoaded(true);
-        console.log('[PlayerDetection] Models loaded (including expressions)');
       } catch (error) {
         console.error('[PlayerDetection] Error loading models:', error);
       } finally {
@@ -173,14 +190,13 @@ export const usePlayerFaceDetection = (
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          width: { ideal: 480 },  // Lower resolution for performance
+          height: { ideal: 360 }
         }
       });
       
       streamRef.current = stream;
       
-      // If we don't have an external ref and haven't created an internal one, create it now
       if (!externalVideoRef && !internalVideoRef.current) {
         const v = document.createElement('video');
         v.setAttribute('autoplay', '');
@@ -195,16 +211,14 @@ export const usePlayerFaceDetection = (
       
       if (videoEl) {
         videoEl.srcObject = stream;
-        // Ensure properties are set for inline playback
         videoEl.setAttribute('autoplay', '');
         videoEl.setAttribute('muted', '');
         videoEl.setAttribute('playsinline', '');
-        
         await videoEl.play();
         console.log('[PlayerDetection] Camera started');
         return true;
       } else {
-        console.warn('[PlayerDetection] No video element available to attach stream');
+        console.warn('[PlayerDetection] No video element available');
         return false;
       }
     } catch (error) {
@@ -220,25 +234,22 @@ export const usePlayerFaceDetection = (
       streamRef.current = null;
     }
     
-    // Clear srcObject for both internal and external refs
     const videoEl = videoRef.current;
     if (videoEl) {
       videoEl.srcObject = null;
     }
     
-    // Only remove the internal video element if we created it
     if (internalVideoRef.current && internalVideoRef.current.parentNode) {
       internalVideoRef.current.parentNode.removeChild(internalVideoRef.current);
       internalVideoRef.current = null;
     }
-  }, []); // Remove dependency on videoRef since it's derived or stable ref
+  }, []);
 
   // Send logs to server
   const sendLogsToServer = useCallback(async () => {
     if (pendingLogsRef.current.length === 0) return;
     
-    const logsToSend = [...pendingLogsRef.current];
-    pendingLogsRef.current = [];
+    const logsToSend = pendingLogsRef.current.splice(0, MAX_PENDING_LOGS);
     
     try {
       const { error } = await supabase.functions.invoke('device-detection', {
@@ -250,15 +261,14 @@ export const usePlayerFaceDetection = (
       
       if (error) {
         console.error('[PlayerDetection] Error sending logs:', error);
-        // Put logs back on failure
-        pendingLogsRef.current = [...logsToSend, ...pendingLogsRef.current];
+        pendingLogsRef.current.unshift(...logsToSend);
       } else {
         setTotalDetectionsToday(prev => prev + logsToSend.length);
         console.log(`[PlayerDetection] Sent ${logsToSend.length} detections`);
       }
     } catch (error) {
       console.error('[PlayerDetection] Send error:', error);
-      pendingLogsRef.current = [...logsToSend, ...pendingLogsRef.current];
+      pendingLogsRef.current.unshift(...logsToSend);
     }
   }, [deviceCode]);
 
@@ -274,30 +284,37 @@ export const usePlayerFaceDetection = (
             bestMatch = { trackId, distance };
           }
         }
-      } catch (error) {
-        console.error('[PlayerDetection] Descriptor comparison error:', error);
+      } catch {
+        // Skip invalid descriptors
       }
     }
     return bestMatch?.trackId || null;
   }, []);
 
-  // Main detection loop
+  // Main detection loop - uses TinyFaceDetector for speed
   const detectFaces = useCallback(async () => {
+    // Concurrency lock
+    if (isDetectingRef.current || isSwitchingBackendRef.current) return;
     if (!videoRef.current || !isModelsLoaded || !isActive) return;
     
     const video = videoRef.current;
-    if (video.videoWidth === 0 || video.videoHeight === 0) return;
+    if (video.videoWidth === 0 || video.videoHeight === 0 || video.readyState < 2) return;
+
+    isDetectingRef.current = true;
 
     try {
+      // Use TinyFaceDetector (much faster than SSD)
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ 
+          inputSize: 224,      // Smaller input = faster
+          scoreThreshold: 0.5 
+        }))
         .withFaceLandmarks()
         .withFaceDescriptors()
         .withAgeAndGender()
         .withFaceExpressions();
 
       const now = new Date();
-      const currentTrackIds = new Set<string>();
 
       for (let index = 0; index < detections.length; index++) {
         const detection = detections[index];
@@ -306,13 +323,13 @@ export const usePlayerFaceDetection = (
         if (!isFacingCamera(detection.landmarks)) continue;
 
         const rawAge = detection.age;
-        const gender = getGender(detection.gender, detection.genderProbability);
+        const genderResult = getGender(detection.gender, detection.genderProbability);
         const confidence = detection.detection.score;
         
         // Get dominant expression
         const expressions = detection.expressions;
         const sortedExpressions = Object.entries(expressions)
-          .sort(([, a], [, b]) => b - a);
+          .sort(([, a], [, b]) => (b as number) - (a as number));
         const dominantExpression = sortedExpressions[0];
 
         // Find or create tracked face
@@ -321,7 +338,6 @@ export const usePlayerFaceDetection = (
 
         if (detection.descriptor) {
           trackId = findMatchingTrackedFace(detection.descriptor);
-          
           if (trackId) {
             existingTracked = trackedFacesRef.current.get(trackId);
           }
@@ -332,14 +348,14 @@ export const usePlayerFaceDetection = (
           existingTracked.lastSeenAt = now;
           existingTracked.descriptor = detection.descriptor;
           existingTracked.ageEstimates.push(rawAge);
-          if (existingTracked.ageEstimates.length > 10) {
+          if (existingTracked.ageEstimates.length > 8) {
             existingTracked.ageEstimates.shift();
           }
           existingTracked.emotions.push({
             expression: dominantExpression[0],
-            probability: dominantExpression[1]
+            probability: dominantExpression[1] as number
           });
-          if (existingTracked.emotions.length > 10) {
+          if (existingTracked.emotions.length > 8) {
             existingTracked.emotions.shift();
           }
           existingTracked.confidence = confidence;
@@ -351,15 +367,14 @@ export const usePlayerFaceDetection = (
             descriptor: detection.descriptor,
             firstSeenAt: now,
             lastSeenAt: now,
-            gender,
+            gender: genderResult.db,
+            genderDisplay: genderResult.display,
             ageEstimates: [rawAge],
-            emotions: [{ expression: dominantExpression[0], probability: dominantExpression[1] }],
+            emotions: [{ expression: dominantExpression[0], probability: dominantExpression[1] as number }],
             confidence,
             loggedToServer: false
           });
         }
-
-        currentTrackIds.add(trackId);
       }
 
       // Update active faces state
@@ -373,9 +388,9 @@ export const usePlayerFaceDetection = (
           
           active.push({
             trackId,
-            gender: tracked.gender,
+            gender: tracked.genderDisplay,
             age: avgAge,
-            ageGroup: getAgeGroup(avgAge),
+            ageGroup: getAgeGroupDisplay(avgAge),
             emotion: emotion.expression,
             emotionConfidence: emotion.probability,
             confidence: tracked.confidence,
@@ -395,17 +410,19 @@ export const usePlayerFaceDetection = (
         isSwitchingBackendRef.current = true;
         try {
           const backend = await switchFaceApiToCpu(faceapi);
-          console.warn('[PlayerDetection] Backend recovered with fallback:', backend);
+          console.warn('[PlayerDetection] Backend recovered:', backend);
         } catch (fallbackError) {
           console.error('[PlayerDetection] CPU fallback failed:', fallbackError);
         } finally {
           isSwitchingBackendRef.current = false;
         }
       }
+    } finally {
+      isDetectingRef.current = false;
     }
   }, [isModelsLoaded, isActive, findMatchingTrackedFace]);
 
-  // Clean up old faces and log to server
+  // Clean up old faces and queue logs for server
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now();
@@ -416,43 +433,45 @@ export const usePlayerFaceDetection = (
           const avgAge = calculateAverageAge(tracked.ageEstimates);
           const emotion = getMostFrequentEmotion(tracked.emotions);
           
-          // Log to server if duration >= minimum and not already logged
+          // Queue log if meaningful attention and not already sent
           if (duration >= MIN_ATTENTION_DURATION && !tracked.loggedToServer) {
+            const content = currentContentRef.current;
             pendingLogsRef.current.push({
               confidence: tracked.confidence,
               is_facing_camera: true,
               detected_at: tracked.firstSeenAt.toISOString(),
               age: avgAge,
               age_group: getAgeGroup(avgAge),
-              gender: tracked.gender,
+              gender: tracked.gender, // DB-compatible: 'male'/'female'/'unknown'
               emotion: emotion.expression,
               emotion_confidence: emotion.probability,
-              attention_duration: duration,
-              content_id: currentContent?.contentId || null,
-              content_name: currentContent?.contentName || null,
-              playlist_id: currentContent?.playlistId || null,
+              attention_duration: Math.round(duration * 10) / 10,
+              content_id: content?.contentId || null,
+              content_name: content?.contentName || null,
+              playlist_id: content?.playlistId || null,
               metadata: {
                 track_id: trackId,
                 session_end: tracked.lastSeenAt.toISOString()
               }
             });
+            tracked.loggedToServer = true;
           }
           
           trackedFacesRef.current.delete(trackId);
         }
       }
-    }, 500);
+    }, 1000);
 
     return () => clearInterval(cleanupInterval);
-  }, [currentContent]);
+  }, []);
 
-  // Periodic server sync
+  // Periodic server sync - less frequent to reduce load
   useEffect(() => {
     const syncInterval = setInterval(() => {
       if (pendingLogsRef.current.length > 0) {
         sendLogsToServer();
       }
-    }, 5000);
+    }, BATCH_SEND_INTERVAL_MS);
 
     return () => clearInterval(syncInterval);
   }, [sendLogsToServer]);
