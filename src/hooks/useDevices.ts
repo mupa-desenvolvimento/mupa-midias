@@ -142,7 +142,10 @@ export const useDevices = () => {
       let data: any[] | null = null;
       let queryError: any = null;
 
-      const full = await buildQuery(fullSelect);
+      const fullQuery = buildQuery(fullSelect);
+      if (!fullQuery) return [] as DeviceWithRelations[];
+
+      const full = await fullQuery;
       data = full.data as any[] | null;
       queryError = full.error;
 
@@ -157,10 +160,14 @@ export const useDevices = () => {
           msg.includes("api_integrations");
 
         if (shouldFallback) {
-          const fallbackV2 = await buildQuery(fallbackSelectV2);
+          const fallbackV2Query = buildQuery(fallbackSelectV2);
+          if (!fallbackV2Query) return [] as DeviceWithRelations[];
+          const fallbackV2 = await fallbackV2Query;
 
           if (fallbackV2.error) {
-            const fallbackV1 = await buildQuery(fallbackSelect);
+            const fallbackV1Query = buildQuery(fallbackSelect);
+            if (!fallbackV1Query) return [] as DeviceWithRelations[];
+            const fallbackV1 = await fallbackV1Query;
             data = fallbackV1.data as any[] | null;
             queryError = fallbackV1.error;
           } else {
