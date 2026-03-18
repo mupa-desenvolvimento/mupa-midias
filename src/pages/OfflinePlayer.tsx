@@ -538,6 +538,12 @@ const OfflinePlayer = () => {
   const { data: displaySettings } = useProductDisplaySettingsBySlug(deviceState?.company_slug);
   const { speak: speakPrice, stop: stopTTS } = useProductTTS();
 
+  const handleDismissProduct = useCallback(() => {
+    setTerminalMode("player");
+    clearProduct();
+    stopTTS();
+  }, [clearProduct, stopTTS]);
+
   // Speak product price when found, then auto-dismiss after 3s
   useEffect(() => {
     if (product && product.current_price) {
@@ -561,7 +567,6 @@ const OfflinePlayer = () => {
       let cancelled = false;
       speakPrice(priceText).then(() => {
         if (cancelled) return;
-        // Wait 3 seconds after audio ends, then dismiss
         setTimeout(() => {
           if (!cancelled) {
             handleDismissProduct();
@@ -572,20 +577,6 @@ const OfflinePlayer = () => {
       return () => { cancelled = true; };
     }
   }, [product, speakPrice, handleDismissProduct]);
-
-  useKeyboardShortcuts({
-    onFullscreen: toggleFullscreen,
-    onSync: syncWithServer,
-    onNext: goToNext,
-    onPrev: goToPrev,
-    itemsLength: items.length,
-  });
-
-  const handleDismissProduct = useCallback(() => {
-    setTerminalMode("player");
-    clearProduct();
-    stopTTS();
-  }, [clearProduct, stopTTS]);
 
   const handleEanSubmit = useCallback((ean: string) => {
     lookupProduct(ean);
