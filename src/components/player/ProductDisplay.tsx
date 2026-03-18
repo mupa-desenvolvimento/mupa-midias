@@ -33,7 +33,11 @@ const hexToRgb = (hex: string): RGB => {
     : { r: 30, g: 58, b: 95 };
 };
 
-const getLuminance = (rgb: RGB): number => (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+const darkenRgb = (rgb: RGB, factor: number): RGB => ({
+  r: Math.round(rgb.r * factor),
+  g: Math.round(rgb.g * factor),
+  b: Math.round(rgb.b * factor),
+});
 
 export const ProductDisplay = ({
   product,
@@ -59,6 +63,10 @@ export const ProductDisplay = ({
   const secondaryColor = useColorExtraction ? colors.muted : hexToRgb(settings?.container_secondary_color || "#2D4A6F");
   const accentColor = useColorExtraction ? colors.vibrant : hexToRgb(settings?.accent_color || "#3B82F6");
 
+  // Darker variants for text on white background
+  const titleColor = darkenRgb(primaryColor, 0.7);
+  const priceColor = darkenRgb(primaryColor, 0.65);
+
   const titleSize = settings?.title_font_size || 52;
   const subtitleSize = settings?.subtitle_font_size || 26;
   const priceSize = settings?.price_font_size || 100;
@@ -71,25 +79,18 @@ export const ProductDisplay = ({
   };
   const { boldPart, restPart } = formatProductName(product.name);
 
-  // Gradient using extracted colors - applied to the info panel
-  const panelGradient = `linear-gradient(160deg, 
-    ${rgbToString(secondaryColor)} 0%, 
-    ${rgbToString(primaryColor)} 40%, 
-    ${rgbToRgba(primaryColor, 0.95)} 100%
-  )`;
-
-  // Subtle accent bar gradient
-  const accentGradient = `linear-gradient(90deg, ${rgbToString(accentColor)}, ${rgbToRgba(accentColor, 0.7)})`;
+  // Accent gradient for badges and decorative elements
+  const accentGradient = `linear-gradient(135deg, ${rgbToString(accentColor)}, ${rgbToString(primaryColor)})`;
 
   const renderInfoPanel = () => (
     <motion.div
       className="w-1/2 h-full flex flex-col justify-between relative overflow-hidden"
-      style={{ background: panelGradient }}
+      style={{ backgroundColor: "#FFFFFF" }}
       initial={{ x: imagePosition === "right" ? -60 : 60, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      {/* Decorative accent line at top */}
+      {/* Top decorative accent line */}
       <motion.div
         className="absolute top-0 left-0 right-0 h-1.5"
         style={{ background: accentGradient }}
@@ -98,24 +99,33 @@ export const ProductDisplay = ({
         transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
       />
 
-      <div className="flex flex-col justify-between h-full p-8 lg:p-12">
+      {/* Subtle side accent stripe */}
+      <motion.div
+        className="absolute top-0 left-0 w-1 h-full"
+        style={{ background: accentGradient }}
+        initial={{ scaleY: 0 }}
+        animate={{ scaleY: 1 }}
+        transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+      />
+
+      <div className="flex flex-col justify-between h-full p-8 lg:p-12 pl-10 lg:pl-14">
         {/* Product Name */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <h1 className="text-white leading-tight mb-2">
+          <h1 className="leading-tight mb-2">
             <span
               className="block font-black tracking-tight uppercase"
-              style={{ fontSize: `${titleSize}px` }}
+              style={{ fontSize: `${titleSize}px`, color: rgbToString(titleColor) }}
             >
               {boldPart}
             </span>
             {restPart && (
               <span
-                className="block font-light tracking-wider uppercase mt-1 text-white/80"
-                style={{ fontSize: `${subtitleSize}px` }}
+                className="block font-light tracking-wider uppercase mt-1"
+                style={{ fontSize: `${subtitleSize}px`, color: rgbToRgba(titleColor, 0.6) }}
               >
                 {restPart}
               </span>
@@ -135,11 +145,11 @@ export const ProductDisplay = ({
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-bold text-sm shadow-lg"
               style={{
                 background: accentGradient,
-                boxShadow: `0 4px 20px ${rgbToRgba(accentColor, 0.4)}`,
+                boxShadow: `0 4px 20px ${rgbToRgba(accentColor, 0.3)}`,
               }}
             >
               <Percent className="w-4 h-4" />
-              OFERTA PREÇO DE POR
+              OFERTA ESPECIAL
             </span>
           </motion.div>
         )}
@@ -159,11 +169,11 @@ export const ProductDisplay = ({
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.4, delay: 0.5 }}
             >
-              <span className="text-white/50" style={{ fontSize: `${originalPriceSize * 0.5}px` }}>DE</span>
-              <span className="text-white/50" style={{ fontSize: `${originalPriceSize * 0.55}px` }}>R$</span>
+              <span style={{ fontSize: `${originalPriceSize * 0.5}px`, color: rgbToRgba(titleColor, 0.4) }}>DE</span>
+              <span style={{ fontSize: `${originalPriceSize * 0.55}px`, color: rgbToRgba(titleColor, 0.4) }}>R$</span>
               <span
-                className="text-white/60 line-through font-semibold"
-                style={{ fontSize: `${originalPriceSize}px` }}
+                className="line-through font-semibold"
+                style={{ fontSize: `${originalPriceSize}px`, color: rgbToRgba(titleColor, 0.45) }}
               >
                 {originalPrice.reais}
                 <span style={{ fontSize: `${originalPriceSize * 0.6}px` }}>,{originalPrice.centavos}</span>
@@ -171,35 +181,39 @@ export const ProductDisplay = ({
             </motion.div>
           )}
 
-          {/* Current price with glassmorphism card */}
+          {/* Current price card with product-colored background */}
           <motion.div
             className="inline-block px-6 py-5 rounded-2xl"
             style={{
-              backgroundColor: "rgba(0, 0, 0, 0.35)",
-              backdropFilter: "blur(12px)",
-              border: `1px solid ${rgbToRgba(accentColor, 0.2)}`,
+              backgroundColor: rgbToRgba(primaryColor, 0.08),
+              border: `2px solid ${rgbToRgba(accentColor, 0.15)}`,
             }}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.45, type: "spring", stiffness: 150 }}
           >
             {product.is_offer && (
-              <span className="block text-white/60 text-sm mb-1 font-medium tracking-wide">POR</span>
+              <span
+                className="block text-sm mb-1 font-semibold tracking-wide"
+                style={{ color: rgbToString(accentColor) }}
+              >
+                POR APENAS
+              </span>
             )}
             <div className="flex items-baseline">
-              <span className="text-white font-medium mr-1" style={{ fontSize: `${priceSize * 0.28}px` }}>
+              <span className="font-medium mr-1" style={{ fontSize: `${priceSize * 0.28}px`, color: rgbToString(priceColor) }}>
                 R$
               </span>
               <motion.span
-                className="font-extrabold text-white"
-                style={{ fontSize: `${priceSize}px`, lineHeight: 1 }}
+                className="font-extrabold"
+                style={{ fontSize: `${priceSize}px`, lineHeight: 1, color: rgbToString(priceColor) }}
                 initial={{ scale: 1.1 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.3, delay: 0.6, type: "spring" }}
               >
                 {currentPrice.reais}
               </motion.span>
-              <span className="text-white font-bold" style={{ fontSize: `${priceSize * 0.4}px` }}>
+              <span className="font-bold" style={{ fontSize: `${priceSize * 0.4}px`, color: rgbToString(priceColor) }}>
                 ,{currentPrice.centavos}
               </span>
             </div>
@@ -211,24 +225,24 @@ export const ProductDisplay = ({
           <motion.div
             className="p-4 rounded-xl mb-3"
             style={{
-              backgroundColor: "rgba(255,255,255,0.1)",
-              backdropFilter: "blur(6px)",
+              backgroundColor: rgbToRgba(accentColor, 0.06),
+              borderLeft: `3px solid ${rgbToString(accentColor)}`,
             }}
             initial={{ y: 15, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.6 }}
           >
-            <p className="text-white/90 text-base lg:text-lg">
+            <p className="text-base lg:text-lg" style={{ color: rgbToRgba(titleColor, 0.8) }}>
               Produto em oferta! De{" "}
-              <span className="font-semibold" style={{ color: rgbToRgba(accentColor, 0.9) }}>
+              <span className="font-semibold" style={{ color: rgbToString(accentColor) }}>
                 R$ {product.original_price?.toFixed(2).replace(".", ",")}
               </span>{" "}
               por{" "}
-              <span className="font-semibold" style={{ color: rgbToRgba(accentColor, 0.9) }}>
+              <span className="font-semibold" style={{ color: rgbToString(accentColor) }}>
                 R$ {product.current_price.toFixed(2).replace(".", ",")}
               </span>.
               {product.savings_percent && (
-                <span className="font-bold"> Economia de {product.savings_percent}%!</span>
+                <span className="font-bold" style={{ color: rgbToString(primaryColor) }}> Economia de {product.savings_percent}%!</span>
               )}
             </p>
           </motion.div>
@@ -236,7 +250,8 @@ export const ProductDisplay = ({
 
         {/* EAN code */}
         <motion.div
-          className="text-white/40 text-sm mt-auto"
+          className="text-sm mt-auto"
+          style={{ color: rgbToRgba(titleColor, 0.3) }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
@@ -246,10 +261,10 @@ export const ProductDisplay = ({
       </div>
 
       {/* Countdown progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5">
+      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: rgbToRgba(primaryColor, 0.06) }}>
         <motion.div
           className="h-full"
-          style={{ backgroundColor: rgbToString(accentColor), width: `${(countdown / timeout) * 100}%` }}
+          style={{ background: accentGradient, width: `${(countdown / timeout) * 100}%` }}
           transition={{ duration: 1, ease: "linear" }}
         />
       </div>
@@ -270,7 +285,7 @@ export const ProductDisplay = ({
         style={{
           width: "60%",
           height: "60%",
-          background: `radial-gradient(circle, ${rgbToRgba(primaryColor, 0.08)} 0%, transparent 70%)`,
+          background: `radial-gradient(circle, ${rgbToRgba(primaryColor, 0.06)} 0%, transparent 70%)`,
         }}
         animate={{ scale: [1, 1.05, 1] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -282,11 +297,10 @@ export const ProductDisplay = ({
           alt={product.name}
           className="max-w-[80%] max-h-[80vh] object-contain relative z-10"
           style={{
-            filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.12))",
+            filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.08))",
           }}
           onLoad={onImageLoad}
           onError={(e) => {
-            // If preloaded src failed, try original URL
             const target = e.currentTarget;
             if (preloadedSrc && product.image_url && target.src !== product.image_url) {
               target.src = product.image_url;
@@ -298,8 +312,8 @@ export const ProductDisplay = ({
           transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 120 }}
         />
       ) : (
-        <div className="w-64 h-64 rounded-2xl flex items-center justify-center bg-slate-50">
-          <Package className="w-24 h-24 text-slate-200" />
+        <div className="w-64 h-64 rounded-2xl flex items-center justify-center" style={{ backgroundColor: rgbToRgba(primaryColor, 0.04) }}>
+          <Package className="w-24 h-24" style={{ color: rgbToRgba(primaryColor, 0.15) }} />
         </div>
       )}
 
@@ -307,8 +321,8 @@ export const ProductDisplay = ({
       <motion.div
         className="absolute bottom-4 right-4 px-3 py-1 rounded-full text-xs font-medium"
         style={{
-          backgroundColor: rgbToRgba(primaryColor, 0.08),
-          color: rgbToRgba(primaryColor, 0.4),
+          backgroundColor: rgbToRgba(primaryColor, 0.06),
+          color: rgbToRgba(primaryColor, 0.35),
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
