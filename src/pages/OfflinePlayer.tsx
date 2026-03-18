@@ -538,7 +538,13 @@ const OfflinePlayer = () => {
   const { data: displaySettings } = useProductDisplaySettingsBySlug(deviceState?.company_slug);
   const { speak: speakPrice, stop: stopTTS } = useProductTTS();
 
-  // Speak product price when found
+  const handleDismissProduct = useCallback(() => {
+    setTerminalMode("player");
+    clearProduct();
+    stopTTS();
+  }, [clearProduct, stopTTS]);
+
+  // Speak product price when found, then auto-dismiss after 3s
   useEffect(() => {
     if (product && product.current_price) {
       const formatPrice = (value: number) => {
@@ -557,23 +563,20 @@ const OfflinePlayer = () => {
       } else {
         priceText = `${formatPrice(product.current_price)}.`;
       }
-      speakPrice(priceText);
+
+      let cancelled = false;
+      speakPrice(priceText).then(() => {
+        if (cancelled) return;
+        setTimeout(() => {
+          if (!cancelled) {
+            handleDismissProduct();
+          }
+        }, 3000);
+      });
+
+      return () => { cancelled = true; };
     }
-  }, [product, speakPrice]);
-
-  useKeyboardShortcuts({
-    onFullscreen: toggleFullscreen,
-    onSync: syncWithServer,
-    onNext: goToNext,
-    onPrev: goToPrev,
-    itemsLength: items.length,
-  });
-
-  const handleDismissProduct = useCallback(() => {
-    setTerminalMode("player");
-    clearProduct();
-    stopTTS();
-  }, [clearProduct, stopTTS]);
+  }, [product, speakPrice, handleDismissProduct]);
 
   const handleEanSubmit = useCallback((ean: string) => {
     lookupProduct(ean);
@@ -675,7 +678,7 @@ const OfflinePlayer = () => {
           isLoading={isProductLoading}
           error={productError}
           onDismiss={handleDismissProduct}
-          timeout={8}
+          timeout={9999}
           displaySettings={displaySettings || undefined}
           isPortrait={isPortrait}
         />
