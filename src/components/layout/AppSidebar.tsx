@@ -20,7 +20,9 @@ import {
   Brain,
   QrCode,
   Link,
-  ChevronDown } from
+  ChevronDown,
+  Crown,
+  AlertTriangle } from
 "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +31,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUserCompany } from "@/hooks/useUserCompany";
 import { useTenantLicense } from "@/hooks/useTenantLicense";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import packageJson from "../../../package.json";
