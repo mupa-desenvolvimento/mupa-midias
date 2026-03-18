@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
+// @ts-ignore - firebase modular API
 import { ref, onValue, off } from "firebase/database";
 import { offlineStorage } from "@/modules/offline-storage";
 import { DeviceState, CachedPlaylist, CachedPlaylistItem, CachedChannel, OverrideMedia } from "@/modules/shared/types";
