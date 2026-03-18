@@ -536,6 +536,17 @@ const OfflinePlayer = () => {
   });
 
   const { data: displaySettings } = useProductDisplaySettingsBySlug(deviceState?.company_slug);
+  const { speak: speakPrice, stop: stopTTS } = useProductTTS();
+
+  // Speak product price when found
+  useEffect(() => {
+    if (product && product.current_price) {
+      const priceText = product.is_offer && product.original_price
+        ? `${product.name}. De ${product.original_price.toFixed(2).replace('.', ',')} reais por ${product.current_price.toFixed(2).replace('.', ',')} reais.`
+        : `${product.name}. ${product.current_price.toFixed(2).replace('.', ',')} reais.`;
+      speakPrice(priceText);
+    }
+  }, [product, speakPrice]);
 
   useKeyboardShortcuts({
     onFullscreen: toggleFullscreen,
