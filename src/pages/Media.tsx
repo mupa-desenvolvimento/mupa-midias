@@ -46,6 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Media = () => {
   const { toast } = useToast();
+  const { isLite } = useTenantLicense();
   const [searchTerm, setSearchTerm] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
