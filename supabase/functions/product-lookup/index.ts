@@ -50,9 +50,8 @@ function validateEan(ean: string): { valid: boolean; normalized: string; error?:
     return { valid: false, normalized: '', error: 'EAN deve conter apenas números' };
   }
   
-  const validLengths = [8, 12, 13, 14];
-  if (!validLengths.includes(trimmed.length)) {
-    return { valid: false, normalized: '', error: `EAN deve ter 8, 12, 13 ou 14 dígitos (recebido: ${trimmed.length})` };
+  if (trimmed.length < 1 || trimmed.length > 20) {
+    return { valid: false, normalized: '', error: `EAN inválido (recebido: ${trimmed.length} dígitos)` };
   }
   
   return { valid: true, normalized: trimmed };
