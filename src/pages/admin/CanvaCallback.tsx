@@ -62,7 +62,7 @@ export default function CanvaCallback() {
           let currentSession = data.session;
 
           if (currentSession?.expires_at && currentSession.expires_at * 1000 <= Date.now() + 60_000) {
-            const { data: refreshedData } = await supabase.auth.refreshSession();
+            const { data: refreshedData } = await (supabase.auth as any).refreshSession();
             currentSession = refreshedData.session;
           }
 
