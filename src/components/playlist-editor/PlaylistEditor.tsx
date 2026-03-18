@@ -7,7 +7,6 @@ import { useChannels } from "@/hooks/useChannels";
 import { useDevices } from "@/hooks/useDevices";
 import { MediaItem } from "@/hooks/useMediaItems";
 import { AutoContentItem } from "@/hooks/useAutoContent";
-import { EditorSidebar } from "./EditorSidebar";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorTimeline } from "./EditorTimeline";
 import { EditorHeader } from "./EditorHeader";
