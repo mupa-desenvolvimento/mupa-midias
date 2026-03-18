@@ -54,6 +54,9 @@ export function useStores() {
       // Filter by tenant if not super admin
       if (!isSuperAdmin && tenantId) {
         query = query.eq('tenant_id', tenantId);
+      } else if (!isSuperAdmin) {
+        setStores([]);
+        return;
       }
 
       const { data, error } = await query;

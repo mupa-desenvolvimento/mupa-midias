@@ -57,6 +57,8 @@ export const useDeviceGroups = () => {
 
       if (!isSuperAdmin && tenantId) {
         query = query.eq("tenant_id", tenantId);
+      } else if (!isSuperAdmin) {
+        return [] as DeviceGroupWithDetails[];
       }
 
       const { data, error } = await query;

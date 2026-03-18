@@ -73,10 +73,10 @@ export interface DeviceUpdate {
 export const useDevices = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { companyId, isSuperAdmin } = useUserTenant();
+  const { tenantId, companyId, isSuperAdmin } = useUserTenant();
 
   const { data: devices = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["devices", companyId, isSuperAdmin],
+    queryKey: ["devices", tenantId, isSuperAdmin],
     queryFn: async () => {
       const fullSelect = `
         *,
@@ -111,15 +111,29 @@ export const useDevices = () => {
         current_playlist:playlists(id, name)
       `;
 
+      // Get all company IDs for the tenant to filter devices properly
+      let tenantCompanyIds: string[] = [];
+      if (!isSuperAdmin && tenantId) {
+        const { data: companies } = await supabase
+          .from("companies")
+          .select("id")
+          .eq("tenant_id", tenantId);
+        tenantCompanyIds = (companies || []).map(c => c.id);
+        if (tenantCompanyIds.length === 0) return [] as DeviceWithRelations[];
+      }
+
       const buildQuery = (select: string) => {
         let query = supabase
           .from("devices")
           .select(select)
           .order("created_at", { ascending: false });
 
-        // Filter by company for non-super-admins
-        if (!isSuperAdmin && companyId) {
-          query = query.eq("company_id", companyId);
+        // Filter by ALL companies belonging to the tenant
+        if (!isSuperAdmin && tenantCompanyIds.length > 0) {
+          query = query.in("company_id", tenantCompanyIds);
+        } else if (!isSuperAdmin) {
+          // No tenant = no devices
+          return null;
         }
 
         return query;
@@ -128,7 +142,10 @@ export const useDevices = () => {
       let data: any[] | null = null;
       let queryError: any = null;
 
-      const full = await buildQuery(fullSelect);
+      const fullQuery = buildQuery(fullSelect);
+      if (!fullQuery) return [] as DeviceWithRelations[];
+
+      const full = await fullQuery;
       data = full.data as any[] | null;
       queryError = full.error;
 
@@ -143,10 +160,14 @@ export const useDevices = () => {
           msg.includes("api_integrations");
 
         if (shouldFallback) {
-          const fallbackV2 = await buildQuery(fallbackSelectV2);
+          const fallbackV2Query = buildQuery(fallbackSelectV2);
+          if (!fallbackV2Query) return [] as DeviceWithRelations[];
+          const fallbackV2 = await fallbackV2Query;
 
           if (fallbackV2.error) {
-            const fallbackV1 = await buildQuery(fallbackSelect);
+            const fallbackV1Query = buildQuery(fallbackSelect);
+            if (!fallbackV1Query) return [] as DeviceWithRelations[];
+            const fallbackV1 = await fallbackV1Query;
             data = fallbackV1.data as any[] | null;
             queryError = fallbackV1.error;
           } else {
