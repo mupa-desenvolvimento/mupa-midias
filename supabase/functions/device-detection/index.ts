@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface DetectionPayload {
@@ -14,7 +14,6 @@ interface DetectionPayload {
     is_facing_camera?: boolean;
     detected_at?: string;
     metadata?: Record<string, unknown>;
-    // Novos campos para analytics
     age?: number;
     age_group?: string;
     gender?: string;
@@ -28,7 +27,6 @@ interface DetectionPayload {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -36,18 +34,14 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     if (req.method === "POST") {
       const payload: DetectionPayload = await req.json();
 
-      console.log("Recebendo detecções do dispositivo:", payload.device_serial);
-
-      // Validar dados obrigatórios
-      if (!payload.device_serial) {
+      if (!payload.device_serial || payload.device_serial.length > 200) {
         return new Response(
-          JSON.stringify({ error: "device_serial é obrigatório" }),
+          JSON.stringify({ error: "device_serial inválido" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -59,7 +53,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // --- INPUT VALIDATION ---
       if (payload.detections.length > 100) {
         return new Response(
           JSON.stringify({ error: "Máximo de 100 detecções por requisição" }),
@@ -67,48 +60,31 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (payload.device_serial.length > 200) {
-        return new Response(
-          JSON.stringify({ error: "device_serial muito longo" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const validGenders = ["male", "female", "unknown"];
+      // Accepted values for validation (expanded to support both formats)
+      const validGenders = ["male", "female", "unknown", "masculino", "feminino", "indefinido"];
       const validEmotions = ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral", "unknown"];
-      const validAgeGroups = ["child", "teen", "young_adult", "adult", "senior", "unknown"];
-      // --- END INPUT VALIDATION ---
+      const validAgeGroups = ["child", "teen", "young_adult", "adult", "senior", "unknown", "0-12", "13-18", "19-25", "26-35", "36-50", "51+"];
 
-      // Buscar dispositivo pelo serial (device_code)
+      // Lookup device
       const { data: device } = await supabase
         .from("devices")
         .select("id")
         .eq("device_code", payload.device_serial)
         .single();
 
-      // Preparar registros para inserção com novos campos
       const detectionLogs = payload.detections.map((detection) => {
-        // Validate face_descriptor size
         const faceDescriptor = Array.isArray(detection.face_descriptor) && detection.face_descriptor.length <= 128
           ? detection.face_descriptor
           : null;
 
-        // Validate metadata size (max 10KB serialized)
         let metadata = detection.metadata || {};
         try {
-          if (JSON.stringify(metadata).length > 10240) {
-            metadata = {};
-          }
-        } catch {
-          metadata = {};
-        }
+          if (JSON.stringify(metadata).length > 10240) metadata = {};
+        } catch { metadata = {}; }
 
-        // Sanitize enum fields
         const gender = detection.gender && validGenders.includes(detection.gender) ? detection.gender : null;
         const emotion = detection.emotion && validEmotions.includes(detection.emotion) ? detection.emotion : null;
         const ageGroup = detection.age_group && validAgeGroups.includes(detection.age_group) ? detection.age_group : null;
-
-        // Validate string lengths
         const contentName = detection.content_name ? String(detection.content_name).slice(0, 500) : null;
         const deviceNickname = payload.device_nickname ? String(payload.device_nickname).slice(0, 200) : null;
 
@@ -133,7 +109,6 @@ Deno.serve(async (req) => {
         };
       });
 
-      // Inserir registros
       const { data, error } = await supabase
         .from("device_detection_logs")
         .insert(detectionLogs)
@@ -147,24 +122,23 @@ Deno.serve(async (req) => {
         );
       }
 
-      console.log(`Inseridos ${data.length} registros de detecção para ${payload.device_serial}`);
+      console.log(`Inseridos ${data.length} registros para ${payload.device_serial}`);
 
       return new Response(
         JSON.stringify({
           success: true,
           message: `${data.length} detecções registradas`,
           device_found: !!device,
-          inserted_ids: data.map((d) => d.id),
+          inserted_ids: data.map((d: any) => d.id),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // GET - Listar detecções de um dispositivo
     if (req.method === "GET") {
       const url = new URL(req.url);
       const deviceSerial = url.searchParams.get("device_serial");
-      const limit = parseInt(url.searchParams.get("limit") || "100");
+      const limit = Math.min(parseInt(url.searchParams.get("limit") || "100"), 500);
 
       if (!deviceSerial) {
         return new Response(
@@ -181,7 +155,6 @@ Deno.serve(async (req) => {
         .limit(limit);
 
       if (error) {
-        console.error("Erro ao buscar detecções:", error);
         return new Response(
           JSON.stringify({ error: "Erro ao buscar detecções", details: error.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -198,11 +171,11 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: "Método não suportado" }),
       { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
- } catch (error: unknown) {
+  } catch (error: unknown) {
     console.error("Erro no endpoint:", error);
     return new Response(
       JSON.stringify({ error: "Erro interno do servidor" }),
-       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-     );
-   }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 });
