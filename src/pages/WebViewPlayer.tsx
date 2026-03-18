@@ -498,7 +498,7 @@ const WebViewPlayer = () => {
           isLoading={isProductLoading}
           error={productError}
           onDismiss={handleDismissProduct}
-          timeout={15}
+          timeout={9999}
           displaySettings={displaySettings || undefined}
         />
       )}
