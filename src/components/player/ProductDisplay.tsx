@@ -23,6 +23,7 @@ interface ProductDisplayProps {
   onImageLoad: () => void;
   imageLoaded: boolean;
   settings?: Partial<ProductDisplaySettings>;
+  preloadedSrc?: string | null;
 }
 
 const hexToRgb = (hex: string): RGB => {
