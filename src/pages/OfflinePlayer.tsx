@@ -21,7 +21,6 @@ import {
   EmptyContentScreen,
 } from "@/components/player-core";
 import {
-  TerminalModeSwitcher,
   AIAssistantOverlay,
   MetricsOverlay,
   FacialRecognitionOverlay,
@@ -571,13 +570,6 @@ const OfflinePlayer = () => {
           isSyncing={isSyncing}
           debugInfo={debugInfo}
         />
-        <TerminalModeSwitcher
-          activeMode={terminalMode}
-          onModeChange={handleModeChange}
-          visible={true}
-          peopleCount={todayCount}
-          facesDetected={activeFaces.length}
-        />
       </div>
     );
   }
@@ -881,14 +873,6 @@ const OfflinePlayer = () => {
         onClose={() => setTerminalMode("player")}
       />
 
-      {/* Mode switcher sidebar */}
-      <TerminalModeSwitcher
-        activeMode={terminalMode}
-        onModeChange={handleModeChange}
-        visible={showControls || isOverlayActive}
-        peopleCount={todayCount}
-        facesDetected={activeFaces.length}
-      />
 
       {/* Hidden face camera refs (shown in overlay) */}
       {terminalMode !== "facial" && (
