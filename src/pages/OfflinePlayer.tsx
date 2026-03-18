@@ -787,6 +787,22 @@ const OfflinePlayer = () => {
         />
       )}
 
+      {/* Large clock overlay - always visible */}
+      {terminalMode === "player" && (
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-[5]">
+          <div className="bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-20 pb-6 px-8 flex items-end justify-between">
+            <div>
+              <p className="text-white font-bold text-5xl md:text-6xl lg:text-7xl tracking-tight leading-none drop-shadow-lg font-mono">
+                {formattedTime}
+              </p>
+              <p className="text-white/70 text-lg md:text-xl lg:text-2xl mt-1 tracking-wide drop-shadow-md">
+                {formattedDate}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isSyncing && terminalMode === "player" && (
         <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 opacity-50">
           <RefreshCw className="w-4 h-4 text-primary animate-spin" />
