@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Download } from 'lucide-react';
+import { RefreshCw, Download, X, Sparkles } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function PWAUpdatePrompt() {
   const { toast } = useToast();
   const [needRefresh, setNeedRefresh] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -58,38 +60,56 @@ export function PWAUpdatePrompt() {
     }
   }, [offlineReady, toast]);
 
-  useEffect(() => {
-    if (needRefresh) {
-      toast({
-        title: "Atualização disponível",
-        description: (
-          <div className="flex flex-col gap-2">
-            <span>Uma nova versão está disponível.</span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={() => window.location.reload()}
-                className="gap-1"
-              >
-                <RefreshCw className="w-3 h-3" />
-                Atualizar agora
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setNeedRefresh(false)}
-              >
-                Depois
-              </Button>
+  const showBanner = needRefresh && !dismissed;
+
+  return (
+    <AnimatePresence>
+      {showBanner && (
+        <motion.div
+          initial={{ y: -80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -80, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="fixed top-0 left-0 right-0 z-[9999] px-3 py-2 sm:px-4 sm:py-3"
+        >
+          <div className="max-w-4xl mx-auto rounded-b-xl border border-accent/30 bg-accent/10 backdrop-blur-xl shadow-lg">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-accent/20">
+                  <Sparkles className="w-4 h-4 text-accent" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    Nova versão disponível!
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Atualize para acessar os novos recursos e melhorias.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                  className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Atualizar
+                </Button>
+                <button
+                  onClick={() => setDismissed(true)}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  aria-label="Fechar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
-        ),
-        duration: 0,
-      });
-    }
-  }, [needRefresh, toast]);
-
-  return null;
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 export function InstallPrompt() {
