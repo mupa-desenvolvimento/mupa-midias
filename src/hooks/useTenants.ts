@@ -134,20 +134,73 @@ export function useTenants() {
     }
   };
 
-  const updateTenant = async (id: string, updates: { name?: string; max_users?: number; max_devices?: number; max_stores?: number }) => {
+  const updateTenant = async (id: string, updates: { name?: string; max_users?: number; max_devices?: number; max_stores?: number; license_plan?: 'lite' | 'standard' | 'enterprise' }) => {
     try {
+      const { license_plan, ...tenantUpdates } = updates;
+      
       const { error } = await supabase
         .from('tenants')
-        .update(updates)
+        .update(tenantUpdates)
         .eq('id', id);
 
       if (error) throw error;
+
+      // Update license if plan changed
+      if (license_plan) {
+        const licenseDefaults = {
+          lite: { max_playlists: 1, max_devices: 3, max_media_uploads: 5, max_stores: 3, max_device_groups: 1, allow_video_upload: false },
+          standard: { max_playlists: 50, max_devices: 100, max_media_uploads: 500, max_stores: 500, max_device_groups: 50, allow_video_upload: true },
+          enterprise: { max_playlists: 9999, max_devices: 9999, max_media_uploads: 9999, max_stores: 9999, max_device_groups: 9999, allow_video_upload: true },
+        };
+        const limits = licenseDefaults[license_plan];
+        const expiresAt = new Date();
+        if (license_plan === 'lite') {
+          expiresAt.setMonth(expiresAt.getMonth() + 3);
+        } else {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        }
+
+        // Upsert license
+        const { data: existing } = await supabase
+          .from('tenant_licenses')
+          .select('id')
+          .eq('tenant_id', id)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase.from('tenant_licenses').update({
+            plan: license_plan,
+            expires_at: expiresAt.toISOString(),
+            is_active: true,
+            ...limits,
+          }).eq('tenant_id', id);
+        } else {
+          await supabase.from('tenant_licenses').insert({
+            tenant_id: id,
+            plan: license_plan,
+            expires_at: expiresAt.toISOString(),
+            is_active: true,
+            ...limits,
+          });
+        }
+      }
+
       await fetchTenants();
       toast.success('Cliente atualizado com sucesso');
     } catch (error) {
       toast.error('Erro ao atualizar cliente');
       throw error;
     }
+  };
+
+  const getTenantLicense = async (tenantId: string) => {
+    const { data } = await supabase
+      .from('tenant_licenses')
+      .select('plan')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle();
+    return (data?.plan as 'lite' | 'standard' | 'enterprise') || 'standard';
   };
 
   const toggleTenantStatus = async (id: string, isActive: boolean) => {
