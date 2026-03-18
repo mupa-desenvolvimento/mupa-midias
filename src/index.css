@@ -347,15 +347,27 @@ html, body, #root {
   padding: 0 !important;
 }
 
-/* Only hide overflow on the root for layout-managed pages */
+/* Allow vertical scroll everywhere — critical for Android touch */
 #root {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* momentum scroll on older WebViews */
 }
 
-/* Allow vertical scroll on body for non-layout pages */
 body {
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure all scrollable containers support smooth touch scrolling on Android */
+.overflow-auto,
+.overflow-y-auto,
+.custom-scrollbar,
+[class*="overflow-auto"],
+[style*="overflow"] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain; /* prevent scroll chaining */
 }
 
 /* Force fixed elements to respect full viewport on old WebViews */
