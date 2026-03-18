@@ -134,7 +134,7 @@ export function EditorSidebar({
   };
 
   const uploadSvgToGlobal = async (file: File): Promise<string | null> => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await (supabase.auth as any).getSession();
     if (!session) {
       throw new Error("Você precisa estar autenticado para importar SVGs.");
     }
@@ -254,7 +254,7 @@ export function EditorSidebar({
     setSearching(true);
     if (page === 1) setSearchResults([]);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await (supabase.auth as any).getSession();
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-search`,

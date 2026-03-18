@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+// @ts-ignore - JSX component type mismatch
 import QRCode from "react-qr-code";
 import { Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";

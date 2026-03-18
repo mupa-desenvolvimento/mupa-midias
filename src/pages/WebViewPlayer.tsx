@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useDeviceSession } from "@/hooks/useDeviceSession";
 import { useParams, useSearchParams } from "react-router-dom";
 import { db } from "@/services/firebase";
+// @ts-ignore - firebase modular API
 import { ref, onValue } from "firebase/database";
 import { usePlayerFaceDetection } from "@/hooks/usePlayerFaceDetection";
 import { setupKioskMode } from "@/utils/nativeBridge";
@@ -107,7 +108,7 @@ const WebViewPlayer = () => {
     stopTTS();
   }, [clearProduct, stopTTS]);
 
-  // Speak product price when found, then auto-dismiss after 3s
+  // Speak product price when found or "not found" on error, then auto-dismiss after 3s
   useEffect(() => {
     if (product && product.current_price) {
       const formatPrice = (value: number) => {
@@ -140,6 +141,22 @@ const WebViewPlayer = () => {
       return () => { cancelled = true; };
     }
   }, [product, speakPrice, handleDismissProduct]);
+
+  // Speak "Produto não encontrado" on error
+  useEffect(() => {
+    if (productError) {
+      let cancelled = false;
+      speakPrice("Produto não encontrado.").then(() => {
+        if (cancelled) return;
+        setTimeout(() => {
+          if (!cancelled) {
+            handleDismissProduct();
+          }
+        }, 3000);
+      });
+      return () => { cancelled = true; };
+    }
+  }, [productError, speakPrice, handleDismissProduct]);
 
   const handleEanSubmit = useCallback((ean: string) => {
     lookupProduct(ean);

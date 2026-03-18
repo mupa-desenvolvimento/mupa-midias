@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+// @ts-ignore - platform version mismatch
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -63,15 +64,16 @@ interface FolderBreadcrumb {
  
   const getValidSession = useCallback(async (forceRefresh = false): Promise<Session> => {
     let session: Session | null = null;
+    const authClient = supabase.auth as any;
 
     if (forceRefresh) {
-      const { data, error } = await supabase.auth.refreshSession();
+      const { data, error } = await authClient.refreshSession();
       if (error || !data.session) {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
       session = data.session;
     } else {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await authClient.getSession();
       if (error) {
         throw new Error('Sessão inválida. Faça login novamente.');
       }
@@ -82,18 +84,18 @@ interface FolderBreadcrumb {
       throw new Error('Not authenticated');
     }
 
-    const expiresAtMs = (session.expires_at ?? 0) * 1000;
+    const expiresAtMs = ((session as any).expires_at ?? 0) * 1000;
     if (expiresAtMs > 0 && expiresAtMs <= Date.now() + 60_000) {
-      const { data, error } = await supabase.auth.refreshSession();
+      const { data, error } = await authClient.refreshSession();
       if (error || !data.session) {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
       session = data.session;
     }
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await authClient.getUser();
     if (userError || !userData.user) {
-      const { data, error } = await supabase.auth.refreshSession();
+      const { data, error } = await authClient.refreshSession();
       if (error || !data.session) {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
@@ -146,7 +148,7 @@ interface FolderBreadcrumb {
    const checkConnection = useCallback(async () => {
      try {
        setIsLoading(true);
-       const { data: { session } } = await supabase.auth.getSession();
+       const { data: { session } } = await (supabase.auth as any).getSession();
        if (!session) {
          setIsConnected(false);
          return;

@@ -123,7 +123,7 @@ export function StoreImportDialog({ open, onOpenChange, onImportComplete }: Stor
 
   const validatePermissions = async (): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await (supabase.auth as any).getUser();
       if (!user) {
         setPermissionError('Você precisa estar logado para importar lojas.');
         return false;
@@ -304,7 +304,7 @@ export function StoreImportDialog({ open, onOpenChange, onImportComplete }: Stor
 
     try {
       // Create import log first
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await (supabase.auth as any).getUser();
       
       const { data: log, error: logError } = await supabase
         .from('import_logs')
@@ -327,7 +327,7 @@ export function StoreImportDialog({ open, onOpenChange, onImportComplete }: Stor
       setImportLogId(log.id);
 
       // Get session for auth header
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await (supabase.auth as any).getSession();
       
       // Call edge function
       const response = await supabase.functions.invoke('import-stores', {

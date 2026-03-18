@@ -404,7 +404,7 @@ export function EditorProperties({
       "font/woff2";
     const uploadName = `${family}.${ext}`;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await (supabase.auth as any).getSession();
     if (!session) {
       toast.error("Você precisa estar autenticado para enviar fontes");
       return;
@@ -499,7 +499,7 @@ export function EditorProperties({
     const id = systemFamilyToId.get(current);
     if (!id) return;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
       if (!session) {
         toast.error("Você precisa estar autenticado para remover fontes do sistema");
         return;

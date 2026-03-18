@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
+// @ts-ignore - platform version mismatch
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+
+// @ts-ignore - platform version mismatch
+const auth = supabase.auth as any;
 
 export type AppRole = 'admin_global' | 'admin_regional' | 'admin_loja' | 'operador_conteudo' | 'tecnico';
 
@@ -49,7 +53,7 @@ export function useAuth() {
       });
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = auth.onAuthStateChange(
       (event, session) => {
         setAuthState(prev => ({
           ...prev,
@@ -68,12 +72,12 @@ export function useAuth() {
     );
 
     (async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await auth.getSession();
 
       if (cancelled) return;
 
       if (error && isInvalidRefreshToken(error)) {
-        await supabase.auth.signOut();
+        await auth.signOut();
         if (cancelled) return;
         resetAuthState();
         return;
@@ -125,14 +129,14 @@ export function useAuth() {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await auth.signInWithPassword({ email, password });
     return { error };
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { error } = await auth.signUp({
       email,
       password,
       options: {
@@ -144,7 +148,7 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await auth.signOut();
     return { error };
   };
 

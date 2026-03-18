@@ -126,7 +126,7 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
     }: ToggleModulePayload) => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await (supabase.auth as any).getSession();
 
       if (!session) {
         throw new Error("Não autenticado");
@@ -176,7 +176,7 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
     }: GenerateNowPayload) => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await (supabase.auth as any).getSession();
 
       if (!session) {
         throw new Error("Não autenticado");
@@ -223,7 +223,7 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
     mutationFn: async ({ csv, fileName }: UploadBirthdaysPayload) => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await (supabase.auth as any).getSession();
 
       if (!session) {
         throw new Error("Não autenticado");

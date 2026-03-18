@@ -611,7 +611,7 @@ export function MediaUploadDialog({ open, onOpenChange, onSuccess, folderId }: M
         formData.append('folderId', folderId);
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await (supabase.auth as any).getSession();
       
       if (!session) {
         throw new Error('Não autenticado');

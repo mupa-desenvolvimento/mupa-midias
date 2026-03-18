@@ -644,7 +644,7 @@ export default function Editor() {
 
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await (supabase.auth as any).getSession();
       if (!session) throw new Error("Não autenticado");
 
       const formData = new FormData();

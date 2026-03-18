@@ -60,11 +60,12 @@ export const FaceCapture = ({
       try {
         // Use CDN for consistency with useFaceDetection
         const modelPath = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+        const nets = faceapi.nets as any;
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(modelPath),
-          faceapi.nets.faceLandmark68Net.loadFromUri(modelPath),
-          faceapi.nets.faceRecognitionNet.loadFromUri(modelPath),
-          faceapi.nets.ageGenderNet.loadFromUri(modelPath)
+          nets.tinyFaceDetector.loadFromUri(modelPath),
+          nets.faceLandmark68Net.loadFromUri(modelPath),
+          nets.faceRecognitionNet.loadFromUri(modelPath),
+          nets.ageGenderNet.loadFromUri(modelPath)
         ]);
         setModelLoaded(true);
         onModelLoad?.(true);
@@ -81,7 +82,7 @@ export const FaceCapture = ({
     videoWidth: number,
     videoHeight: number
   ): FaceQuality => {
-    const box = detection.detection.box;
+    const box = (detection.detection as any).box;
     const landmarks = detection.landmarks;
     
     // Verificar se face está centralizada (centro da face deve estar perto do centro do vídeo)
@@ -119,7 +120,7 @@ export const FaceCapture = ({
     const isFacingCamera = noseSymmetry < 0.3;
     
     // Iluminação baseada no score de detecção
-    const detectionScore = detection.detection.score;
+    const detectionScore = (detection.detection as any).score;
     const hasGoodLighting = detectionScore > 0.8;
     
     // Calcular score geral
@@ -179,7 +180,7 @@ export const FaceCapture = ({
       setIsDetecting(true);
       try {
         const detection = await faceapi
-          .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+          .detectSingleFace(videoRef.current, new (faceapi as any).TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
           .withFaceLandmarks()
           .withFaceDescriptor()
           .withAgeAndGender();
@@ -278,7 +279,7 @@ export const FaceCapture = ({
       const video = videoRef.current;
       
       // Capturar apenas a região da face com margem
-      const box = detection.detection.box;
+      const box = (detection.detection as any).box;
       const margin = box.width * 0.4;
       const x = Math.max(0, box.x - margin);
       const y = Math.max(0, box.y - margin);

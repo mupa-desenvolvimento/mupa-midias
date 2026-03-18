@@ -174,7 +174,7 @@ export const useMediaItems = (folderId?: string | null) => {
 
   const deleteMediaItem = useMutation({
     mutationFn: async (id: string) => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await (supabase.auth as any).getSession();
       if (!session) throw new Error("Não autenticado");
 
       const response = await fetch(
