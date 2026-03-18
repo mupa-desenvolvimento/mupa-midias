@@ -304,7 +304,7 @@ export function StoreImportDialog({ open, onOpenChange, onImportComplete }: Stor
 
     try {
       // Create import log first
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await (supabase.auth as any).getUser();
       
       const { data: log, error: logError } = await supabase
         .from('import_logs')
