@@ -120,15 +120,16 @@ const Tenants = () => {
     }
   };
 
-  const handleEdit = (tenant: Tenant) => {
+  const handleEdit = async (tenant: Tenant) => {
     setSelectedTenant(tenant);
+    const currentPlan = await getTenantLicense(tenant.id);
     setFormData({
       name: tenant.name,
       slug: tenant.slug,
       max_users: tenant.max_users || 50,
       max_devices: tenant.max_devices || 100,
       max_stores: tenant.max_stores || 500,
-      license_plan: 'standard',
+      license_plan: currentPlan,
     });
     setIsEditOpen(true);
   };
