@@ -72,7 +72,7 @@ export const PlaylistEditor = () => {
     getTotalDuration 
   } = usePlaylistItems(activePlaylistId);
 
-  const [activePanel, setActivePanel] = useState<"media" | null>("media");
+  const [activePanel] = useState<"media">("media");
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
