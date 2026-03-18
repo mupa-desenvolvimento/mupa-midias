@@ -1,4 +1,5 @@
-import { Package, Tag, CheckCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import { Package, Tag, Percent } from "lucide-react";
 import { rgbToString, rgbToRgba, type ExtractedColors, type RGB } from "@/lib/colorExtractor";
 import type { ProductDisplaySettings } from "@/hooks/useProductDisplaySettings";
 
@@ -24,22 +25,14 @@ interface ProductDisplayProps {
   settings?: Partial<ProductDisplaySettings>;
 }
 
-// Convert hex to RGB
 const hexToRgb = (hex: string): RGB => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
+    ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
     : { r: 30, g: 58, b: 95 };
 };
 
-// Get luminance to determine text color
-const getLuminance = (rgb: RGB): number => {
-  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-};
+const getLuminance = (rgb: RGB): number => (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
 
 export const ProductDisplay = ({
   product,
@@ -50,7 +43,6 @@ export const ProductDisplay = ({
   imageLoaded,
   settings,
 }: ProductDisplayProps) => {
-  // Formatar preço
   const formatPrice = (price: number) => {
     const [reais, centavos] = price.toFixed(2).split(".");
     return { reais, centavos };
@@ -58,273 +50,288 @@ export const ProductDisplay = ({
 
   const currentPrice = formatPrice(product.current_price);
   const originalPrice = product.original_price ? formatPrice(product.original_price) : null;
+  const savings = product.original_price ? product.original_price - product.current_price : 0;
 
-  // Calcular economia
-  const savings = product.original_price 
-    ? product.original_price - product.current_price 
-    : 0;
-
-  // Determine colors based on settings
   const useColorExtraction = settings?.enable_color_extraction !== false;
-  
-  // Colors for the gradient/background
-  const primaryColor = useColorExtraction 
-    ? colors.muted 
-    : hexToRgb(settings?.container_primary_color || "#1E3A5F");
-  const secondaryColor = useColorExtraction 
-    ? colors.dominant 
-    : hexToRgb(settings?.container_secondary_color || "#2D4A6F");
-  const accentColor = useColorExtraction 
-    ? colors.vibrant 
-    : hexToRgb(settings?.accent_color || "#3B82F6");
+  const primaryColor = useColorExtraction ? colors.dominant : hexToRgb(settings?.container_primary_color || "#1E3A5F");
+  const secondaryColor = useColorExtraction ? colors.muted : hexToRgb(settings?.container_secondary_color || "#2D4A6F");
+  const accentColor = useColorExtraction ? colors.vibrant : hexToRgb(settings?.accent_color || "#3B82F6");
 
-  // Determine if background is dark
-  const isDark = useColorExtraction ? colors.isDark : getLuminance(primaryColor) < 0.5;
-
-  // Gerar gradiente de fundo
-  const leftGradient = `linear-gradient(180deg, 
-    ${rgbToRgba(primaryColor, 1)} 0%, 
-    ${rgbToRgba(secondaryColor, 0.9)} 50%, 
-    ${rgbToRgba(primaryColor, 1)} 100%
-  )`;
-
-  // Fundo do lado da imagem
-  const imageBackground = settings?.image_background_color || "#FFFFFF";
-
-  // Cores do texto baseadas na luminância do fundo
-  const textColor = isDark ? "text-white" : "text-slate-900";
-  const textMuted = isDark ? "text-white/70" : "text-slate-600";
-
-  // Font sizes from settings
-  const titleSize = settings?.title_font_size || 48;
-  const subtitleSize = settings?.subtitle_font_size || 24;
-  const priceSize = settings?.price_font_size || 96;
+  const titleSize = settings?.title_font_size || 52;
+  const subtitleSize = settings?.subtitle_font_size || 26;
+  const priceSize = settings?.price_font_size || 100;
   const originalPriceSize = settings?.original_price_font_size || 36;
-
-  // Positions
   const imagePosition = settings?.image_position || "right";
-  const pricePosition = settings?.price_position || "bottom";
 
-  // Formatar nome do produto: 3 primeiras palavras em bold
   const formatProductName = (name: string) => {
     const words = name.split(" ");
-    const boldPart = words.slice(0, 3).join(" ");
-    const restPart = words.slice(3).join(" ");
-    return { boldPart, restPart };
+    return { boldPart: words.slice(0, 3).join(" "), restPart: words.slice(3).join(" ") };
   };
-
   const { boldPart, restPart } = formatProductName(product.name);
 
-  // Render info section
-  const renderInfoSection = () => (
-    <div 
-      className="w-1/2 flex flex-col justify-between p-8 lg:p-12 relative overflow-hidden"
-      style={{ background: leftGradient }}
+  // Gradient using extracted colors - applied to the info panel
+  const panelGradient = `linear-gradient(160deg, 
+    ${rgbToString(secondaryColor)} 0%, 
+    ${rgbToString(primaryColor)} 40%, 
+    ${rgbToRgba(primaryColor, 0.95)} 100%
+  )`;
+
+  // Subtle accent bar gradient
+  const accentGradient = `linear-gradient(90deg, ${rgbToString(accentColor)}, ${rgbToRgba(accentColor, 0.7)})`;
+
+  const renderInfoPanel = () => (
+    <motion.div
+      className="w-1/2 h-full flex flex-col justify-between relative overflow-hidden"
+      style={{ background: panelGradient }}
+      initial={{ x: imagePosition === "right" ? -60 : 60, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      {/* Header com nome - container destacado */}
-      <div 
-        className="relative z-10 px-6 py-4 -mx-8 lg:-mx-12"
-        style={{ 
-          backgroundColor: rgbToRgba(accentColor, 0.95),
-        }}
-      >
-        {/* Nome do produto - 3 primeiras palavras em bold, restante menor e fino */}
-        <h1 className="text-white leading-tight">
-          <span 
-            className="block font-black tracking-tight uppercase"
-            style={{ fontSize: `${titleSize}px` }}
-          >
-            {boldPart}
-          </span>
-          {restPart && (
-            <span 
-              className="block font-light tracking-wide uppercase mt-1"
-              style={{ fontSize: `${subtitleSize}px` }}
-            >
-              {restPart}
-            </span>
-          )}
-        </h1>
-      </div>
+      {/* Decorative accent line at top */}
+      <motion.div
+        className="absolute top-0 left-0 right-0 h-1.5"
+        style={{ background: accentGradient }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+      />
 
-      {/* Tags de oferta */}
-      {product.is_offer && pricePosition === "bottom" && (
-        <div className="flex flex-wrap gap-2 my-4">
-          <span 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-white font-bold text-sm lg:text-base"
-            style={{ backgroundColor: rgbToString(accentColor) }}
-          >
-            <CheckCircle className="w-4 h-4" />
-            OFERTA PREÇO DE POR
-          </span>
-        </div>
-      )}
-
-      {/* Bloco de preços - position varies */}
-      <div 
-        className={`relative z-10 my-6 ${
-          pricePosition === "top" ? "order-first" : 
-          pricePosition === "center" ? "flex-1 flex flex-col justify-center" : ""
-        }`}
-      >
-        {/* Preço original (se oferta) */}
-        {product.is_offer && originalPrice && (
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className={`${textMuted}`} style={{ fontSize: `${originalPriceSize * 0.5}px` }}>DE</span>
-            <span 
-              className={`${textMuted} line-through`}
-              style={{ fontSize: `${originalPriceSize}px` }}
-            >
-              R$ {originalPrice.reais}<span style={{ fontSize: `${originalPriceSize * 0.6}px` }}>,{originalPrice.centavos}</span>
-            </span>
-          </div>
-        )}
-        
-        {/* Preço atual */}
-        <div 
-          className="inline-block px-6 py-4 rounded-xl"
-          style={{ 
-            backgroundColor: rgbToRgba(isDark ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 }, 0.3),
-            backdropFilter: 'blur(8px)'
-          }}
+      <div className="flex flex-col justify-between h-full p-8 lg:p-12">
+        {/* Product Name */}
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
-          {product.is_offer && (
-            <span className={`block text-sm ${textMuted} mb-1`}>POR</span>
-          )}
-          <div className="flex items-baseline">
-            <span 
-              className={`${textColor} font-medium mr-1`}
-              style={{ fontSize: `${priceSize * 0.3}px` }}
+          <h1 className="text-white leading-tight mb-2">
+            <span
+              className="block font-black tracking-tight uppercase"
+              style={{ fontSize: `${titleSize}px` }}
             >
-              R$
+              {boldPart}
             </span>
-            <span 
-              className={`font-bold ${textColor}`}
-              style={{ fontSize: `${priceSize}px` }}
-            >
-              {currentPrice.reais}
-            </span>
-            <span 
-              className={`${textColor} font-bold`}
-              style={{ fontSize: `${priceSize * 0.4}px` }}
-            >
-              ,{currentPrice.centavos}
-            </span>
-            <span 
-              className={`${textMuted} font-medium ml-2`}
-              style={{ fontSize: `${priceSize * 0.25}px` }}
-            >
-              / {product.unit || 'UN'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Mensagem de economia */}
-      {product.is_offer && savings > 0 && pricePosition === "bottom" && (
-        <div 
-          className="p-4 rounded-xl mb-4"
-          style={{ 
-            backgroundColor: rgbToRgba(isDark ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 }, 0.15),
-            backdropFilter: 'blur(4px)'
-          }}
-        >
-          <p className={`${textColor} text-base lg:text-lg`}>
-            Produto em oferta! De <span className="font-semibold">R$ {product.original_price?.toFixed(2).replace('.', ',')}</span> por{' '}
-            <span className="font-semibold">R$ {product.current_price.toFixed(2).replace('.', ',')}</span>.
-            {product.savings_percent && (
-              <span className="font-bold"> Economia de {product.savings_percent}%!</span>
+            {restPart && (
+              <span
+                className="block font-light tracking-wider uppercase mt-1 text-white/80"
+                style={{ fontSize: `${subtitleSize}px` }}
+              >
+                {restPart}
+              </span>
             )}
-          </p>
-        </div>
-      )}
+          </h1>
+        </motion.div>
 
-      {/* Economia em destaque */}
-      {product.is_offer && savings > 0 && pricePosition === "bottom" && (
-        <div className="mb-4">
-          <p className={`${textMuted} text-sm mb-2`}>Você economiza:</p>
-          <div 
-            className="inline-flex items-center px-4 py-2 rounded-lg font-bold text-white text-xl"
-            style={{ backgroundColor: 'rgb(34, 197, 94)' }}
+        {/* Offer badge */}
+        {product.is_offer && (
+          <motion.div
+            className="flex items-center gap-2 my-3"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.4, type: "spring", stiffness: 200 }}
           >
-            R$ {savings.toFixed(2).replace('.', ',')}
-          </div>
-        </div>
-      )}
+            <span
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-bold text-sm shadow-lg"
+              style={{
+                background: accentGradient,
+                boxShadow: `0 4px 20px ${rgbToRgba(accentColor, 0.4)}`,
+              }}
+            >
+              <Percent className="w-4 h-4" />
+              OFERTA PREÇO DE POR
+            </span>
+          </motion.div>
+        )}
 
-      {/* Código EAN e countdown */}
-      <div className={`relative z-10 ${textMuted} text-sm`}>
-        <p>Código: {product.ean}</p>
+        {/* Price block */}
+        <motion.div
+          className="my-4"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+        >
+          {/* Original price */}
+          {product.is_offer && originalPrice && (
+            <motion.div
+              className="flex items-baseline gap-2 mb-3"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.5 }}
+            >
+              <span className="text-white/50" style={{ fontSize: `${originalPriceSize * 0.5}px` }}>DE</span>
+              <span className="text-white/50" style={{ fontSize: `${originalPriceSize * 0.55}px` }}>R$</span>
+              <span
+                className="text-white/60 line-through font-semibold"
+                style={{ fontSize: `${originalPriceSize}px` }}
+              >
+                {originalPrice.reais}
+                <span style={{ fontSize: `${originalPriceSize * 0.6}px` }}>,{originalPrice.centavos}</span>
+              </span>
+            </motion.div>
+          )}
+
+          {/* Current price with glassmorphism card */}
+          <motion.div
+            className="inline-block px-6 py-5 rounded-2xl"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.35)",
+              backdropFilter: "blur(12px)",
+              border: `1px solid ${rgbToRgba(accentColor, 0.2)}`,
+            }}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.45, type: "spring", stiffness: 150 }}
+          >
+            {product.is_offer && (
+              <span className="block text-white/60 text-sm mb-1 font-medium tracking-wide">POR</span>
+            )}
+            <div className="flex items-baseline">
+              <span className="text-white font-medium mr-1" style={{ fontSize: `${priceSize * 0.28}px` }}>
+                R$
+              </span>
+              <motion.span
+                className="font-extrabold text-white"
+                style={{ fontSize: `${priceSize}px`, lineHeight: 1 }}
+                initial={{ scale: 1.1 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.6, type: "spring" }}
+              >
+                {currentPrice.reais}
+              </motion.span>
+              <span className="text-white font-bold" style={{ fontSize: `${priceSize * 0.4}px` }}>
+                ,{currentPrice.centavos}
+              </span>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Savings message */}
+        {product.is_offer && savings > 0 && (
+          <motion.div
+            className="p-4 rounded-xl mb-3"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.1)",
+              backdropFilter: "blur(6px)",
+            }}
+            initial={{ y: 15, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.6 }}
+          >
+            <p className="text-white/90 text-base lg:text-lg">
+              Produto em oferta! De{" "}
+              <span className="font-semibold" style={{ color: rgbToRgba(accentColor, 0.9) }}>
+                R$ {product.original_price?.toFixed(2).replace(".", ",")}
+              </span>{" "}
+              por{" "}
+              <span className="font-semibold" style={{ color: rgbToRgba(accentColor, 0.9) }}>
+                R$ {product.current_price.toFixed(2).replace(".", ",")}
+              </span>.
+              {product.savings_percent && (
+                <span className="font-bold"> Economia de {product.savings_percent}%!</span>
+              )}
+            </p>
+          </motion.div>
+        )}
+
+        {/* EAN code */}
+        <motion.div
+          className="text-white/40 text-sm mt-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          <p>Código: {product.ean}</p>
+        </motion.div>
       </div>
 
-      {/* Barra de progresso do countdown */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-        <div
-          className="h-full transition-all duration-1000 ease-linear"
-          style={{ 
-            width: `${(countdown / timeout) * 100}%`,
-            backgroundColor: rgbToString(accentColor)
-          }}
+      {/* Countdown progress bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5">
+        <motion.div
+          className="h-full"
+          style={{ backgroundColor: rgbToString(accentColor), width: `${(countdown / timeout) * 100}%` }}
+          transition={{ duration: 1, ease: "linear" }}
         />
       </div>
-    </div>
+    </motion.div>
   );
 
-  // Render image section
-  const renderImageSection = () => (
-    <div 
-      className="w-1/2 flex items-center justify-center p-8 relative"
-      style={{ backgroundColor: imageBackground }}
+  const renderImagePanel = () => (
+    <motion.div
+      className="w-1/2 h-full flex items-center justify-center relative overflow-hidden"
+      style={{ backgroundColor: "#FFFFFF" }}
+      initial={{ x: imagePosition === "right" ? 60 : -60, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
+      {/* Subtle colored glow behind image */}
+      <motion.div
+        className="absolute rounded-full blur-3xl"
+        style={{
+          width: "60%",
+          height: "60%",
+          background: `radial-gradient(circle, ${rgbToRgba(primaryColor, 0.08)} 0%, transparent 70%)`,
+        }}
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      />
+
       {product.image_url ? (
-        <img
+        <motion.img
           src={product.image_url}
           alt={product.name}
-          className={`max-w-[85%] max-h-[85vh] object-contain drop-shadow-2xl transition-opacity duration-500 ${
-            imageLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="max-w-[80%] max-h-[80vh] object-contain relative z-10"
+          style={{
+            filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.12))",
+          }}
           onLoad={onImageLoad}
           crossOrigin="anonymous"
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: imageLoaded ? 1 : 0.85, opacity: imageLoaded ? 1 : 0 }}
+          transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 120 }}
         />
       ) : (
-        <div className="w-64 h-64 bg-slate-100 rounded-xl flex items-center justify-center">
-          <Package className="w-24 h-24 text-slate-300" />
+        <div className="w-64 h-64 bg-slate-50 rounded-2xl flex items-center justify-center">
+          <Package className="w-24 h-24 text-slate-200" />
         </div>
       )}
 
-      {/* Indicador de countdown discreto */}
-      <div className="absolute bottom-4 right-4 text-slate-300 text-xs">
+      {/* Countdown badge */}
+      <motion.div
+        className="absolute bottom-4 right-4 px-3 py-1 rounded-full text-xs font-medium"
+        style={{
+          backgroundColor: rgbToRgba(primaryColor, 0.08),
+          color: rgbToRgba(primaryColor, 0.4),
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+      >
         {countdown}s
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 
   const isPortrait = typeof window !== "undefined" ? window.innerHeight > window.innerWidth : false;
 
   if (isPortrait) {
     return (
-      <div className="absolute inset-0 flex flex-col">
-        <div className="w-full h-1/2">
-          {renderImageSection()}
-        </div>
-        <div className="w-full flex-1">
-          {renderInfoSection()}
-        </div>
+      <div className="absolute inset-0 flex flex-col" style={{ backgroundColor: "#FFFFFF" }}>
+        <div className="w-full h-[45%]">{renderImagePanel()}</div>
+        <div className="w-full flex-1">{renderInfoPanel()}</div>
       </div>
     );
   }
 
   return (
-    <div className="absolute inset-0 flex">
+    <div className="absolute inset-0 flex" style={{ backgroundColor: "#FFFFFF" }}>
       {imagePosition === "left" ? (
         <>
-          {renderImageSection()}
-          {renderInfoSection()}
+          {renderImagePanel()}
+          {renderInfoPanel()}
         </>
       ) : (
         <>
-          {renderInfoSection()}
-          {renderImageSection()}
+          {renderInfoPanel()}
+          {renderImagePanel()}
         </>
       )}
     </div>
