@@ -29,7 +29,7 @@ interface TenantFilters {
 }
 
 const Tenants = () => {
-  const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant } = useTenants();
+  const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant, getTenantLicense } = useTenants();
   const { isSuperAdmin, isLoading: isCheckingAdmin } = useSuperAdmin();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
