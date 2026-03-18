@@ -180,7 +180,7 @@ export const FaceCapture = ({
       setIsDetecting(true);
       try {
         const detection = await faceapi
-          .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+          .detectSingleFace(videoRef.current, new (faceapi as any).TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
           .withFaceLandmarks()
           .withFaceDescriptor()
           .withAgeAndGender();
