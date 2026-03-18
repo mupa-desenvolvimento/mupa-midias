@@ -11,6 +11,7 @@ export interface Product {
 class ProductService {
   private static instance: ProductService;
   private apiUrl = "http://srv-mupa.ddns.net:5050";
+  private supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 
   private constructor() {}
 
