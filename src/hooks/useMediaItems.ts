@@ -65,6 +65,8 @@ export const useMediaItems = (folderId?: string | null) => {
       // Filter by tenant for non-super-admins
       if (!isSuperAdmin && tenantId) {
         query = query.eq("tenant_id", tenantId);
+      } else if (!isSuperAdmin) {
+        return [] as MediaItem[];
       }
 
       if (folderId !== undefined) {

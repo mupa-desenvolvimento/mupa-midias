@@ -64,6 +64,8 @@ export const usePlaylists = () => {
 
       if (!isSuperAdmin && tenantId) {
         query = query.eq("tenant_id", tenantId);
+      } else if (!isSuperAdmin) {
+        return [] as PlaylistWithChannel[];
       }
 
       const { data, error } = await query;
