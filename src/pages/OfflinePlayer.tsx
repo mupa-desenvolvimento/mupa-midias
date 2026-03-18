@@ -538,7 +538,7 @@ const OfflinePlayer = () => {
   const { data: displaySettings } = useProductDisplaySettingsBySlug(deviceState?.company_slug);
   const { speak: speakPrice, stop: stopTTS } = useProductTTS();
 
-  // Speak product price when found
+  // Speak product price when found, then auto-dismiss after 3s
   useEffect(() => {
     if (product && product.current_price) {
       const formatPrice = (value: number) => {
@@ -557,9 +557,21 @@ const OfflinePlayer = () => {
       } else {
         priceText = `${formatPrice(product.current_price)}.`;
       }
-      speakPrice(priceText);
+
+      let cancelled = false;
+      speakPrice(priceText).then(() => {
+        if (cancelled) return;
+        // Wait 3 seconds after audio ends, then dismiss
+        setTimeout(() => {
+          if (!cancelled) {
+            handleDismissProduct();
+          }
+        }, 3000);
+      });
+
+      return () => { cancelled = true; };
     }
-  }, [product, speakPrice]);
+  }, [product, speakPrice, handleDismissProduct]);
 
   useKeyboardShortcuts({
     onFullscreen: toggleFullscreen,
