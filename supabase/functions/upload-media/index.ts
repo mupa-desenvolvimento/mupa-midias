@@ -173,6 +173,49 @@ Deno.serve(async (req: Request) => {
 
     console.log('Authenticated user:', user.email)
 
+    // Check tenant license limits for media uploads
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseAdminEarly = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    })
+
+    const { data: tenantMappingEarly } = await supabaseAdminEarly
+      .from('user_tenant_mappings')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (tenantMappingEarly?.tenant_id) {
+      const { data: licenseData } = await supabaseAdminEarly.rpc('get_tenant_license', {
+        p_tenant_id: tenantMappingEarly.tenant_id,
+      })
+      const license = licenseData as any
+      if (license?.has_license && license?.plan === 'lite') {
+        // Check video upload restriction
+        const requestedFileType = (await req.clone().formData()).get('fileType') as string | null
+        const isVideoUpload = requestedFileType && ALLOWED_VIDEO_TYPES.includes(requestedFileType.toLowerCase())
+        if (isVideoUpload && !license.allow_video_upload) {
+          return new Response(
+            JSON.stringify({ error: 'O plano LITE não permite upload de vídeos. Faça upgrade para continuar.' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Check media count limit
+        const { count } = await supabaseAdminEarly
+          .from('media_items')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantMappingEarly.tenant_id)
+        
+        if (count !== null && license.max_media_uploads && count >= license.max_media_uploads) {
+          return new Response(
+            JSON.stringify({ error: `Limite de ${license.max_media_uploads} mídias atingido no plano LITE. Faça upgrade para continuar.` }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
+    }
+
     // Get Cloudflare R2 credentials
     const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')
     const accessKeyId = Deno.env.get('CLOUDFLARE_R2_ACCESS_KEY_ID')
