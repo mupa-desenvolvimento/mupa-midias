@@ -123,7 +123,7 @@ export function StoreImportDialog({ open, onOpenChange, onImportComplete }: Stor
 
   const validatePermissions = async (): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await (supabase.auth as any).getUser();
       if (!user) {
         setPermissionError('Você precisa estar logado para importar lojas.');
         return false;
