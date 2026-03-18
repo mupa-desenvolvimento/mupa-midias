@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTenant } from "./useUserTenant";
 import type { Json } from "@/integrations/supabase/types";
 
 export interface MediaItem {
@@ -17,6 +18,7 @@ export interface MediaItem {
   created_at: string;
   updated_at: string;
   folder_id?: string | null;
+  tenant_id?: string | null;
 }
 
 export interface MediaItemInsert {
@@ -30,34 +32,28 @@ export interface MediaItemInsert {
   status?: string;
   metadata?: Json | null;
   folder_id?: string | null;
+  tenant_id?: string | null;
 }
 
 // Helper to convert R2 signed URL to public URL
 const getPublicUrl = (url: string | null): string | null => {
   if (!url) return null;
-  
-  // If already a public URL (pub-*.r2.dev), return as is
   if (url.includes('.r2.dev/')) return url;
-  
-  // Convert R2 storage URL to public URL format
-  // From: https://{account_id}.r2.cloudflarestorage.com/{bucket}/{key}
-  // To: https://{public_domain}/{key}
   const r2Match = url.match(/https:\/\/[^/]+\.r2\.cloudflarestorage\.com\/[^/]+\/(.+)/);
   if (r2Match) {
-    // Hardcoded public domain for this project
     const publicDomain = 'https://pub-0e15cc358ba84ff2a24226b12278433b.r2.dev';
     return `${publicDomain}/${r2Match[1]}`;
   }
-  
   return url;
 };
 
 export const useMediaItems = (folderId?: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { tenantId, isSuperAdmin } = useUserTenant();
 
   const { data: mediaItems = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["media-items", folderId],
+    queryKey: ["media-items", folderId, tenantId, isSuperAdmin],
     queryFn: async () => {
       console.log('[useMediaItems] Fetching media items...', folderId === undefined ? 'ALL' : folderId);
       
@@ -65,6 +61,11 @@ export const useMediaItems = (folderId?: string | null) => {
         .from("media_items")
         .select("*")
         .neq("type", "font");
+
+      // Filter by tenant for non-super-admins
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      }
 
       if (folderId !== undefined) {
         if (folderId === null) {
@@ -75,22 +76,26 @@ export const useMediaItems = (folderId?: string | null) => {
       }
 
       const { data, error } = await query.order("created_at", { ascending: false });
-
       if (error) throw error;
       
-      // Transform URLs to public format
       const items = (data as MediaItem[]).map(item => ({
         ...item,
         file_url: getPublicUrl(item.file_url),
         thumbnail_url: getPublicUrl(item.thumbnail_url),
       }));
 
-      // Also fetch active campaigns and merge as virtual media items
-      const { data: campaigns } = await supabase
+      // Also fetch active campaigns
+      let campaignQuery = supabase
         .from("qrcode_campaigns")
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
+
+      if (!isSuperAdmin && tenantId) {
+        campaignQuery = campaignQuery.eq("tenant_id", tenantId);
+      }
+
+      const { data: campaigns } = await campaignQuery;
 
       const campaignItems: MediaItem[] = (campaigns || []).map((c: any) => ({
         id: c.id,
@@ -108,7 +113,6 @@ export const useMediaItems = (folderId?: string | null) => {
         folder_id: null,
       }));
 
-      // Filter out campaigns already linked via media_id to avoid duplicates
       const linkedMediaIds = new Set((campaigns || []).map((c: any) => c.media_id).filter(Boolean));
       const dedupedItems = items.filter(item => !linkedMediaIds.has(item.id) || item.type !== 'campaign');
 
@@ -116,15 +120,20 @@ export const useMediaItems = (folderId?: string | null) => {
       console.log('[useMediaItems] Fetched', items.length, 'media +', campaignItems.length, 'campaigns');
       return allItems;
     },
-    staleTime: 0, // Always consider data stale to ensure fresh fetches
+    staleTime: 0,
     refetchOnWindowFocus: true,
   });
 
   const createMediaItem = useMutation({
     mutationFn: async (item: MediaItemInsert) => {
+      const itemData = { ...item };
+      if (!isSuperAdmin && tenantId && !itemData.tenant_id) {
+        itemData.tenant_id = tenantId;
+      }
+
       const { data, error } = await supabase
         .from("media_items")
-        .insert([item])
+        .insert([itemData])
         .select()
         .single();
 
@@ -163,12 +172,8 @@ export const useMediaItems = (folderId?: string | null) => {
 
   const deleteMediaItem = useMutation({
     mutationFn: async (id: string) => {
-      // Call edge function to delete from R2 and database
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error("Não autenticado");
-      }
+      if (!session) throw new Error("Não autenticado");
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-media`,
@@ -183,11 +188,7 @@ export const useMediaItems = (folderId?: string | null) => {
       );
 
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao excluir mídia');
-      }
-
+      if (!response.ok) throw new Error(result.error || 'Erro ao excluir mídia');
       return result;
     },
     onSuccess: () => {
@@ -205,7 +206,6 @@ export const useMediaItems = (folderId?: string | null) => {
         .from("media_items")
         .update({ folder_id: folderId })
         .eq("id", mediaId);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -223,7 +223,6 @@ export const useMediaItems = (folderId?: string | null) => {
         .from("media_items")
         .update({ folder_id: folderId })
         .in("id", mediaIds);
-
       if (error) throw error;
     },
     onSuccess: () => {

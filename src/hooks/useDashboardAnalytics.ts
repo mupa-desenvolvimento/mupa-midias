@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfDay, endOfDay, subDays, format, startOfHour } from 'date-fns';
+import { startOfDay, endOfDay, subDays } from 'date-fns';
+import { useUserTenant } from './useUserTenant';
 
 interface AudienceByHour {
   hour: string;
@@ -58,6 +59,7 @@ export const useDashboardAnalytics = () => {
   const [emotionData, setEmotionData] = useState<EmotionData[]>([]);
   const [topContent, setTopContent] = useState<ContentPerformance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { tenantId, companyId, isSuperAdmin } = useUserTenant();
 
   const fetchStats = useCallback(async () => {
     try {
@@ -67,7 +69,19 @@ export const useDashboardAnalytics = () => {
       const yesterdayStart = startOfDay(subDays(now, 1)).toISOString();
       const yesterdayEnd = endOfDay(subDays(now, 1)).toISOString();
 
-      // Parallel queries for basic stats
+      // Build tenant-scoped queries
+      let devicesQuery = supabase.from('devices').select('id, status, is_active');
+      let mediaQuery = supabase.from('media_items').select('id').eq('status', 'active');
+      let playlistsQuery = supabase.from('playlists').select('id').eq('is_active', true);
+
+      if (!isSuperAdmin) {
+        if (companyId) devicesQuery = devicesQuery.eq('company_id', companyId);
+        if (tenantId) {
+          mediaQuery = mediaQuery.eq('tenant_id', tenantId);
+          playlistsQuery = playlistsQuery.eq('tenant_id', tenantId);
+        }
+      }
+
       const [
         devicesResult,
         mediaResult,
@@ -75,9 +89,9 @@ export const useDashboardAnalytics = () => {
         todayDetectionsResult,
         yesterdayDetectionsResult
       ] = await Promise.all([
-        supabase.from('devices').select('id, status, is_active'),
-        supabase.from('media_items').select('id').eq('status', 'active'),
-        supabase.from('playlists').select('id').eq('is_active', true),
+        devicesQuery,
+        mediaQuery,
+        playlistsQuery,
         supabase
           .from('device_detection_logs')
           .select('id, attention_duration')
@@ -95,7 +109,6 @@ export const useDashboardAnalytics = () => {
       const todayDetections = todayDetectionsResult.data || [];
       const yesterdayDetections = yesterdayDetectionsResult.data || [];
       
-      // Calculate average attention time
       const attentionTimes = todayDetections
         .map(d => d.attention_duration)
         .filter((t): t is number => t !== null && t !== undefined);
@@ -116,7 +129,7 @@ export const useDashboardAnalytics = () => {
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     }
-  }, []);
+  }, [tenantId, companyId, isSuperAdmin]);
 
   const fetchAudienceByHour = useCallback(async () => {
     try {
@@ -135,7 +148,6 @@ export const useDashboardAnalytics = () => {
         return;
       }
 
-      // Group by hour
       const hourCounts: Record<string, number> = {};
       for (let i = 0; i < 24; i++) {
         hourCounts[`${i.toString().padStart(2, '0')}:00`] = 0;
@@ -153,7 +165,6 @@ export const useDashboardAnalytics = () => {
       }));
 
       setAudienceByHour(hourlyData);
-
     } catch (error) {
       console.error('Error fetching audience by hour:', error);
     }
@@ -189,16 +200,9 @@ export const useDashboardAnalytics = () => {
         return;
       }
 
-      // Gender distribution
-      const genderCounts: Record<string, number> = {
-        masculino: 0,
-        feminino: 0,
-        indefinido: 0
-      };
+      const genderCounts: Record<string, number> = { masculino: 0, feminino: 0, indefinido: 0 };
       data.forEach(d => {
-        if (d.gender) {
-          genderCounts[d.gender] = (genderCounts[d.gender] || 0) + 1;
-        }
+        if (d.gender) genderCounts[d.gender] = (genderCounts[d.gender] || 0) + 1;
       });
       
       const total = Object.values(genderCounts).reduce((a, b) => a + b, 0);
@@ -208,48 +212,27 @@ export const useDashboardAnalytics = () => {
         { name: 'Indefinido', value: total > 0 ? Math.round((genderCounts.indefinido / total) * 100) : 0, color: '#f59e0b' }
       ]);
 
-      // Age distribution
-      const ageCounts: Record<string, number> = {
-        '0-12': 0,
-        '13-18': 0,
-        '19-25': 0,
-        '26-35': 0,
-        '36-50': 0,
-        '51+': 0
-      };
+      const ageCounts: Record<string, number> = { '0-12': 0, '13-18': 0, '19-25': 0, '26-35': 0, '36-50': 0, '51+': 0 };
       data.forEach(d => {
-        if (d.age_group && ageCounts[d.age_group] !== undefined) {
-          ageCounts[d.age_group]++;
-        }
+        if (d.age_group && ageCounts[d.age_group] !== undefined) ageCounts[d.age_group]++;
       });
-      setAgeDistribution([
-        { range: '0-12', count: ageCounts['0-12'] },
-        { range: '13-18', count: ageCounts['13-18'] },
-        { range: '19-25', count: ageCounts['19-25'] },
-        { range: '26-35', count: ageCounts['26-35'] },
-        { range: '36-50', count: ageCounts['36-50'] },
-        { range: '51+', count: ageCounts['51+'] }
-      ]);
+      setAgeDistribution(Object.entries(ageCounts).map(([range, count]) => ({ range, count })));
 
-      // Emotion distribution
       const emotionCounts: Record<string, number> = {};
       data.forEach(d => {
-        if (d.emotion) {
-          emotionCounts[d.emotion] = (emotionCounts[d.emotion] || 0) + 1;
-        }
+        if (d.emotion) emotionCounts[d.emotion] = (emotionCounts[d.emotion] || 0) + 1;
       });
       
       const emotionTotal = Object.values(emotionCounts).reduce((a, b) => a + b, 0);
-      const emotionArray = Object.entries(emotionCounts)
-        .map(([name, count]) => ({
-          name: translateEmotion(name),
-          count,
-          percentage: emotionTotal > 0 ? Math.round((count / emotionTotal) * 100) : 0
-        }))
-        .sort((a, b) => b.count - a.count);
-      
-      setEmotionData(emotionArray);
-
+      setEmotionData(
+        Object.entries(emotionCounts)
+          .map(([name, count]) => ({
+            name: translateEmotion(name),
+            count,
+            percentage: emotionTotal > 0 ? Math.round((count / emotionTotal) * 100) : 0
+          }))
+          .sort((a, b) => b.count - a.count)
+      );
     } catch (error) {
       console.error('Error fetching demographics:', error);
     }
@@ -273,7 +256,6 @@ export const useDashboardAnalytics = () => {
         return;
       }
 
-      // Group by content
       const contentStats: Record<string, {
         contentName: string;
         views: number;
@@ -283,91 +265,55 @@ export const useDashboardAnalytics = () => {
 
       data.forEach(d => {
         if (!d.content_id) return;
-        
         if (!contentStats[d.content_id]) {
-          contentStats[d.content_id] = {
-            contentName: d.content_name || 'Desconhecido',
-            views: 0,
-            totalAttention: 0,
-            emotions: {}
-          };
+          contentStats[d.content_id] = { contentName: d.content_name || 'Desconhecido', views: 0, totalAttention: 0, emotions: {} };
         }
-        
         contentStats[d.content_id].views++;
         contentStats[d.content_id].totalAttention += d.attention_duration || 0;
-        
         if (d.emotion) {
-          contentStats[d.content_id].emotions[d.emotion] = 
-            (contentStats[d.content_id].emotions[d.emotion] || 0) + 1;
+          contentStats[d.content_id].emotions[d.emotion] = (contentStats[d.content_id].emotions[d.emotion] || 0) + 1;
         }
       });
 
-      const topContentArray: ContentPerformance[] = Object.entries(contentStats)
-        .map(([contentId, stats]) => {
-          const topEmotion = Object.entries(stats.emotions)
-            .sort(([, a], [, b]) => b - a)[0];
-          
-          return {
-            contentId,
-            contentName: stats.contentName,
-            views: stats.views,
-            avgAttention: stats.views > 0 ? stats.totalAttention / stats.views : 0,
-            topEmotion: topEmotion ? translateEmotion(topEmotion[0]) : 'N/A'
-          };
-        })
-        .sort((a, b) => b.views - a.views)
-        .slice(0, 5);
-
-      setTopContent(topContentArray);
-
+      setTopContent(
+        Object.entries(contentStats)
+          .map(([contentId, stats]) => {
+            const topEmotion = Object.entries(stats.emotions).sort(([, a], [, b]) => b - a)[0];
+            return {
+              contentId,
+              contentName: stats.contentName,
+              views: stats.views,
+              avgAttention: stats.views > 0 ? stats.totalAttention / stats.views : 0,
+              topEmotion: topEmotion ? translateEmotion(topEmotion[0]) : 'N/A'
+            };
+          })
+          .sort((a, b) => b.views - a.views)
+          .slice(0, 5)
+      );
     } catch (error) {
       console.error('Error fetching top content:', error);
     }
   }, []);
 
-  // Refresh all data
   const refresh = useCallback(async () => {
     setIsLoading(true);
-    await Promise.all([
-      fetchStats(),
-      fetchAudienceByHour(),
-      fetchDemographics(),
-      fetchTopContent()
-    ]);
+    await Promise.all([fetchStats(), fetchAudienceByHour(), fetchDemographics(), fetchTopContent()]);
     setIsLoading(false);
   }, [fetchStats, fetchAudienceByHour, fetchDemographics, fetchTopContent]);
 
-  // Initial load
   useEffect(() => {
     refresh();
-    
-    // Refresh every 30 seconds
     const interval = setInterval(refresh, 30000);
     return () => clearInterval(interval);
   }, [refresh]);
 
-  return {
-    stats,
-    audienceByHour,
-    genderDistribution,
-    ageDistribution,
-    emotionData,
-    topContent,
-    isLoading,
-    refresh
-  };
+  return { stats, audienceByHour, genderDistribution, ageDistribution, emotionData, topContent, isLoading, refresh };
 };
 
-// Helper to translate emotion names
 function translateEmotion(emotion: string): string {
   const translations: Record<string, string> = {
-    neutral: 'Neutro',
-    happy: 'Feliz',
-    sad: 'Triste',
-    angry: 'Raiva',
-    fearful: 'Medo',
-    disgusted: 'Nojo',
-    surprised: 'Surpreso'
+    neutral: 'Neutro', happy: 'Feliz', sad: 'Triste', angry: 'Raiva',
+    fearful: 'Medo', disgusted: 'Nojo', surprised: 'Surpreso'
   };
   return translations[emotion] || emotion;
 }

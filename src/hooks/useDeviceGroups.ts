@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTenant } from "./useUserTenant";
 
 export interface DeviceGroup {
   id: string;
@@ -40,11 +41,12 @@ export interface DeviceGroupChannel {
 export const useDeviceGroups = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { tenantId, isSuperAdmin } = useUserTenant();
 
   const { data: deviceGroups = [], isLoading, error } = useQuery({
-    queryKey: ["device-groups"],
+    queryKey: ["device-groups", tenantId, isSuperAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("device_groups")
         .select(`
           *,
@@ -53,6 +55,11 @@ export const useDeviceGroups = () => {
         `)
         .order("name", { ascending: true });
 
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as DeviceGroupWithDetails[];
     },
@@ -60,9 +67,14 @@ export const useDeviceGroups = () => {
 
   const createDeviceGroup = useMutation({
     mutationFn: async (group: DeviceGroupInsert) => {
+      const groupData = { ...group };
+      if (!isSuperAdmin && tenantId && !groupData.tenant_id) {
+        groupData.tenant_id = tenantId;
+      }
+
       const { data, error } = await supabase
         .from("device_groups")
-        .insert([group])
+        .insert([groupData])
         .select()
         .single();
 
@@ -128,7 +140,6 @@ export const useDeviceGroups = () => {
     },
   });
 
-  // Channel assignment functions
   const getGroupChannels = async (groupId: string) => {
     const { data, error } = await supabase
       .from("device_group_channels")

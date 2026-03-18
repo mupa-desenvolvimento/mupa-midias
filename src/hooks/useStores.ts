@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StoreWithHierarchy, Region, State, City } from '@/types/database';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
+import { useUserTenant } from './useUserTenant';
 
 interface StoreInsert {
   code: string;
@@ -11,6 +12,7 @@ interface StoreInsert {
   address?: string | null;
   is_active?: boolean;
   metadata?: Json;
+  tenant_id?: string | null;
 }
 
 interface StoreUpdate {
@@ -28,10 +30,11 @@ export function useStores() {
   const [states, setStates] = useState<State[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { tenantId, isSuperAdmin } = useUserTenant();
 
   const fetchStores = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('stores')
         .select(`
           *,
@@ -48,6 +51,12 @@ export function useStores() {
         `)
         .order('name');
 
+      // Filter by tenant if not super admin
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setStores((data as unknown as StoreWithHierarchy[]) || []);
     } catch (error) {
@@ -58,11 +67,16 @@ export function useStores() {
 
   const fetchRegions = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('regions')
         .select('*, country:countries(*)')
         .order('name');
 
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setRegions(data || []);
     } catch (error) {
@@ -72,11 +86,16 @@ export function useStores() {
 
   const fetchStates = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('states')
         .select('*, region:regions(*)')
         .order('name');
 
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setStates(data || []);
     } catch (error) {
@@ -86,11 +105,16 @@ export function useStores() {
 
   const fetchCities = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('cities')
         .select('*, state:states(*)')
         .order('name');
 
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setCities(data || []);
     } catch (error) {
@@ -105,14 +129,22 @@ export function useStores() {
   };
 
   useEffect(() => {
-    fetchAll();
-  }, []);
+    if (isSuperAdmin || tenantId) {
+      fetchAll();
+    }
+  }, [tenantId, isSuperAdmin]);
 
   const createStore = async (store: StoreInsert) => {
     try {
+      // Auto-assign tenant_id if not super admin
+      const storeData = { ...store };
+      if (!isSuperAdmin && tenantId && !storeData.tenant_id) {
+        storeData.tenant_id = tenantId;
+      }
+
       const { data, error } = await supabase
         .from('stores')
-        .insert(store)
+        .insert(storeData)
         .select()
         .single();
 
@@ -166,10 +198,15 @@ export function useStores() {
     }
   };
 
-  const createState = async (state: { region_id: string; name: string; code: string }) => {
+  const createState = async (state: { region_id: string; name: string; code: string; tenant_id?: string }) => {
+    const stateData = { ...state };
+    if (!isSuperAdmin && tenantId && !stateData.tenant_id) {
+      stateData.tenant_id = tenantId;
+    }
+
     const { data, error } = await supabase
       .from('states')
-      .insert(state)
+      .insert(stateData)
       .select()
       .single();
 
@@ -178,10 +215,15 @@ export function useStores() {
     return data;
   };
 
-  const createCity = async (city: { state_id: string; name: string }) => {
+  const createCity = async (city: { state_id: string; name: string; tenant_id?: string }) => {
+    const cityData = { ...city };
+    if (!isSuperAdmin && tenantId && !cityData.tenant_id) {
+      cityData.tenant_id = tenantId;
+    }
+
     const { data, error } = await supabase
       .from('cities')
-      .insert(city)
+      .insert(cityData)
       .select()
       .single();
 
@@ -190,10 +232,15 @@ export function useStores() {
     return data;
   };
 
-  const createRegion = async (region: { country_id: string; name: string; code?: string }) => {
+  const createRegion = async (region: { country_id: string; name: string; code?: string; tenant_id?: string }) => {
+    const regionData = { ...region };
+    if (!isSuperAdmin && tenantId && !regionData.tenant_id) {
+      regionData.tenant_id = tenantId;
+    }
+
     const { data, error } = await supabase
       .from('regions')
-      .insert(region)
+      .insert(regionData)
       .select()
       .single();
 

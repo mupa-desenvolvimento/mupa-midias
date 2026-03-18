@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTenant } from "./useUserTenant";
 import type { Json } from "@/integrations/supabase/types";
 
 export interface Company {
@@ -72,11 +73,12 @@ export interface CompanyIntegrationInsert {
 export const useCompanies = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { tenantId, isSuperAdmin } = useUserTenant();
 
   const { data: companies = [], isLoading, error } = useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies", tenantId, isSuperAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("companies")
         .select(`
           *,
@@ -87,6 +89,11 @@ export const useCompanies = () => {
         `)
         .order("name");
 
+      if (!isSuperAdmin && tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as CompanyWithIntegrations[];
     },
@@ -108,9 +115,14 @@ export const useCompanies = () => {
 
   const createCompany = useMutation({
     mutationFn: async (company: CompanyInsert) => {
+      const companyData = { ...company };
+      if (!isSuperAdmin && tenantId && !companyData.tenant_id) {
+        companyData.tenant_id = tenantId;
+      }
+
       const { data, error } = await supabase
         .from("companies")
-        .insert([company])
+        .insert([companyData])
         .select()
         .single();
 
@@ -163,7 +175,6 @@ export const useCompanies = () => {
 
   const addCompanyIntegration = useMutation({
     mutationFn: async (integration: CompanyIntegrationInsert) => {
-      // First check if integration already exists
       const { data: existing } = await supabase
         .from("company_integrations")
         .select("id")
@@ -172,7 +183,6 @@ export const useCompanies = () => {
         .maybeSingle();
 
       if (existing) {
-        // Update existing integration
         const { data, error } = await supabase
           .from("company_integrations")
           .update({
@@ -187,7 +197,6 @@ export const useCompanies = () => {
         if (error) throw error;
         return data;
       } else {
-        // Insert new integration
         const { data, error } = await supabase
           .from("company_integrations")
           .insert([{
