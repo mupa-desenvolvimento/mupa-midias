@@ -120,7 +120,7 @@ export const FaceCapture = ({
     const isFacingCamera = noseSymmetry < 0.3;
     
     // Iluminação baseada no score de detecção
-    const detectionScore = detection.detection.score;
+    const detectionScore = (detection.detection as any).score;
     const hasGoodLighting = detectionScore > 0.8;
     
     // Calcular score geral
