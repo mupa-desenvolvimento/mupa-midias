@@ -653,6 +653,34 @@ const Tenants = () => {
                 className="font-mono bg-muted"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Plano de Licença</Label>
+              <Select value={formData.license_plan} onValueChange={(v) => handlePlanChange(v as 'lite' | 'standard' | 'enterprise')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lite">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-amber-500" />
+                      LITE
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="standard">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-primary" />
+                      STANDARD
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="enterprise">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-purple-500" />
+                      ENTERPRISE
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-max_users">Max Usuários</Label>
