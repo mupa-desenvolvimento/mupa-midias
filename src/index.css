@@ -345,7 +345,17 @@ html, body, #root {
   min-height: 100dvh;
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* Only hide overflow on the root for layout-managed pages */
+#root {
   overflow: hidden;
+}
+
+/* Allow vertical scroll on body for non-layout pages */
+body {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Force fixed elements to respect full viewport on old WebViews */
