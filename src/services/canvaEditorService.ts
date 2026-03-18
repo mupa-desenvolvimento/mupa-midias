@@ -18,7 +18,7 @@
     * Check if user has a valid Canva connection
     */
    async isConnected(): Promise<boolean> {
-     const { data: userData } = await supabase.auth.getUser();
+     const { data: userData } = await (supabase.auth as any).getUser();
      if (!userData?.user?.id) return false;
      
      const { data, error } = await supabase.functions.invoke('canva-auth?action=status', {
