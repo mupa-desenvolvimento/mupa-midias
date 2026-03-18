@@ -286,33 +286,81 @@ Deno.serve(async (req: Request) => {
       console.log('[Lookup] Nenhuma integração configurada. Tentando fallback local.');
     }
 
-    // 4. Fallback: Tabela Local de Produtos
-    // Se chegou aqui, ou não tem integração, ou a integração falhou/não encontrou
-    const { data: localProduct, error: localError } = await supabase
-      .from('products')
+    // 4. Fallback: Tabela lite_products (plano Lite)
+    const { data: liteProduct } = await supabase
+      .from('lite_products')
       .select('*')
       .eq('company_id', device.company_id)
-      .eq('ean', normalizedEan) // Assumindo que a tabela products tem coluna 'ean' ou 'barcode'
-      // .eq('store_code', storeCode) // Se produtos forem por loja
+      .eq('ean', normalizedEan)
+      .eq('is_active', true)
       .maybeSingle();
 
-    if (localProduct) {
-        console.log('[Lookup] Produto encontrado na base local');
+    if (liteProduct) {
+        console.log('[Lookup] Produto encontrado em lite_products');
         
-        // Mapear localProduct para ProductResponse...
-        // Assumindo estrutura genérica, ajustar conforme tabela real
+        // Determinar preços: promo_price ou de_por_price são ofertas
+        const normalPrice = Number(liteProduct.normal_price) || 0;
+        const promoPrice = liteProduct.promo_price ? Number(liteProduct.promo_price) : null;
+        const dePorPrice = liteProduct.de_por_price ? Number(liteProduct.de_por_price) : null;
+        const clubPrice = liteProduct.club_price ? Number(liteProduct.club_price) : null;
+        
+        // Prioridade: promo > de_por > normal
+        let currentPrice = normalPrice;
+        let originalPrice: number | null = null;
+        let isOffer = false;
+        let savingsPercent: number | null = null;
+
+        if (dePorPrice && dePorPrice < normalPrice) {
+          currentPrice = dePorPrice;
+          originalPrice = normalPrice;
+          isOffer = true;
+          savingsPercent = Math.round(((normalPrice - dePorPrice) / normalPrice) * 100);
+        } else if (promoPrice && promoPrice < normalPrice) {
+          currentPrice = promoPrice;
+          originalPrice = normalPrice;
+          isOffer = true;
+          savingsPercent = Math.round(((normalPrice - promoPrice) / normalPrice) * 100);
+        }
+
+        // Gerar URL de imagem se não existir
+        let imageUrl = liteProduct.image_url;
+        if (!imageUrl) {
+          imageUrl = `http://srv-mupa.ddns.net:5050/produto-imagem/${normalizedEan}`;
+        }
+
         const productData = {
             ean: normalizedEan,
-            name: localProduct.name || localProduct.description,
-            unit: localProduct.unit || 'UN',
-            current_price: localProduct.price || 0,
-            original_price: localProduct.original_price || null,
-            is_offer: false, // Calcular se necessário
-            savings_percent: null,
-            image_url: localProduct.image_url,
+            name: liteProduct.description,
+            unit: 'UN',
+            current_price: currentPrice,
+            original_price: originalPrice,
+            is_offer: isOffer,
+            savings_percent: savingsPercent,
+            image_url: imageUrl,
             store_code: storeCode,
-            description: localProduct.name || localProduct.description
+            description: liteProduct.description
         };
+
+        // Cache for 15 min
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        supabase.from('product_cache').upsert({
+          company_id: device.company_id,
+          ean: normalizedEan,
+          store_code: storeCode,
+          product_data: productData,
+          image_url: imageUrl,
+          expires_at: expiresAt.toISOString()
+        }, { onConflict: 'company_id,ean,store_code' }).then();
+
+        // Log success
+        supabase.from('product_lookup_logs').insert({
+          device_id: device.id,
+          company_id: device.company_id,
+          ean: normalizedEan,
+          store_code: storeCode,
+          status: 'success',
+          latency_ms: Date.now() - startTime
+        }).then();
 
         return new Response(
             JSON.stringify({
