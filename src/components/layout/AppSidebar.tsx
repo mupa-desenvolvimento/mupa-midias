@@ -313,6 +313,35 @@ const AppSidebar = () => {
         }
       </SidebarContent>
 
+      {/* License upgrade/info banner */}
+      {!isSuperAdmin && planLabel && !collapsed && (
+        <div className="px-3 py-2 border-t border-sidebar-border/30">
+          <div className="rounded-lg bg-sidebar-accent/30 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold tracking-wider uppercase text-sidebar-foreground/50">Plano</span>
+              <Badge variant={isLite ? "secondary" : "default"} className="text-[10px] px-1.5 py-0">
+                {planLabel}
+              </Badge>
+            </div>
+            {isLite && (
+              <Button
+                size="sm"
+                className="w-full h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={() => navigate("/admin/settings?tab=license")}
+              >
+                <Crown className="h-3.5 w-3.5 mr-1.5" />
+                Fazer Upgrade
+              </Button>
+            )}
+            {!isLite && license?.expires_at && (
+              <p className="text-[10px] text-sidebar-foreground/50 text-center">
+                Expira em {new Date(license.expires_at).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       <SidebarFooter className="p-3 border-t border-sidebar-border/30">
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8 shrink-0">
