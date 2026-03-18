@@ -21,8 +21,8 @@ const mapMoodToTargetMood = (mood: 'good' | 'bad', expression: string): string[]
 
 const getProductImageUrl = (ean: string, imageUrl: string | null): string => {
   if (imageUrl) return imageUrl;
-  // Use Mupa API image endpoint based on EAN
-  return `http://srv-mupa.ddns.net:5050/produto-imagem/${ean}`;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  return `${supabaseUrl}/functions/v1/product-image-proxy?ean=${ean}`;
 };
 
 const deduplicateByName = (products: any[]): any[] => {
