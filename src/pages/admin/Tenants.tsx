@@ -550,6 +550,39 @@ const Tenants = () => {
                 className="font-mono"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Plano de Licença</Label>
+              <Select value={formData.license_plan} onValueChange={(v) => handlePlanChange(v as 'lite' | 'standard' | 'enterprise')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lite">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-amber-500" />
+                      LITE — Demonstração / Consulta de Preço
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="standard">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-primary" />
+                      STANDARD — Uso completo
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="enterprise">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-purple-500" />
+                      ENTERPRISE — Ilimitado
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.license_plan === 'lite' && (
+                <p className="text-xs text-muted-foreground">
+                  Limites: 1 playlist, 3 dispositivos, 5 imagens, 3 lojas, 1 grupo. Sem vídeo. Renova a cada 3 meses.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="max_users">Max Usuários</Label>
