@@ -208,7 +208,7 @@ const AppSidebar = () => {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
-              {menuItems.map((item) =>
+              {filteredMenuItems.map((item) =>
               <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="p-0">
                     <SidebarNavItem item={item} />
