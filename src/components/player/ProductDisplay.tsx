@@ -43,6 +43,7 @@ export const ProductDisplay = ({
   onImageLoad,
   imageLoaded,
   settings,
+  preloadedSrc,
 }: ProductDisplayProps) => {
   const formatPrice = (price: number) => {
     const [reais, centavos] = price.toFixed(2).split(".");
