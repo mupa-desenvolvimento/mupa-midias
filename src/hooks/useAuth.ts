@@ -72,7 +72,7 @@ export function useAuth() {
     );
 
     (async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await auth.getSession();
 
       if (cancelled) return;
 
