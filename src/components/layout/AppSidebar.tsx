@@ -220,8 +220,7 @@ const AppSidebar = () => {
         </SidebarGroup>
 
         {/* Auto Content — collapsible */}
-        <SidebarGroup>
-          <Collapsible defaultOpen={isAutoContentActive}>
+        {isSectionAllowed('auto_content') && <SidebarGroup>
             <CollapsibleTrigger className="w-full">
               <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1 flex items-center justify-between cursor-pointer hover:text-sidebar-foreground/60 transition-colors">
                 Conteúdo Automático
