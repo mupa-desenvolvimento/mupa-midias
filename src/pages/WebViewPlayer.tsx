@@ -99,7 +99,13 @@ const WebViewPlayer = () => {
   const { data: displaySettings } = useProductDisplaySettingsBySlug(deviceState?.company_slug);
   const { speak: speakPrice, stop: stopTTS } = useProductTTS();
 
-  // Speak product price when found
+  const handleDismissProduct = useCallback(() => {
+    setShowProductOverlay(false);
+    clearProduct();
+    stopTTS();
+  }, [clearProduct, stopTTS]);
+
+  // Speak product price when found, then auto-dismiss after 3s
   useEffect(() => {
     if (product && product.current_price) {
       const formatPrice = (value: number) => {
@@ -118,15 +124,20 @@ const WebViewPlayer = () => {
       } else {
         priceText = `${formatPrice(product.current_price)}.`;
       }
-      speakPrice(priceText);
-    }
-  }, [product, speakPrice]);
 
-  const handleDismissProduct = useCallback(() => {
-    setShowProductOverlay(false);
-    clearProduct();
-    stopTTS();
-  }, [clearProduct, stopTTS]);
+      let cancelled = false;
+      speakPrice(priceText).then(() => {
+        if (cancelled) return;
+        setTimeout(() => {
+          if (!cancelled) {
+            handleDismissProduct();
+          }
+        }, 3000);
+      });
+
+      return () => { cancelled = true; };
+    }
+  }, [product, speakPrice, handleDismissProduct]);
 
   const handleEanSubmit = useCallback((ean: string) => {
     lookupProduct(ean);
