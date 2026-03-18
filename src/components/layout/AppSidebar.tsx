@@ -46,7 +46,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarFooter,
-  SidebarTrigger,
   useSidebar } from
 "@/components/ui/sidebar";
 import {
