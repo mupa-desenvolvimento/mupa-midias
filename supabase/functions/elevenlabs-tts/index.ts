@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.87.1";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -118,15 +119,8 @@ Deno.serve(async (req) => {
     const r2PublicUrl = Deno.env.get("CLOUDFLARE_R2_PUBLIC_URL");
 
     if (!r2AccountId || !r2AccessKey || !r2SecretKey || !r2Bucket || !r2PublicUrl) {
-      // If R2 not configured, return audio as base64 without caching
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer.slice(0, 1024))));
-      // For large files, use proper encoding
-      const uint8 = new Uint8Array(audioBuffer);
-      let binary = "";
-      for (let i = 0; i < uint8.length; i++) {
-        binary += String.fromCharCode(uint8[i]);
-      }
-      const fullBase64 = btoa(binary);
+      // R2 not configured, return audio as base64 without caching
+      const fullBase64 = base64Encode(audioBuffer);
       
       return new Response(JSON.stringify({ audio_base64: fullBase64, cached: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
