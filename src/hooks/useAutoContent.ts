@@ -126,7 +126,7 @@ export const useAutoContent = (params?: UseAutoContentParams) => {
     }: ToggleModulePayload) => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await (supabase.auth as any).getSession();
 
       if (!session) {
         throw new Error("Não autenticado");
