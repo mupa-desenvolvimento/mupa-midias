@@ -99,7 +99,7 @@ export function useLiteProducts() {
         other_price: parseFloat(row.outro || row.other_price || "") || null,
         custom_field_name: row.campo_extra_nome || row.custom_field_name || null,
         custom_field_value: row.campo_extra_valor || row.custom_field_value || null,
-        image_url: row.url_imagem || row.image_url || `${MUPA_API}/produto-imagem/${row.ean || row.codigo_barras || row.gtin || ""}`,
+        image_url: row.url_imagem || row.image_url || getImageProxyUrl(row.ean || row.codigo_barras || row.gtin || ""),
         is_active: true,
         updated_at: new Date().toISOString(),
       })).filter((r) => r.ean);
