@@ -200,6 +200,8 @@ const AppSidebar = () => {
   }
 
   const planLabel = license?.plan === 'lite' ? 'LITE' : license?.plan === 'standard' ? 'STANDARD' : license?.plan === 'enterprise' ? 'ENTERPRISE' : null;
+
+  return (
     <Sidebar className="border-r border-sidebar-border/50" collapsible="icon">
       <SidebarHeader className="p-3">
         <div className="gap-2 flex items-center justify-center">
