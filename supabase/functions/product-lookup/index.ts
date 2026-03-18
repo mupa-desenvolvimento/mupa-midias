@@ -6,7 +6,16 @@ declare const Deno: any;
 const MUPA_IMAGE_API = "http://srv-mupa.ddns.net:5050/produto-imagem";
 
 /**
+ * Build a proxied image URL that goes through our edge function to avoid CORS.
+ */
+function getProxiedImageUrl(ean: string): string {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  return `${supabaseUrl}/functions/v1/product-image-proxy?ean=${ean}`;
+}
+
+/**
  * Fetch product image URL from Mupa API and persist it to lite_products.
+ * Returns proxied URL for browser compatibility.
  */
 async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<string | null> {
   try {
@@ -16,21 +25,40 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
     clearTimeout(timeout);
 
     if (!res.ok) { await res.text(); return null; }
+    
+    const contentType = res.headers.get('content-type') || '';
+    
+    // If it returned an image directly, the proxy URL will work
+    if (contentType.startsWith('image/')) {
+      const proxiedUrl = getProxiedImageUrl(ean);
+      console.log(`[Image] Direct image found for ${ean}, using proxy: ${proxiedUrl}`);
+      supabase
+        .from('lite_products')
+        .update({ image_url: proxiedUrl })
+        .eq('ean', ean)
+        .eq('company_id', companyId)
+        .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
+      return proxiedUrl;
+    }
+    
+    // If JSON response, extract URL
     const data = await res.json();
     const imageUrl = data.imagem_url || data.image_url || null;
     
     if (imageUrl) {
-      console.log(`[Image] Resolved for ${ean}: ${imageUrl}`);
-      // Persist to lite_products so we don't fetch again
+      // Always return proxied URL for CORS safety
+      const proxiedUrl = getProxiedImageUrl(ean);
+      console.log(`[Image] Resolved for ${ean}: ${imageUrl}, proxied: ${proxiedUrl}`);
       supabase
         .from('lite_products')
-        .update({ image_url: imageUrl })
+        .update({ image_url: proxiedUrl })
         .eq('ean', ean)
         .eq('company_id', companyId)
-        .then(() => console.log(`[Image] Saved to lite_products for ${ean}`));
+        .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
+      return proxiedUrl;
     }
     
-    return imageUrl;
+    return null;
   } catch (e) {
     console.error(`[Image] Error fetching for ${ean}:`, e);
     return null;

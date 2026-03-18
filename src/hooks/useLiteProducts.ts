@@ -25,7 +25,8 @@ export interface LiteProduct {
   updated_at: string;
 }
 
-const MUPA_API = "http://srv-mupa.ddns.net:5050";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const getImageProxyUrl = (ean: string) => `${SUPABASE_URL}/functions/v1/product-image-proxy?ean=${ean}`;
 
 export function useLiteProducts() {
   const { tenantId, companyId } = useUserTenant();
@@ -53,7 +54,7 @@ export function useLiteProducts() {
       // If no image_url, try Mupa API
       let imageUrl = product.image_url;
       if (!imageUrl && product.ean) {
-        imageUrl = `${MUPA_API}/produto-imagem/${product.ean}`;
+        imageUrl = getImageProxyUrl(product.ean);
       }
 
       const record = {
@@ -98,7 +99,7 @@ export function useLiteProducts() {
         other_price: parseFloat(row.outro || row.other_price || "") || null,
         custom_field_name: row.campo_extra_nome || row.custom_field_name || null,
         custom_field_value: row.campo_extra_valor || row.custom_field_value || null,
-        image_url: row.url_imagem || row.image_url || `${MUPA_API}/produto-imagem/${row.ean || row.codigo_barras || row.gtin || ""}`,
+        image_url: row.url_imagem || row.image_url || getImageProxyUrl(row.ean || row.codigo_barras || row.gtin || ""),
         is_active: true,
         updated_at: new Date().toISOString(),
       })).filter((r) => r.ean);

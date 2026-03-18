@@ -11,6 +11,7 @@ export interface Product {
 class ProductService {
   private static instance: ProductService;
   private apiUrl = "http://srv-mupa.ddns.net:5050";
+  private supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 
   private constructor() {}
 
@@ -40,7 +41,7 @@ class ProductService {
         gtin: data.gtin || gtin,
         descricao: data.descricao || "Produto sem descrição",
         preco: Number(data.preco) || 0,
-        imagem_url: `${this.apiUrl}/produto-imagem/${gtin}`,
+        imagem_url: `${this.supabaseUrl}/functions/v1/product-image-proxy?ean=${gtin}`,
         categoria: data.categoria
       };
     } catch (error) {
