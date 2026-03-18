@@ -259,7 +259,7 @@ Deno.serve(async (req: Request) => {
           original_price: originalPrice,
           is_offer: isOffer,
           savings_percent: savingsPercent,
-          image_url: p.image,
+          image_url: p.image || await resolveProductImage(normalizedEan, supabase, device.company_id),
           store_code: storeCode,
           description: p.description // Legacy
         };
