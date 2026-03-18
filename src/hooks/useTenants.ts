@@ -116,12 +116,38 @@ export function useTenants() {
 
       if (licenseError) {
         console.error('Error creating license:', licenseError);
-        // Don't rollback tenant, just warn
         toast.error('Cliente criado, mas houve erro ao criar a licença');
       }
 
+      // Create default company for this tenant
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .insert({
+          name: data.name,
+          slug: data.slug.toLowerCase().replace(/\s+/g, '-'),
+          tenant_id: tenant.id,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (companyError) {
+        console.error('Error creating default company:', companyError);
+      } else {
+        // Seed default devices, playlists and media
+        const { error: seedError } = await supabase.rpc('seed_tenant_defaults', {
+          p_tenant_id: tenant.id,
+          p_company_id: company.id,
+        });
+
+        if (seedError) {
+          console.error('Error seeding defaults:', seedError);
+          toast.error('Cliente criado, mas houve erro ao criar recursos padrão');
+        }
+      }
+
       await fetchTenants();
-      toast.success('Cliente criado com sucesso');
+      toast.success('Cliente criado com sucesso (3 dispositivos, 3 playlists e 3 imagens padrão)');
       return tenant;
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };

@@ -3263,6 +3263,10 @@ export type Database = {
         Args: { p_device_token: string; p_logs: Json }
         Returns: Json
       }
+      seed_tenant_defaults: {
+        Args: { p_company_id: string; p_tenant_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
