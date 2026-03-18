@@ -21,7 +21,6 @@ import {
   EmptyContentScreen,
 } from "@/components/player-core";
 import {
-  TerminalModeSwitcher,
   AIAssistantOverlay,
   MetricsOverlay,
   FacialRecognitionOverlay,
