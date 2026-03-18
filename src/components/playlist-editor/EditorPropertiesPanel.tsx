@@ -144,22 +144,18 @@ const MediaLibraryPanel = ({ onAddMedia, itemsLength }: {
           />
         </div>
 
-        <div className="flex gap-1 flex-wrap">
-          {MEDIA_FILTER_OPTIONS.map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setTypeFilter(filter.value)}
-              className={cn(
-                "flex-1 h-7 text-xs rounded transition-colors",
-                typeFilter === filter.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
-              )}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Filtrar por tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            {MEDIA_FILTER_OPTIONS.map((filter) => (
+              <SelectItem key={filter.value} value={filter.value} className="text-xs">
+                {filter.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Media Grid - Scroll local com scrollbar sempre visível */}

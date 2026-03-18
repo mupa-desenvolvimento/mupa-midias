@@ -7,7 +7,6 @@ import { useChannels } from "@/hooks/useChannels";
 import { useDevices } from "@/hooks/useDevices";
 import { MediaItem } from "@/hooks/useMediaItems";
 import { AutoContentItem } from "@/hooks/useAutoContent";
-import { EditorSidebar } from "./EditorSidebar";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorTimeline } from "./EditorTimeline";
 import { EditorHeader } from "./EditorHeader";
@@ -73,7 +72,7 @@ export const PlaylistEditor = () => {
     getTotalDuration 
   } = usePlaylistItems(activePlaylistId);
 
-  const [activePanel, setActivePanel] = useState<"media" | null>("media");
+  const [activePanel] = useState<"media">("media");
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -454,15 +453,8 @@ export const PlaylistEditor = () => {
 
       {/* Main Content - Full height minus header */}
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left Sidebar - Tools */}
-        <EditorSidebar
-          activePanel={activePanel}
-          onPanelChange={setActivePanel}
-        />
-
         {/* Left Panel - Content Selection */}
-        {activePanel && (
-          <div className="w-80 border-r bg-card flex flex-col overflow-hidden">
+        <div className="w-80 border-r bg-card flex flex-col overflow-hidden">
             {/* Tabs for Channels vs Legacy mode */}
             <div className="p-3 border-b shrink-0">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
@@ -510,7 +502,6 @@ export const PlaylistEditor = () => {
               </div>
             )}
           </div>
-        )}
 
         {/* Center - Canvas/Preview (only show in legacy mode) */}
         {activeTab === "legacy" && (
