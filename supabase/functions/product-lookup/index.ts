@@ -404,9 +404,12 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((normalPrice - promoPrice) / normalPrice) * 100);
         }
 
-        // Buscar URL de imagem se não existir
+        // Buscar URL de imagem se não existir ou converter URL direta para proxy
         let imageUrl = liteProduct.image_url;
-        if (!imageUrl) {
+        if (imageUrl && imageUrl.includes('srv-mupa.ddns.net')) {
+          // Convert direct Mupa URL to proxied URL
+          imageUrl = getProxiedImageUrl(normalizedEan);
+        } else if (!imageUrl) {
           imageUrl = await resolveProductImage(normalizedEan, supabase, device.company_id);
         }
 
