@@ -78,7 +78,7 @@ export function resolveContentSrc(type: string, fileUrl: string | null, metadata
  * Determines if a content type should be rendered in an iframe.
  */
 export function isIframeType(type: string): boolean {
-  return ['instagram'].includes(type);
+  return ['instagram', 'webview'].includes(type);
 }
 
 /**
