@@ -12,3 +12,4 @@ export {
   DownloadScreen,
   ActiveSessionScreen,
 } from "./PlayerStateScreens";
+export { VignetteOverlay } from "./VignetteOverlay";

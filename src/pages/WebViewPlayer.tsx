@@ -14,7 +14,7 @@ import { useProductDisplaySettingsBySlug } from "@/hooks/useProductDisplaySettin
 import { ProductLookupContainer } from "@/components/player/ProductLookupContainer";
 import { EanInput } from "@/components/player/EanInput";
 import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useMediaRotation, useClock } from "@/hooks/player";
-import { MediaRenderer, PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen, ActiveSessionScreen } from "@/components/player-core";
+import { MediaRenderer, PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen, ActiveSessionScreen, VignetteOverlay } from "@/components/player-core";
 import {
   Bell,
   Camera,
@@ -529,6 +529,9 @@ const WebViewPlayer = () => {
           displaySettings={displaySettings || undefined}
         />
       )}
+
+      {/* Vignette effect */}
+      {!showProductOverlay && <VignetteOverlay />}
 
       {/* Media */}
       <div className={cn(

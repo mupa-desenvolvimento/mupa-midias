@@ -22,6 +22,7 @@ import {
   BlockedScreen,
   EmptyContentScreen,
   ActiveSessionScreen,
+  VignetteOverlay,
 } from "@/components/player-core";
 import {
   AIAssistantOverlay,
@@ -721,6 +722,9 @@ const OfflinePlayer = () => {
 
       {/* Device simulation indicator */}
       <DeviceSimulator mode={simulationMode} visible={terminalMode === "player" && showControls} />
+
+      {/* Vignette effect */}
+      {terminalMode === "player" && <VignetteOverlay />}
 
       {/* Media player background */}
       <div
