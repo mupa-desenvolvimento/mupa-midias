@@ -356,11 +356,18 @@ export const EanInput = ({
         disabled={disabled || showResetConfirm}
         className="absolute opacity-0 pointer-events-auto"
         style={{ 
-          position: 'absolute',
-          left: '-9999px',
+          position: 'fixed',
+          top: 0,
+          left: 0,
           width: '1px',
           height: '1px',
+          padding: 0,
+          border: 'none',
+          outline: 'none',
           fontSize: '16px',
+          caretColor: 'transparent',
+          color: 'transparent',
+          background: 'transparent',
           // @ts-ignore - propriedade experimental para suprimir teclado virtual
           virtualKeyboardPolicy: 'manual',
         }}
@@ -370,7 +377,6 @@ export const EanInput = ({
         autoCorrect="off"
         spellCheck={false}
         enterKeyHint="go"
-        readOnly
       />
 
       {/* Modal de confirmação de reset */}
