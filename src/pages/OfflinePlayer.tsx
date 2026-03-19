@@ -22,6 +22,7 @@ import {
   BlockedScreen,
   EmptyContentScreen,
   ActiveSessionScreen,
+  VignetteOverlay,
 } from "@/components/player-core";
 import {
   AIAssistantOverlay,
