@@ -195,6 +195,29 @@ export const MediaRenderer = ({
     );
   }
 
+  // ─── WebView (iframe) ───
+  if (media.type === 'webview') {
+    const src = resolveContentSrc('webview', media.file_url, media.metadata);
+    if (!src) {
+      return (
+        <div className="w-full h-full bg-black flex items-center justify-center text-white/50">
+          <p>WebView não disponível</p>
+        </div>
+      );
+    }
+    return (
+      <iframe
+        key={media.id}
+        src={src}
+        className={cn("w-full h-full border-0", transitionClass)}
+        allow="autoplay; encrypted-media; fullscreen"
+        allowFullScreen
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        title={media.name}
+      />
+    );
+  }
+
   // ─── Instagram (iframe) ───
   if (media.type === 'instagram') {
     const src = resolveContentSrc('instagram', media.file_url, media.metadata);
