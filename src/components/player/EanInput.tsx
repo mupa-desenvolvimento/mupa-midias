@@ -280,7 +280,7 @@ export const EanInput = ({
         clearTimeout(autoSubmitTimeoutRef.current);
       }
 
-      if (/^\d+$/.test(newValue) && VALID_EAN_LENGTHS.includes(newValue.length)) {
+      if (/^\d+$/.test(newValue) && newValue.length >= MIN_EAN_LENGTH && newValue.length <= MAX_EAN_LENGTH) {
         const delay = isScannerInputRef.current ? AUTO_SUBMIT_DELAY : 150;
 
         autoSubmitTimeoutRef.current = setTimeout(() => {
