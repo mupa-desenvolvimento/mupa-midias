@@ -6,6 +6,7 @@
 export const CONTENT_TYPES = [
   'image',
   'video',
+  'webview',
   'weather',
   'news',
   'motivational',
