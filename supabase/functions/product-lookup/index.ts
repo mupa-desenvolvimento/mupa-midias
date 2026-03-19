@@ -17,24 +17,31 @@ function getProxiedImageUrl(ean: string): string {
  * Fetch product image URL from Mupa API and persist it to lite_products.
  * Returns proxied URL for browser compatibility.
  */
-async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<string | null> {
+async function resolveProductImage(
+  ean: string,
+  supabase: any,
+  companyId: string
+): Promise<{ image_url: string | null; cores: string[] | null }> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     
     let res: Response;
     try {
-      res = await fetch(`${MUPA_IMAGE_API}/${ean}`, { signal: controller.signal });
+      res = await fetch(`${MUPA_IMAGE_API}/${ean}`, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' },
+      });
       clearTimeout(timeout);
     } catch (fetchErr) {
       clearTimeout(timeout);
       console.error(`[Image] Network error for ${ean}:`, fetchErr);
-      return null;
+      return { image_url: null, cores: null };
     }
 
     if (!res.ok) {
       console.warn(`[Image] Mupa API returned ${res.status} for ${ean}`);
-      return null;
+      return { image_url: null, cores: null };
     }
     
     const contentType = res.headers.get('content-type') || '';
@@ -51,7 +58,7 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return proxiedUrl;
+      return { image_url: proxiedUrl, cores: null };
     }
     
     // If JSON response, extract URL
@@ -60,10 +67,13 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
       data = await res.json();
     } catch {
       console.error(`[Image] Failed to parse JSON for ${ean}`);
-      return null;
+      return { image_url: null, cores: null };
     }
     
     const imageUrl = data.imagem_url || data.image_url || null;
+    const cores: string[] | null = Array.isArray(data.cores)
+      ? data.cores.filter((c: any) => typeof c === 'string')
+      : null;
     
     if (imageUrl) {
       // Always return proxied URL for CORS safety
@@ -75,14 +85,14 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return proxiedUrl;
+      return { image_url: proxiedUrl, cores };
     }
     
     console.warn(`[Image] No image URL found in response for ${ean}`);
-    return null;
+    return { image_url: null, cores };
   } catch (e) {
     console.error(`[Image] Unexpected error for ${ean}:`, e);
-    return null;
+    return { image_url: null, cores: null };
   }
 }
 
@@ -115,6 +125,7 @@ interface ProductResponse {
     is_offer: boolean;
     savings_percent: number | null;
     image_url: string | null;
+    cores?: string[] | null;
     store_code: string;
     description?: string; // Legacy support
   };
@@ -229,6 +240,11 @@ Deno.serve(async (req: Request) => {
       }).then();
       
       const productData = cached.product_data as any;
+      const cachedImageUrl = cached.image_url || productData.image_url || null;
+      const imageUrlToUse =
+        typeof cachedImageUrl === 'string' && cachedImageUrl.startsWith('http://')
+          ? getProxiedImageUrl(normalizedEan)
+          : cachedImageUrl;
       
       return new Response(
         JSON.stringify({
@@ -241,7 +257,8 @@ Deno.serve(async (req: Request) => {
             original_price: productData.original_price,
             is_offer: productData.is_offer,
             savings_percent: productData.savings_percent,
-            image_url: cached.image_url,
+            image_url: imageUrlToUse,
+            cores: productData.cores || null,
             store_code: storeCode,
             description: productData.name // Legacy
           }
@@ -300,6 +317,7 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
         }
 
+        const resolvedImage = await resolveProductImage(normalizedEan, supabase, device.company_id);
         const productData = {
           ean: p.barcode,
           name: p.description,
@@ -308,7 +326,8 @@ Deno.serve(async (req: Request) => {
           original_price: originalPrice,
           is_offer: isOffer,
           savings_percent: savingsPercent,
-          image_url: p.image || await resolveProductImage(normalizedEan, supabase, device.company_id),
+          image_url: resolvedImage.image_url || p.image || null,
+          cores: resolvedImage.cores,
           store_code: storeCode,
           description: p.description // Legacy
         };
@@ -324,7 +343,7 @@ Deno.serve(async (req: Request) => {
             ean: normalizedEan,
             store_code: storeCode,
             product_data: productData,
-            image_url: p.image,
+            image_url: productData.image_url,
             expires_at: expiresAt.toISOString()
           }, {
             onConflict: 'company_id,ean,store_code'
@@ -406,8 +425,11 @@ Deno.serve(async (req: Request) => {
 
         // Buscar URL de imagem se não existir
         let imageUrl = liteProduct.image_url;
+        let cores: string[] | null = null;
         if (!imageUrl) {
-          imageUrl = await resolveProductImage(normalizedEan, supabase, device.company_id);
+          const resolvedImage = await resolveProductImage(normalizedEan, supabase, device.company_id);
+          imageUrl = resolvedImage.image_url;
+          cores = resolvedImage.cores;
         }
 
         const productData = {
@@ -419,6 +441,7 @@ Deno.serve(async (req: Request) => {
             is_offer: isOffer,
             savings_percent: savingsPercent,
             image_url: imageUrl,
+            cores: cores,
             store_code: storeCode,
             description: liteProduct.description
         };

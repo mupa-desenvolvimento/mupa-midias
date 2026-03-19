@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AlertCircle, Package, Loader2 } from "lucide-react";
-import { preloadImage, extractColorsFromElement, getDefaultColors, rgbToString, rgbToRgba, type ExtractedColors } from "@/lib/colorExtractor";
+import { preloadImage, extractColorsFromElement, getDefaultColors, rgbToString, rgbToRgba, type ExtractedColors, type RGB } from "@/lib/colorExtractor";
 import { ProductDisplay } from "./ProductDisplay";
 import type { ProductDisplaySettings } from "@/hooks/useProductDisplaySettings";
 
@@ -13,6 +13,7 @@ interface ProductData {
   is_offer: boolean;
   savings_percent: number | null;
   image_url: string | null;
+  cores?: string[] | null;
   store_code: string;
 }
 
@@ -28,6 +29,40 @@ interface ProductLookupContainerProps {
 }
 
 const defaultColors: ExtractedColors = getDefaultColors();
+
+const hexToRgb = (hex: string): RGB | null => {
+  const normalized = hex.trim();
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(normalized);
+  if (!match) return null;
+  return { r: parseInt(match[1], 16), g: parseInt(match[2], 16), b: parseInt(match[3], 16) };
+};
+
+const getLuminance = (rgb: RGB): number => (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+const paletteToExtractedColors = (cores: string[]): ExtractedColors => {
+  const rgbs = cores.map(hexToRgb).filter((c): c is RGB => !!c);
+  if (!rgbs.length) return defaultColors;
+
+  const saturation = (c: RGB) => Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b);
+  const key = (c: RGB) => `${c.r},${c.g},${c.b}`;
+  const nonWhite = rgbs.filter((c) => getLuminance(c) <= 0.95);
+  const candidates = nonWhite.length ? nonWhite : rgbs;
+  const bySat = [...candidates].sort((a, b) => saturation(b) - saturation(a));
+
+  const dominant = bySat[0] || rgbs[0];
+  const dominantKey = key(dominant);
+  const muted =
+    bySat.find((c) => key(c) !== dominantKey && Math.abs(getLuminance(c) - getLuminance(dominant)) > 0.08) ||
+    bySat.find((c) => key(c) !== dominantKey) ||
+    rgbs[1] ||
+    dominant;
+  const vibrant =
+    bySat.find((c) => key(c) !== dominantKey && key(c) !== key(muted)) ||
+    rgbs.find((c) => key(c) !== dominantKey) ||
+    dominant;
+
+  return { dominant, muted, vibrant, isDark: getLuminance(dominant) < 0.5 };
+};
 
 export const ProductLookupContainer = ({
   product,
@@ -68,13 +103,19 @@ export const ProductLookupContainer = ({
     setPreloadedSrc(null);
 
     const url = product.image_url;
+    const hasApiPalette = Array.isArray(product.cores) && product.cores.length > 0;
+
+    if (hasApiPalette) {
+      setColors(paletteToExtractedColors(product.cores as string[]));
+    }
     
     preloadImage(url)
       .then((img) => {
         if (preloadAbortRef.current) return;
-        // Extract colors from the already-loaded image element (no extra download)
-        const extracted = extractColorsFromElement(img);
-        setColors(extracted);
+        if (!hasApiPalette) {
+          const extracted = extractColorsFromElement(img);
+          setColors(extracted);
+        }
         setPreloadedSrc(url);
         setImageLoaded(true);
       })
@@ -89,7 +130,7 @@ export const ProductLookupContainer = ({
     return () => {
       preloadAbortRef.current = true;
     };
-  }, [product?.image_url]);
+  }, [product?.image_url, product?.cores]);
 
   // Countdown for auto-dismiss
   useEffect(() => {
