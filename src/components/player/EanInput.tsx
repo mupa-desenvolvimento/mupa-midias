@@ -6,9 +6,10 @@ import { Capacitor } from "@capacitor/core";
 const RESET_CODE = "050223";
 
 // Configurações otimizadas para WebView/Kodular
-const SCANNER_CHAR_THRESHOLD = 30; // ms entre caracteres para detectar scanner
-const AUTO_SUBMIT_DELAY = 50; // ms após último caractere para submeter automaticamente
-const VALID_EAN_LENGTHS = [8, 12, 13, 14];
+const SCANNER_CHAR_THRESHOLD = 50; // ms entre caracteres para detectar scanner (aumentado para Zebra/Motorola)
+const AUTO_SUBMIT_DELAY = 80; // ms após último caractere para submeter automaticamente
+const MIN_EAN_LENGTH = 1; // Aceita códigos internos curtos
+const MAX_EAN_LENGTH = 20; // Limite máximo de dígitos
 
 interface EanInputProps {
   onSubmit: (ean: string) => void;
@@ -106,7 +107,7 @@ export const EanInput = ({
       return;
     }
 
-    if (!VALID_EAN_LENGTHS.includes(trimmed.length)) {
+    if (trimmed.length < MIN_EAN_LENGTH || trimmed.length > MAX_EAN_LENGTH) {
       console.log("[EanInput] EAN com tamanho inválido:", trimmed.length);
       return;
     }
@@ -147,7 +148,7 @@ export const EanInput = ({
     }
 
     // Para scanners ou códigos válidos, auto-submete rapidamente
-    if (/^\d+$/.test(newValue) && VALID_EAN_LENGTHS.includes(newValue.length)) {
+    if (/^\d+$/.test(newValue) && newValue.length >= MIN_EAN_LENGTH && newValue.length <= MAX_EAN_LENGTH) {
       // Auto-submit mais rápido para scanner, um pouco mais lento para digitação manual
       const delay = isScannerInputRef.current ? AUTO_SUBMIT_DELAY : 150;
       
@@ -279,7 +280,7 @@ export const EanInput = ({
         clearTimeout(autoSubmitTimeoutRef.current);
       }
 
-      if (/^\d+$/.test(newValue) && VALID_EAN_LENGTHS.includes(newValue.length)) {
+      if (/^\d+$/.test(newValue) && newValue.length >= MIN_EAN_LENGTH && newValue.length <= MAX_EAN_LENGTH) {
         const delay = isScannerInputRef.current ? AUTO_SUBMIT_DELAY : 150;
 
         autoSubmitTimeoutRef.current = setTimeout(() => {
@@ -355,11 +356,18 @@ export const EanInput = ({
         disabled={disabled || showResetConfirm}
         className="absolute opacity-0 pointer-events-auto"
         style={{ 
-          position: 'absolute',
-          left: '-9999px',
+          position: 'fixed',
+          top: 0,
+          left: 0,
           width: '1px',
           height: '1px',
+          padding: 0,
+          border: 'none',
+          outline: 'none',
           fontSize: '16px',
+          caretColor: 'transparent',
+          color: 'transparent',
+          background: 'transparent',
           // @ts-ignore - propriedade experimental para suprimir teclado virtual
           virtualKeyboardPolicy: 'manual',
         }}
@@ -369,7 +377,6 @@ export const EanInput = ({
         autoCorrect="off"
         spellCheck={false}
         enterKeyHint="go"
-        readOnly
       />
 
       {/* Modal de confirmação de reset */}
