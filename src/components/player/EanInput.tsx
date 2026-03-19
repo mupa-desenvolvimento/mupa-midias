@@ -148,7 +148,7 @@ export const EanInput = ({
     }
 
     // Para scanners ou códigos válidos, auto-submete rapidamente
-    if (/^\d+$/.test(newValue) && VALID_EAN_LENGTHS.includes(newValue.length)) {
+    if (/^\d+$/.test(newValue) && newValue.length >= MIN_EAN_LENGTH && newValue.length <= MAX_EAN_LENGTH) {
       // Auto-submit mais rápido para scanner, um pouco mais lento para digitação manual
       const delay = isScannerInputRef.current ? AUTO_SUBMIT_DELAY : 150;
       
