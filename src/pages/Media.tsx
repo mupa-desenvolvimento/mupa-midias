@@ -1,6 +1,6 @@
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { useTenantLicense } from "@/hooks/useTenantLicense";
-import { FolderPlus, ChevronLeft, ChevronRight, Folder as FolderIcon, HardDrive, Plus, Image as ImageIcon, Video, Clock, Grid2x2, Loader2, Play, Eye, MoreVertical, Pencil, Trash2, LayoutGrid, LayoutList, AlertTriangle, Upload, Filter, SortAsc, SortDesc } from "lucide-react";
+import { FolderPlus, ChevronLeft, ChevronRight, Folder as FolderIcon, HardDrive, Plus, Image as ImageIcon, Video, Clock, Grid2x2, Loader2, Play, Eye, MoreVertical, Pencil, Trash2, LayoutGrid, LayoutList, AlertTriangle, Upload, Filter, SortAsc, SortDesc, Globe } from "lucide-react";
 import { useFolders, Folder as FolderType } from "@/hooks/useFolders";
 import { FolderSidebar } from "@/components/media/FolderSidebar";
 import { DraggableMediaWrapper } from "@/components/media/DraggableMediaWrapper";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useMediaItems, MediaItem } from "@/hooks/useMediaItems";
 import { MediaUploadDialog } from "@/components/media/MediaUploadDialog";
+import { WebviewContentDialog } from "@/components/media/WebviewContentDialog";
 import { MediaLightbox } from "@/components/media/MediaLightbox";
 import { MediaEditDialog } from "@/components/media/MediaEditDialog";
 import { MediaDeleteDialog } from "@/components/media/MediaDeleteDialog";
@@ -49,6 +50,7 @@ const Media = () => {
   const { isLite } = useTenantLicense();
   const [searchTerm, setSearchTerm] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [webviewDialogOpen, setWebviewDialogOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -364,6 +366,14 @@ const Media = () => {
                 </Dialog>
                 
                 <Button 
+                  variant="outline"
+                  onClick={() => setWebviewDialogOpen(true)}
+                >
+                  <Globe className="w-4 h-4 mr-2" />
+                  WebView
+                </Button>
+
+                <Button 
                   className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" 
                   onClick={() => setUploadDialogOpen(true)}
                 >
@@ -380,6 +390,15 @@ const Media = () => {
             onSuccess={() => {
               refetch();
               toast({ title: "Mídia enviada com sucesso" });
+            }}
+            folderId={currentFolderId}
+          />
+
+          <WebviewContentDialog
+            open={webviewDialogOpen}
+            onOpenChange={setWebviewDialogOpen}
+            onSuccess={() => {
+              refetch();
             }}
             folderId={currentFolderId}
           />

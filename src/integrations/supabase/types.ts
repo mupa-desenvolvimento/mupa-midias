@@ -2271,16 +2271,21 @@ export type Database = {
           container_primary_color: string | null
           container_secondary_color: string | null
           created_at: string
+          custom_font_css_url: string | null
           enable_color_extraction: boolean
           id: string
           image_background_color: string | null
           image_position: string
           layout_preset: number
+          original_price_font_family: string | null
           original_price_font_size: number
+          price_font_family: string | null
           price_font_size: number
           price_position: string
           remove_image_background: boolean
+          subtitle_font_family: string | null
           subtitle_font_size: number
+          title_font_family: string | null
           title_font_size: number
           updated_at: string
         }
@@ -2290,16 +2295,21 @@ export type Database = {
           container_primary_color?: string | null
           container_secondary_color?: string | null
           created_at?: string
+          custom_font_css_url?: string | null
           enable_color_extraction?: boolean
           id?: string
           image_background_color?: string | null
           image_position?: string
           layout_preset?: number
+          original_price_font_family?: string | null
           original_price_font_size?: number
+          price_font_family?: string | null
           price_font_size?: number
           price_position?: string
           remove_image_background?: boolean
+          subtitle_font_family?: string | null
           subtitle_font_size?: number
+          title_font_family?: string | null
           title_font_size?: number
           updated_at?: string
         }
@@ -2309,16 +2319,21 @@ export type Database = {
           container_primary_color?: string | null
           container_secondary_color?: string | null
           created_at?: string
+          custom_font_css_url?: string | null
           enable_color_extraction?: boolean
           id?: string
           image_background_color?: string | null
           image_position?: string
           layout_preset?: number
+          original_price_font_family?: string | null
           original_price_font_size?: number
+          price_font_family?: string | null
           price_font_size?: number
           price_position?: string
           remove_image_background?: boolean
+          subtitle_font_family?: string | null
           subtitle_font_size?: number
+          title_font_family?: string | null
           title_font_size?: number
           updated_at?: string
         }
