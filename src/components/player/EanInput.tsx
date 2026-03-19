@@ -41,29 +41,36 @@ export const EanInput = ({
   const bufferRef = useRef<string>("");
 
   // Foca no input quando mídias visíveis ou alwaysListenForScanner ativo
+  // Em plataformas nativas, também foca - readOnly + inputMode="none" impede o teclado
   useEffect(() => {
-    const shouldFocus = (isVisible || alwaysListenForScanner) && !disabled && hiddenInputRef.current && !isNative;
+    const shouldFocus = (isVisible || alwaysListenForScanner) && !disabled && hiddenInputRef.current;
     if (shouldFocus) {
-      // Delay para garantir que WebView está pronto
-      setTimeout(() => {
-        hiddenInputRef.current?.focus();
-      }, 100);
+      // Delays escalonados para garantir que WebView está pronto na inicialização
+      const delays = [100, 500, 1000, 2000];
+      const timeouts = delays.map(delay =>
+        setTimeout(() => {
+          if (hiddenInputRef.current && document.activeElement !== hiddenInputRef.current) {
+            hiddenInputRef.current.focus({ preventScroll: true });
+          }
+        }, delay)
+      );
+      return () => timeouts.forEach(clearTimeout);
     }
-  }, [isVisible, disabled, alwaysListenForScanner, isNative]);
+  }, [isVisible, disabled, alwaysListenForScanner]);
 
-  // Refoca agressivamente - crítico para WebViews
+  // Refoca agressivamente - crítico para WebViews e plataformas nativas
   useEffect(() => {
     const shouldListen = isVisible || alwaysListenForScanner;
-    if (!shouldListen || disabled || isNative) return;
+    if (!shouldListen || disabled) return;
 
     const interval = setInterval(() => {
       if (hiddenInputRef.current && document.activeElement !== hiddenInputRef.current) {
-        hiddenInputRef.current.focus();
+        hiddenInputRef.current.focus({ preventScroll: true });
       }
-    }, 200); // Mais agressivo: 200ms
+    }, 200);
 
     return () => clearInterval(interval);
-  }, [isVisible, disabled, alwaysListenForScanner, isNative]);
+  }, [isVisible, disabled, alwaysListenForScanner]);
 
   // Limpa timeout ao desmontar
   useEffect(() => {
@@ -332,14 +339,13 @@ export const EanInput = ({
       <input
         ref={hiddenInputRef}
         type="text"
-        inputMode={isNative ? "none" : "numeric"}
+        inputMode="none"
         pattern="[0-9]*"
         value={value}
         onInput={handleInput}
-        onChange={(e) => setValue(e.target.value)} // Fallback
+        onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onKeyPress={(e) => {
-          // Fallback para WebViews que usam keypress
           if (e.key === "Enter" || e.charCode === 13) {
             e.preventDefault();
             if (value.trim()) handleSubmit(value);
@@ -347,12 +353,15 @@ export const EanInput = ({
         }}
         onFocus={handleFocus}
         disabled={disabled || showResetConfirm}
-        className="absolute opacity-0 w-0 h-0 pointer-events-auto"
+        className="absolute opacity-0 pointer-events-auto"
         style={{ 
           position: 'absolute',
           left: '-9999px',
           width: '1px',
-          height: '1px'
+          height: '1px',
+          fontSize: '16px',
+          // @ts-ignore - propriedade experimental para suprimir teclado virtual
+          virtualKeyboardPolicy: 'manual',
         }}
         aria-label="Scanner de código de barras"
         autoComplete="off"
@@ -360,7 +369,7 @@ export const EanInput = ({
         autoCorrect="off"
         spellCheck={false}
         enterKeyHint="go"
-        readOnly={isNative}
+        readOnly
       />
 
       {/* Modal de confirmação de reset */}
@@ -419,7 +428,7 @@ export const EanInput = ({
               <input
                 ref={inputRef}
                 type="text"
-                inputMode={isNative ? "none" : "numeric"}
+                inputMode="none"
                 pattern="[0-9]*"
                 value={value}
                 onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
@@ -428,7 +437,7 @@ export const EanInput = ({
                 className="w-64 pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-primary"
                 maxLength={14}
                 enterKeyHint="go"
-                readOnly={isNative}
+                readOnly
               />
             </div>
             
