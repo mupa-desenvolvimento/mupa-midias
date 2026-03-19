@@ -1,6 +1,6 @@
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { useTenantLicense } from "@/hooks/useTenantLicense";
-import { FolderPlus, ChevronLeft, ChevronRight, Folder as FolderIcon, HardDrive, Plus, Image as ImageIcon, Video, Clock, Grid2x2, Loader2, Play, Eye, MoreVertical, Pencil, Trash2, LayoutGrid, LayoutList, AlertTriangle, Upload, Filter, SortAsc, SortDesc } from "lucide-react";
+import { FolderPlus, ChevronLeft, ChevronRight, Folder as FolderIcon, HardDrive, Plus, Image as ImageIcon, Video, Clock, Grid2x2, Loader2, Play, Eye, MoreVertical, Pencil, Trash2, LayoutGrid, LayoutList, AlertTriangle, Upload, Filter, SortAsc, SortDesc, Globe } from "lucide-react";
 import { useFolders, Folder as FolderType } from "@/hooks/useFolders";
 import { FolderSidebar } from "@/components/media/FolderSidebar";
 import { DraggableMediaWrapper } from "@/components/media/DraggableMediaWrapper";
