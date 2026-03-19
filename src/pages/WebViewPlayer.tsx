@@ -530,6 +530,9 @@ const WebViewPlayer = () => {
         />
       )}
 
+      {/* Vignette effect */}
+      {!showProductOverlay && <VignetteOverlay />}
+
       {/* Media */}
       <div className={cn(
         "absolute inset-0",

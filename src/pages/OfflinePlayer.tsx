@@ -723,6 +723,9 @@ const OfflinePlayer = () => {
       {/* Device simulation indicator */}
       <DeviceSimulator mode={simulationMode} visible={terminalMode === "player" && showControls} />
 
+      {/* Vignette effect */}
+      {terminalMode === "player" && <VignetteOverlay />}
+
       {/* Media player background */}
       <div
         className={cn(
