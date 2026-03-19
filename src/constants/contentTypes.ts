@@ -63,6 +63,8 @@ export const MEDIA_FILTER_OPTIONS = [
  */
 export function resolveContentSrc(type: string, fileUrl: string | null, metadata?: any): string | null {
   switch (type) {
+    case 'webview':
+      return metadata?.webview_url || metadata?.src || fileUrl;
     case 'instagram':
       return metadata?.instagram_url || metadata?.src || fileUrl;
     case 'campaign':
