@@ -339,14 +339,13 @@ export const EanInput = ({
       <input
         ref={hiddenInputRef}
         type="text"
-        inputMode={isNative ? "none" : "numeric"}
+        inputMode="none"
         pattern="[0-9]*"
         value={value}
         onInput={handleInput}
-        onChange={(e) => setValue(e.target.value)} // Fallback
+        onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onKeyPress={(e) => {
-          // Fallback para WebViews que usam keypress
           if (e.key === "Enter" || e.charCode === 13) {
             e.preventDefault();
             if (value.trim()) handleSubmit(value);
@@ -354,12 +353,15 @@ export const EanInput = ({
         }}
         onFocus={handleFocus}
         disabled={disabled || showResetConfirm}
-        className="absolute opacity-0 w-0 h-0 pointer-events-auto"
+        className="absolute opacity-0 pointer-events-auto"
         style={{ 
           position: 'absolute',
           left: '-9999px',
           width: '1px',
-          height: '1px'
+          height: '1px',
+          fontSize: '16px',
+          // @ts-ignore - propriedade experimental para suprimir teclado virtual
+          virtualKeyboardPolicy: 'manual',
         }}
         aria-label="Scanner de código de barras"
         autoComplete="off"
@@ -367,7 +369,7 @@ export const EanInput = ({
         autoCorrect="off"
         spellCheck={false}
         enterKeyHint="go"
-        readOnly={isNative}
+        readOnly
       />
 
       {/* Modal de confirmação de reset */}
