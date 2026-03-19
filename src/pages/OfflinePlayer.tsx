@@ -701,15 +701,17 @@ const OfflinePlayer = () => {
 
       {/* Product lookup overlay */}
       {terminalMode === "product" && (
-        <ProductLookupContainer
-          product={product}
-          isLoading={isProductLoading}
-          error={productError}
-          onDismiss={handleDismissProduct}
-          timeout={9999}
-          displaySettings={displaySettings || undefined}
-          isPortrait={isPortrait}
-        />
+        <div className="absolute inset-0 z-40" style={{ backgroundColor: '#FFFFFF' }}>
+          <ProductLookupContainer
+            product={product}
+            isLoading={isProductLoading}
+            error={productError}
+            onDismiss={handleDismissProduct}
+            timeout={9999}
+            displaySettings={displaySettings || undefined}
+            isPortrait={isPortrait}
+          />
+        </div>
       )}
 
       {/* Override media badge */}
