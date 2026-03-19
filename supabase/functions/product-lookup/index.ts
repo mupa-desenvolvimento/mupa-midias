@@ -21,15 +21,28 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${MUPA_IMAGE_API}/${ean}`, { signal: controller.signal });
-    clearTimeout(timeout);
+    
+    let res: Response;
+    try {
+      res = await fetch(`${MUPA_IMAGE_API}/${ean}`, { signal: controller.signal });
+      clearTimeout(timeout);
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      console.error(`[Image] Network error for ${ean}:`, fetchErr);
+      return null;
+    }
 
-    if (!res.ok) { await res.text(); return null; }
+    if (!res.ok) {
+      console.warn(`[Image] Mupa API returned ${res.status} for ${ean}`);
+      return null;
+    }
     
     const contentType = res.headers.get('content-type') || '';
     
     // If it returned an image directly, the proxy URL will work
     if (contentType.startsWith('image/')) {
+      // Consume the body to avoid stream leak
+      try { await res.arrayBuffer(); } catch {}
       const proxiedUrl = getProxiedImageUrl(ean);
       console.log(`[Image] Direct image found for ${ean}, using proxy: ${proxiedUrl}`);
       supabase
@@ -42,7 +55,14 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
     }
     
     // If JSON response, extract URL
-    const data = await res.json();
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      console.error(`[Image] Failed to parse JSON for ${ean}`);
+      return null;
+    }
+    
     const imageUrl = data.imagem_url || data.image_url || null;
     
     if (imageUrl) {
@@ -58,9 +78,10 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
       return proxiedUrl;
     }
     
+    console.warn(`[Image] No image URL found in response for ${ean}`);
     return null;
   } catch (e) {
-    console.error(`[Image] Error fetching for ${ean}:`, e);
+    console.error(`[Image] Unexpected error for ${ean}:`, e);
     return null;
   }
 }
