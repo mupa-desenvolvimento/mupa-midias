@@ -113,30 +113,32 @@ export function useDeviceSession(deviceCode: string | null | undefined) {
     };
   }, [state.status, callSessionApi]);
 
-  // Release on unmount / page close
+  // Release on page close only (NOT on React re-render/reload)
   useEffect(() => {
     if (!deviceCode) return;
 
-    const release = () => {
+    const releaseOnClose = () => {
       if (claimedRef.current && sessionIdRef.current) {
-        // Use sendBeacon for reliable cleanup on page close
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/device-session`;
-        const body = JSON.stringify({
+        const payload = JSON.stringify({
           action: "release",
           device_code: deviceCode,
           session_id: sessionIdRef.current,
         });
-        navigator.sendBeacon(url, body);
-        sessionStorage.removeItem(SESSION_STORAGE_KEY + deviceCode);
+        // Use Blob to set correct Content-Type for edge function
+        const blob = new Blob([payload], { type: "application/json" });
+        navigator.sendBeacon(url, blob);
+        // Keep sessionStorage so a quick re-open can reclaim
         claimedRef.current = false;
       }
     };
 
-    window.addEventListener("beforeunload", release);
+    window.addEventListener("beforeunload", releaseOnClose);
 
     return () => {
-      window.removeEventListener("beforeunload", release);
-      release();
+      window.removeEventListener("beforeunload", releaseOnClose);
+      // Do NOT release on React unmount/re-render — only on actual page close
+      // This prevents the "device in use" error on reload
     };
   }, [deviceCode]);
 
