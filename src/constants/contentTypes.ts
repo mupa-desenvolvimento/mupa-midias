@@ -46,6 +46,7 @@ export const MEDIA_FILTER_OPTIONS = [
   { value: 'all',          label: 'Todos' },
   { value: 'image',        label: 'Imagens' },
   { value: 'video',        label: 'Vídeos' },
+  { value: 'webview',      label: 'WebView' },
   { value: 'weather',      label: 'Clima' },
   { value: 'news',         label: 'Notícias' },
   { value: 'motivational', label: 'Frases' },
