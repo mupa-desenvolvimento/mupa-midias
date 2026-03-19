@@ -30,6 +30,7 @@ export interface ContentTypeInfo {
 export const CONTENT_TYPE_MAP: Record<ContentType, ContentTypeInfo> = {
   image:        { value: 'image',        label: 'Imagem',              icon: 'Image',       hasFile: true,  defaultDuration: 10 },
   video:        { value: 'video',        label: 'Vídeo',               icon: 'Video',       hasFile: true,  defaultDuration: 0  },
+  webview:      { value: 'webview',      label: 'WebView',             icon: 'Globe',       hasFile: false, defaultDuration: 15 },
   weather:      { value: 'weather',      label: 'Clima',               icon: 'CloudSun',    hasFile: false, defaultDuration: 15 },
   news:         { value: 'news',         label: 'Notícias',            icon: 'Newspaper',   hasFile: false, defaultDuration: 20 },
   motivational: { value: 'motivational', label: 'Frases Motivacionais',icon: 'MessageCircleHeart', hasFile: false, defaultDuration: 10 },
