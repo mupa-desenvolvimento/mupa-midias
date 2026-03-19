@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useMediaItems, MediaItem } from "@/hooks/useMediaItems";
 import { MediaUploadDialog } from "@/components/media/MediaUploadDialog";
+import { WebviewContentDialog } from "@/components/media/WebviewContentDialog";
 import { MediaLightbox } from "@/components/media/MediaLightbox";
 import { MediaEditDialog } from "@/components/media/MediaEditDialog";
 import { MediaDeleteDialog } from "@/components/media/MediaDeleteDialog";
