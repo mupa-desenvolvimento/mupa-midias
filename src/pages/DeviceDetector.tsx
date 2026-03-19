@@ -114,11 +114,16 @@ const DeviceDetector = () => {
         setLastSentCount((prev) => prev + detectionsToSend.length);
         console.log(`Enviadas ${detectionsToSend.length} detecções`);
       } else {
-        console.error("Erro ao enviar:", await response.text());
+        let errorMsg = `Status ${response.status}`;
+        try {
+          const cloned = response.clone();
+          errorMsg = await cloned.text();
+        } catch { /* body already consumed */ }
+        console.error("Erro ao enviar:", errorMsg);
         setConnectionStatus("error");
       }
     } catch (error) {
-      console.error("Erro de conexão:", error);
+      console.error("Erro de conexão com Supabase:", error);
       setConnectionStatus("error");
     }
   }, [deviceCode, deviceNickname]);
