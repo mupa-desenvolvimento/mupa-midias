@@ -394,6 +394,15 @@ const Media = () => {
             folderId={currentFolderId}
           />
 
+          <WebviewContentDialog
+            open={webviewDialogOpen}
+            onOpenChange={setWebviewDialogOpen}
+            onSuccess={() => {
+              refetch();
+            }}
+            folderId={currentFolderId}
+          />
+
           <MediaLightbox
             open={lightboxOpen}
             onOpenChange={setLightboxOpen}
