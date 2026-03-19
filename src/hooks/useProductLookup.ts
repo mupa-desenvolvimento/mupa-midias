@@ -11,7 +11,6 @@ interface ProductData {
   is_offer: boolean;
   savings_percent: number | null;
   image_url: string | null;
-  cores?: string[] | null;
   store_code: string;
 }
 

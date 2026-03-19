@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Package, Percent, Tag } from "lucide-react";
 import { rgbToString, rgbToRgba, type ExtractedColors, type RGB } from "@/lib/colorExtractor";
@@ -13,7 +12,6 @@ interface ProductData {
   is_offer: boolean;
   savings_percent: number | null;
   image_url: string | null;
-  cores?: string[] | null;
   store_code: string;
 }
 
@@ -47,35 +45,6 @@ const lightenRgb = (rgb: RGB, factor: number): RGB => ({
   b: Math.min(255, Math.round(rgb.b + (255 - rgb.b) * factor)),
 });
 
-const getLuminance = (rgb: RGB): number => (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-
-const pickPalette = (cores: string[]): { primary: RGB; secondary: RGB; accent: RGB } | null => {
-  const parsed = cores
-    .map((hex) => hexToRgb(hex))
-    .filter((c): c is RGB => !!c);
-  if (!parsed.length) return null;
-
-  const saturation = (c: RGB) => Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b);
-  const key = (c: RGB) => `${c.r},${c.g},${c.b}`;
-  const nonWhite = parsed.filter((c) => getLuminance(c) <= 0.95);
-  const candidates = nonWhite.length ? nonWhite : parsed;
-  const bySat = [...candidates].sort((a, b) => saturation(b) - saturation(a));
-
-  const primary = bySat[0] || parsed[0];
-  const primaryKey = key(primary);
-  const secondary =
-    bySat.find((c) => key(c) !== primaryKey && Math.abs(getLuminance(c) - getLuminance(primary)) > 0.08) ||
-    bySat.find((c) => key(c) !== primaryKey) ||
-    parsed[1] ||
-    primary;
-  const accent =
-    bySat.find((c) => key(c) !== primaryKey && key(c) !== key(secondary)) ||
-    parsed.find((c) => key(c) !== primaryKey) ||
-    primary;
-
-  return { primary, secondary, accent };
-};
-
 export const ProductDisplay = ({
   product,
   colors,
@@ -94,33 +63,13 @@ export const ProductDisplay = ({
   const currentPrice = formatPrice(product.current_price);
   const originalPrice = product.original_price ? formatPrice(product.original_price) : null;
 
-  const useApiPalette = Array.isArray(product.cores) && product.cores.length > 0;
-  const apiPalette = useApiPalette ? pickPalette(product.cores as string[]) : null;
   const useColorExtraction = settings?.enable_color_extraction !== false;
-
-  const primaryColor = apiPalette
-    ? apiPalette.primary
-    : useColorExtraction
-      ? colors.dominant
-      : hexToRgb(settings?.container_primary_color || "#1E3A5F");
-  const secondaryColor = apiPalette
-    ? apiPalette.secondary
-    : useColorExtraction
-      ? colors.muted
-      : hexToRgb(settings?.container_secondary_color || "#2D4A6F");
-  const accentColor = apiPalette
-    ? apiPalette.accent
-    : useColorExtraction
-      ? colors.vibrant
-      : hexToRgb(settings?.accent_color || "#3B82F6");
+  const primaryColor = useColorExtraction ? colors.dominant : hexToRgb(settings?.container_primary_color || "#1E3A5F");
+  const secondaryColor = useColorExtraction ? colors.muted : hexToRgb(settings?.container_secondary_color || "#2D4A6F");
+  const accentColor = useColorExtraction ? colors.vibrant : hexToRgb(settings?.accent_color || "#3B82F6");
 
   const darkPrimary = darkenRgb(primaryColor, 0.7);
   const lightPrimary = lightenRgb(primaryColor, 0.3);
-  const isDarkPanel = getLuminance(primaryColor) < 0.55;
-  const textColor = isDarkPanel ? "#FFFFFF" : "#0B0B0B";
-  const mutedTextColor = isDarkPanel ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.62)";
-  const priceBoxBg = isDarkPanel ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.06)";
-  const priceBoxBorder = isDarkPanel ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.10)";
 
   const priceSize = settings?.price_font_size ? settings.price_font_size * 1.6 : 160;
   const titleSize = settings?.title_font_size || 52;
@@ -134,25 +83,14 @@ export const ProductDisplay = ({
   };
   const { boldPart, restPart } = formatProductName(product.name);
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-  const productImageUrl =
-    product.image_url && product.image_url.startsWith("http://") && supabaseUrl
-      ? `${supabaseUrl}/functions/v1/product-image-proxy?ean=${product.ean}`
-      : product.image_url;
-
-  const [imageError, setImageError] = useState(false);
-  useEffect(() => {
-    setImageError(false);
-  }, [productImageUrl, preloadedSrc]);
-
-  const panelBg = useApiPalette ? rgbToString(primaryColor) : `linear-gradient(160deg, ${rgbToString(primaryColor)} 0%, ${rgbToString(darkPrimary)} 60%, ${rgbToString(darkenRgb(primaryColor, 0.5))} 100%)`;
+  // Background gradient using extracted colors
   const panelGradient = `linear-gradient(160deg, ${rgbToString(primaryColor)} 0%, ${rgbToString(darkPrimary)} 60%, ${rgbToString(darkenRgb(primaryColor, 0.5))} 100%)`;
 
   const renderInfoPanel = () => (
     <motion.div
       className="relative h-full flex flex-col justify-between overflow-hidden"
       style={{
-        background: panelBg,
+        background: panelGradient,
         width: "55%",
         clipPath: imagePosition === "right"
           ? "polygon(0 0, 100% 0, 92% 100%, 0 100%)"
@@ -162,27 +100,19 @@ export const ProductDisplay = ({
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      {useApiPalette ? (
-        <div
-          className="absolute left-0 top-0 w-full"
-          style={{ height: "46%", backgroundColor: rgbToString(secondaryColor) }}
-        />
-      ) : (
-        <>
-          <motion.div
-            className="absolute -top-20 -right-20 w-60 h-60 rounded-full"
-            style={{ background: rgbToRgba(lightPrimary, 0.08) }}
-            animate={{ scale: [1, 1.15, 1], rotate: [0, 10, 0] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute bottom-10 -left-10 w-40 h-40 rounded-full"
-            style={{ background: rgbToRgba(accentColor, 0.1) }}
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          />
-        </>
-      )}
+      {/* Decorative shapes */}
+      <motion.div
+        className="absolute -top-20 -right-20 w-60 h-60 rounded-full"
+        style={{ background: rgbToRgba(lightPrimary, 0.08) }}
+        animate={{ scale: [1, 1.15, 1], rotate: [0, 10, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-10 -left-10 w-40 h-40 rounded-full"
+        style={{ background: rgbToRgba(accentColor, 0.1) }}
+        animate={{ scale: [1, 1.2, 1] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+      />
 
       <div className="flex flex-col justify-between h-full p-8 lg:p-12 relative z-10">
         {/* Product Name */}
@@ -194,14 +124,14 @@ export const ProductDisplay = ({
           <h1 className="leading-none mb-1">
             <span
               className="block font-black tracking-tight uppercase"
-              style={{ fontSize: `${titleSize}px`, color: textColor }}
+              style={{ fontSize: `${titleSize}px`, color: "#FFFFFF" }}
             >
               {boldPart}
             </span>
             {restPart && (
               <span
                 className="block font-light tracking-wider uppercase mt-1"
-                style={{ fontSize: `${subtitleSize}px`, color: mutedTextColor }}
+                style={{ fontSize: `${subtitleSize}px`, color: "rgba(255,255,255,0.7)" }}
               >
                 {restPart}
               </span>
@@ -216,23 +146,14 @@ export const ProductDisplay = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <motion.div
-            className="inline-flex items-baseline self-start px-8 py-4"
-            style={{
-              borderRadius: "52px",
-              backgroundColor: priceBoxBg,
-              border: `1px solid ${priceBoxBorder}`,
-            }}
-            initial={{ scale: 0.92, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.35, delay: 0.35, type: "spring", stiffness: 160, damping: 14 }}
-          >
+          {/* Current Price - Bebas Neue */}
+          <div className="flex items-baseline">
             <span
               className="font-normal"
               style={{
                 fontFamily: "'Bebas Neue', cursive",
                 fontSize: `${priceSize * 0.35}px`,
-                color: isDarkPanel ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.82)",
+                color: "rgba(255,255,255,0.9)",
                 lineHeight: 1,
                 marginRight: "4px",
               }}
@@ -243,7 +164,7 @@ export const ProductDisplay = ({
               style={{
                 fontFamily: "'Bebas Neue', cursive",
                 fontSize: `${priceSize}px`,
-                color: textColor,
+                color: "#FFFFFF",
                 lineHeight: 0.85,
                 letterSpacing: "-2px",
               }}
@@ -257,7 +178,7 @@ export const ProductDisplay = ({
               style={{
                 fontFamily: "'Bebas Neue', cursive",
                 fontSize: `${priceSize * 0.45}px`,
-                color: isDarkPanel ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.82)",
+                color: "rgba(255,255,255,0.9)",
                 lineHeight: 1,
                 alignSelf: "flex-start",
                 marginTop: `${priceSize * 0.05}px`,
@@ -265,7 +186,7 @@ export const ProductDisplay = ({
             >
               ,{currentPrice.centavos}
             </span>
-          </motion.div>
+          </div>
 
           {/* Original price / offer info */}
           {product.is_offer && originalPrice && (
@@ -277,10 +198,7 @@ export const ProductDisplay = ({
             >
               <span
                 className="text-sm font-medium px-3 py-1 rounded"
-                style={{
-                  backgroundColor: isDarkPanel ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.10)",
-                  color: isDarkPanel ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.75)",
-                }}
+                style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
               >
                 A partir de {product.savings_percent ? `${product.savings_percent}% OFF` : "3 Un:"}
               </span>
@@ -288,7 +206,7 @@ export const ProductDisplay = ({
                 style={{
                   fontFamily: "'Bebas Neue', cursive",
                   fontSize: `${originalPriceSize * 1.2}px`,
-                  color: isDarkPanel ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.70)",
+                  color: "rgba(255,255,255,0.85)",
                 }}
               >
                 R$ {originalPrice.reais},{originalPrice.centavos}
@@ -307,8 +225,8 @@ export const ProductDisplay = ({
               <span
                 className="inline-flex items-center gap-2 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider"
                 style={{
-                  backgroundColor: isDarkPanel ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)",
-                  color: textColor,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                  color: "#FFFFFF",
                   backdropFilter: "blur(4px)",
                 }}
               >
@@ -322,7 +240,7 @@ export const ProductDisplay = ({
         {/* EAN code */}
         <motion.div
           className="text-xs"
-          style={{ color: isDarkPanel ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)" }}
+          style={{ color: "rgba(255,255,255,0.35)" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
@@ -364,9 +282,9 @@ export const ProductDisplay = ({
         }}
       />
 
-      {(preloadedSrc || productImageUrl) && !imageError ? (
+      {(preloadedSrc || product.image_url) ? (
         <motion.img
-          src={preloadedSrc || productImageUrl || ""}
+          src={preloadedSrc || product.image_url || ""}
           alt={product.name}
           className="max-w-[75%] max-h-[80vh] object-contain relative z-10"
           style={{
@@ -375,11 +293,9 @@ export const ProductDisplay = ({
           onLoad={onImageLoad}
           onError={(e) => {
             const target = e.currentTarget;
-            if (preloadedSrc && productImageUrl && target.src !== productImageUrl) {
-              target.src = productImageUrl;
-              return;
+            if (preloadedSrc && product.image_url && target.src !== product.image_url) {
+              target.src = product.image_url;
             }
-            setImageError(true);
           }}
           crossOrigin="anonymous"
           initial={{ scale: 0.8, opacity: 0 }}
@@ -419,7 +335,7 @@ export const ProductDisplay = ({
         <motion.div
           className="w-full"
           style={{
-            background: panelBg,
+            background: panelGradient,
             height: "55%",
             clipPath: "polygon(0 0, 100% 0, 100% 88%, 0 100%)",
           }}
@@ -427,34 +343,24 @@ export const ProductDisplay = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {useApiPalette ? (
-            <div className="absolute left-0 top-0 w-full" style={{ height: "46%", backgroundColor: rgbToString(secondaryColor) }} />
-          ) : null}
           <div className="flex flex-col justify-between h-full p-6 relative z-10">
             <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
               <h1 className="leading-none">
-                <span className="block font-black tracking-tight uppercase" style={{ fontSize: `${titleSize * 0.8}px`, color: textColor }}>
+                <span className="block font-black tracking-tight uppercase" style={{ fontSize: `${titleSize * 0.8}px`, color: "#FFFFFF" }}>
                   {boldPart}
                 </span>
                 {restPart && (
-                  <span className="block font-light tracking-wider uppercase mt-1" style={{ fontSize: `${subtitleSize * 0.8}px`, color: mutedTextColor }}>
+                  <span className="block font-light tracking-wider uppercase mt-1" style={{ fontSize: `${subtitleSize * 0.8}px`, color: "rgba(255,255,255,0.7)" }}>
                     {restPart}
                   </span>
                 )}
               </h1>
             </motion.div>
             <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }}>
-              <div
-                className="inline-flex items-baseline self-start px-7 py-3"
-                style={{
-                  borderRadius: "46px",
-                  backgroundColor: priceBoxBg,
-                  border: `1px solid ${priceBoxBorder}`,
-                }}
-              >
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${priceSize * 0.25}px`, color: isDarkPanel ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.82)", marginRight: "4px" }}>R$</span>
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${priceSize * 0.7}px`, color: textColor, lineHeight: 0.85 }}>{currentPrice.reais}</span>
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${priceSize * 0.35}px`, color: isDarkPanel ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.82)", alignSelf: "flex-start" }}>,{currentPrice.centavos}</span>
+              <div className="flex items-baseline">
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${priceSize * 0.25}px`, color: "rgba(255,255,255,0.9)", marginRight: "4px" }}>R$</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${priceSize * 0.7}px`, color: "#FFFFFF", lineHeight: 0.85 }}>{currentPrice.reais}</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${priceSize * 0.35}px`, color: "rgba(255,255,255,0.9)", alignSelf: "flex-start" }}>,{currentPrice.centavos}</span>
               </div>
             </motion.div>
           </div>
@@ -463,14 +369,13 @@ export const ProductDisplay = ({
           </div>
         </motion.div>
         <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#FFFFFF" }}>
-          {(preloadedSrc || productImageUrl) && !imageError ? (
+          {(preloadedSrc || product.image_url) ? (
             <motion.img
-              src={preloadedSrc || productImageUrl || ""}
+              src={preloadedSrc || product.image_url || ""}
               alt={product.name}
               className="max-w-[70%] max-h-[90%] object-contain"
               style={{ filter: "drop-shadow(0 8px 30px rgba(0,0,0,0.12))" }}
               onLoad={onImageLoad}
-              onError={() => setImageError(true)}
               crossOrigin="anonymous"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

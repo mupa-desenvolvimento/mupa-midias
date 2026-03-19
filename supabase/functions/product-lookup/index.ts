@@ -17,31 +17,24 @@ function getProxiedImageUrl(ean: string): string {
  * Fetch product image URL from Mupa API and persist it to lite_products.
  * Returns proxied URL for browser compatibility.
  */
-async function resolveProductImage(
-  ean: string,
-  supabase: any,
-  companyId: string
-): Promise<{ image_url: string | null; cores: string[] | null }> {
+async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<string | null> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 5000);
     
     let res: Response;
     try {
-      res = await fetch(`${MUPA_IMAGE_API}/${ean}`, {
-        signal: controller.signal,
-        headers: { 'Accept': 'application/json' },
-      });
+      res = await fetch(`${MUPA_IMAGE_API}/${ean}`, { signal: controller.signal });
       clearTimeout(timeout);
     } catch (fetchErr) {
       clearTimeout(timeout);
       console.error(`[Image] Network error for ${ean}:`, fetchErr);
-      return { image_url: null, cores: null };
+      return null;
     }
 
     if (!res.ok) {
       console.warn(`[Image] Mupa API returned ${res.status} for ${ean}`);
-      return { image_url: null, cores: null };
+      return null;
     }
     
     const contentType = res.headers.get('content-type') || '';
@@ -58,7 +51,7 @@ async function resolveProductImage(
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return { image_url: proxiedUrl, cores: null };
+      return proxiedUrl;
     }
     
     // If JSON response, extract URL
@@ -67,13 +60,10 @@ async function resolveProductImage(
       data = await res.json();
     } catch {
       console.error(`[Image] Failed to parse JSON for ${ean}`);
-      return { image_url: null, cores: null };
+      return null;
     }
     
     const imageUrl = data.imagem_url || data.image_url || null;
-    const cores: string[] | null = Array.isArray(data.cores)
-      ? data.cores.filter((c: any) => typeof c === 'string')
-      : null;
     
     if (imageUrl) {
       // Always return proxied URL for CORS safety
@@ -85,14 +75,14 @@ async function resolveProductImage(
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return { image_url: proxiedUrl, cores };
+      return proxiedUrl;
     }
     
     console.warn(`[Image] No image URL found in response for ${ean}`);
-    return { image_url: null, cores };
+    return null;
   } catch (e) {
     console.error(`[Image] Unexpected error for ${ean}:`, e);
-    return { image_url: null, cores: null };
+    return null;
   }
 }
 
@@ -125,7 +115,6 @@ interface ProductResponse {
     is_offer: boolean;
     savings_percent: number | null;
     image_url: string | null;
-    cores?: string[] | null;
     store_code: string;
     description?: string; // Legacy support
   };
@@ -240,11 +229,6 @@ Deno.serve(async (req: Request) => {
       }).then();
       
       const productData = cached.product_data as any;
-      const cachedImageUrl = cached.image_url || productData.image_url || null;
-      const imageUrlToUse =
-        typeof cachedImageUrl === 'string' && cachedImageUrl.startsWith('http://')
-          ? getProxiedImageUrl(normalizedEan)
-          : cachedImageUrl;
       
       return new Response(
         JSON.stringify({
@@ -257,8 +241,7 @@ Deno.serve(async (req: Request) => {
             original_price: productData.original_price,
             is_offer: productData.is_offer,
             savings_percent: productData.savings_percent,
-            image_url: imageUrlToUse,
-            cores: productData.cores || null,
+            image_url: cached.image_url,
             store_code: storeCode,
             description: productData.name // Legacy
           }
@@ -317,7 +300,6 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
         }
 
-        const resolvedImage = await resolveProductImage(normalizedEan, supabase, device.company_id);
         const productData = {
           ean: p.barcode,
           name: p.description,
@@ -326,8 +308,7 @@ Deno.serve(async (req: Request) => {
           original_price: originalPrice,
           is_offer: isOffer,
           savings_percent: savingsPercent,
-          image_url: resolvedImage.image_url || p.image || null,
-          cores: resolvedImage.cores,
+          image_url: p.image || await resolveProductImage(normalizedEan, supabase, device.company_id),
           store_code: storeCode,
           description: p.description // Legacy
         };
@@ -343,7 +324,7 @@ Deno.serve(async (req: Request) => {
             ean: normalizedEan,
             store_code: storeCode,
             product_data: productData,
-            image_url: productData.image_url,
+            image_url: p.image,
             expires_at: expiresAt.toISOString()
           }, {
             onConflict: 'company_id,ean,store_code'
@@ -423,13 +404,13 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((normalPrice - promoPrice) / normalPrice) * 100);
         }
 
-        // Buscar URL de imagem se não existir
+        // Buscar URL de imagem se não existir ou converter URL direta para proxy
         let imageUrl = liteProduct.image_url;
-        let cores: string[] | null = null;
-        if (!imageUrl) {
-          const resolvedImage = await resolveProductImage(normalizedEan, supabase, device.company_id);
-          imageUrl = resolvedImage.image_url;
-          cores = resolvedImage.cores;
+        if (imageUrl && imageUrl.includes('srv-mupa.ddns.net')) {
+          // Convert direct Mupa URL to proxied URL
+          imageUrl = getProxiedImageUrl(normalizedEan);
+        } else if (!imageUrl) {
+          imageUrl = await resolveProductImage(normalizedEan, supabase, device.company_id);
         }
 
         const productData = {
@@ -441,7 +422,6 @@ Deno.serve(async (req: Request) => {
             is_offer: isOffer,
             savings_percent: savingsPercent,
             image_url: imageUrl,
-            cores: cores,
             store_code: storeCode,
             description: liteProduct.description
         };
