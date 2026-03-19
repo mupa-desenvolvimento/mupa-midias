@@ -428,7 +428,7 @@ export const EanInput = ({
               <input
                 ref={inputRef}
                 type="text"
-                inputMode={isNative ? "none" : "numeric"}
+                inputMode="none"
                 pattern="[0-9]*"
                 value={value}
                 onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
@@ -437,7 +437,7 @@ export const EanInput = ({
                 className="w-64 pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-primary"
                 maxLength={14}
                 enterKeyHint="go"
-                readOnly={isNative}
+                readOnly
               />
             </div>
             
