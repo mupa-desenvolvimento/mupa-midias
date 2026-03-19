@@ -50,6 +50,7 @@ const Media = () => {
   const { isLite } = useTenantLicense();
   const [searchTerm, setSearchTerm] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [webviewDialogOpen, setWebviewDialogOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
