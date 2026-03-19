@@ -41,29 +41,36 @@ export const EanInput = ({
   const bufferRef = useRef<string>("");
 
   // Foca no input quando mídias visíveis ou alwaysListenForScanner ativo
+  // Em plataformas nativas, também foca - readOnly + inputMode="none" impede o teclado
   useEffect(() => {
-    const shouldFocus = (isVisible || alwaysListenForScanner) && !disabled && hiddenInputRef.current && !isNative;
+    const shouldFocus = (isVisible || alwaysListenForScanner) && !disabled && hiddenInputRef.current;
     if (shouldFocus) {
-      // Delay para garantir que WebView está pronto
-      setTimeout(() => {
-        hiddenInputRef.current?.focus();
-      }, 100);
+      // Delays escalonados para garantir que WebView está pronto na inicialização
+      const delays = [100, 500, 1000, 2000];
+      const timeouts = delays.map(delay =>
+        setTimeout(() => {
+          if (hiddenInputRef.current && document.activeElement !== hiddenInputRef.current) {
+            hiddenInputRef.current.focus({ preventScroll: true });
+          }
+        }, delay)
+      );
+      return () => timeouts.forEach(clearTimeout);
     }
-  }, [isVisible, disabled, alwaysListenForScanner, isNative]);
+  }, [isVisible, disabled, alwaysListenForScanner]);
 
-  // Refoca agressivamente - crítico para WebViews
+  // Refoca agressivamente - crítico para WebViews e plataformas nativas
   useEffect(() => {
     const shouldListen = isVisible || alwaysListenForScanner;
-    if (!shouldListen || disabled || isNative) return;
+    if (!shouldListen || disabled) return;
 
     const interval = setInterval(() => {
       if (hiddenInputRef.current && document.activeElement !== hiddenInputRef.current) {
-        hiddenInputRef.current.focus();
+        hiddenInputRef.current.focus({ preventScroll: true });
       }
-    }, 200); // Mais agressivo: 200ms
+    }, 200);
 
     return () => clearInterval(interval);
-  }, [isVisible, disabled, alwaysListenForScanner, isNative]);
+  }, [isVisible, disabled, alwaysListenForScanner]);
 
   // Limpa timeout ao desmontar
   useEffect(() => {
