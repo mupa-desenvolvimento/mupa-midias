@@ -107,7 +107,7 @@ export const EanInput = ({
       return;
     }
 
-    if (!VALID_EAN_LENGTHS.includes(trimmed.length)) {
+    if (trimmed.length < MIN_EAN_LENGTH || trimmed.length > MAX_EAN_LENGTH) {
       console.log("[EanInput] EAN com tamanho inválido:", trimmed.length);
       return;
     }
