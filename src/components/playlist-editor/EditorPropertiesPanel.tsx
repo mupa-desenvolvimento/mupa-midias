@@ -701,7 +701,7 @@ export const EditorPropertiesPanel = ({
   const [mediaTab, setMediaTab] = useState<"library" | "auto">("library");
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-auto">
       <div className="h-10 flex items-center justify-between px-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">
