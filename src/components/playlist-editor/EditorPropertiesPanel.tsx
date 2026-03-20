@@ -737,7 +737,7 @@ export const EditorPropertiesPanel = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div className="flex-1 overflow-auto min-h-0">
         {activePanel === "media" ? (
           mediaTab === "library" ? (
             <MediaLibraryPanel onAddMedia={onAddMedia} itemsLength={itemsLength} />
