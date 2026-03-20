@@ -455,7 +455,7 @@ export const PlaylistEditor = () => {
       {/* Main Content - Full height minus header */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left Panel - Content Selection */}
-        <div className="w-80 border-r bg-card flex flex-col overflow-hidden">
+        <div className="w-96 border-r bg-card flex flex-col overflow-hidden">
             {/* Tabs for Channels vs Legacy mode */}
             <div className="p-3 border-b shrink-0">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
