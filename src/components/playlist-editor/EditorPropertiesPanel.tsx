@@ -701,7 +701,7 @@ export const EditorPropertiesPanel = ({
   const [mediaTab, setMediaTab] = useState<"library" | "auto">("library");
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-auto">
       <div className="h-10 flex items-center justify-between px-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">
@@ -737,7 +737,7 @@ export const EditorPropertiesPanel = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div className="flex-1 overflow-auto min-h-0">
         {activePanel === "media" ? (
           mediaTab === "library" ? (
             <MediaLibraryPanel onAddMedia={onAddMedia} itemsLength={itemsLength} />
