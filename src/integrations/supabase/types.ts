@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      advertisers: {
+        Row: {
+          cnpj: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          metadata: Json | null
+          name: string
+          slug: string
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cnpj?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          metadata?: Json | null
+          name: string
+          slug: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cnpj?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          metadata?: Json | null
+          name?: string
+          slug?: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_integrations: {
         Row: {
           auth_body_json: Json
@@ -254,6 +310,283 @@ export type Database = {
           },
         ]
       }
+      campaign_contents: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          duration_override: number | null
+          id: string
+          is_active: boolean | null
+          media_id: string
+          position: number | null
+          weight: number | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          duration_override?: number | null
+          id?: string
+          is_active?: boolean | null
+          media_id: string
+          position?: number | null
+          weight?: number | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          duration_override?: number | null
+          id?: string
+          is_active?: boolean | null
+          media_id?: string
+          position?: number | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_contents_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_contents_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_targets: {
+        Row: {
+          campaign_id: string
+          city_id: string | null
+          company_id: string | null
+          created_at: string | null
+          device_id: string | null
+          device_type_id: string | null
+          id: string
+          include: boolean | null
+          region_id: string | null
+          sector_id: string | null
+          state_id: string | null
+          store_id: string | null
+          tag_id: string | null
+          target_type: string
+          zone_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          city_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          device_type_id?: string | null
+          id?: string
+          include?: boolean | null
+          region_id?: string | null
+          sector_id?: string | null
+          state_id?: string | null
+          store_id?: string | null
+          tag_id?: string | null
+          target_type: string
+          zone_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          city_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          device_type_id?: string | null
+          id?: string
+          include?: boolean | null
+          region_id?: string | null
+          sector_id?: string | null
+          state_id?: string | null
+          store_id?: string | null
+          tag_id?: string | null
+          target_type?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_targets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_device_type_id_fkey"
+            columns: ["device_type_id"]
+            isOneToOne: false
+            referencedRelation: "device_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "states"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          advertiser_id: string | null
+          budget: number | null
+          campaign_type: string | null
+          contract_id: string | null
+          created_at: string | null
+          current_impressions: number | null
+          days_of_week: number[] | null
+          description: string | null
+          end_date: string | null
+          end_time: string | null
+          id: string
+          is_active: boolean | null
+          max_impressions: number | null
+          metadata: Json | null
+          name: string
+          priority: number | null
+          start_date: string | null
+          start_time: string | null
+          status: string | null
+          tenant_id: string | null
+          updated_at: string | null
+          weight: number | null
+        }
+        Insert: {
+          advertiser_id?: string | null
+          budget?: number | null
+          campaign_type?: string | null
+          contract_id?: string | null
+          created_at?: string | null
+          current_impressions?: number | null
+          days_of_week?: number[] | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_impressions?: number | null
+          metadata?: Json | null
+          name: string
+          priority?: number | null
+          start_date?: string | null
+          start_time?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Update: {
+          advertiser_id?: string | null
+          budget?: number | null
+          campaign_type?: string | null
+          contract_id?: string | null
+          created_at?: string | null
+          current_impressions?: number | null
+          days_of_week?: number[] | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_impressions?: number | null
+          metadata?: Json | null
+          name?: string
+          priority?: number | null
+          start_date?: string | null
+          start_time?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "advertisers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canva_auth_states: {
         Row: {
           code_verifier: string
@@ -450,6 +783,66 @@ export type Database = {
             columns: ["integration_id"]
             isOneToOne: false
             referencedRelation: "api_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          advertiser_id: string
+          created_at: string | null
+          end_date: string
+          id: string
+          metadata: Json | null
+          name: string
+          start_date: string
+          status: string | null
+          tenant_id: string | null
+          total_impressions: number | null
+          total_value: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          advertiser_id: string
+          created_at?: string | null
+          end_date: string
+          id?: string
+          metadata?: Json | null
+          name: string
+          start_date: string
+          status?: string | null
+          tenant_id?: string | null
+          total_impressions?: number | null
+          total_value?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          advertiser_id?: string
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          metadata?: Json | null
+          name?: string
+          start_date?: string
+          status?: string | null
+          tenant_id?: string | null
+          total_impressions?: number | null
+          total_value?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "advertisers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
