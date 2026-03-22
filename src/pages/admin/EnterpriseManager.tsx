@@ -485,7 +485,7 @@ export default function EnterpriseManager() {
       supabase.from("states").select("id, name"),
       supabase.from("regions").select("id, name"),
       supabase.from("cities").select("id, name"),
-      supabase.from("stores").select("id, name, code, latitude, longitude, city_id, is_active").eq("tenant_id", tenantId),
+      supabase.from("stores").select("id, name, code, city_id, is_active, metadata").eq("tenant_id", tenantId),
       supabase.from("sectors").select("id, name, store_id").eq("tenant_id", tenantId),
       supabase.from("zones").select("id, name, sector_id").eq("tenant_id", tenantId),
       supabase.from("countries").select("id, name"),
@@ -501,15 +501,27 @@ export default function EnterpriseManager() {
       countries: countriesR.data || [],
     });
 
-    // Map data
-    const storeMap = stores.filter((s) => s.latitude && s.longitude).map((s) => {
-      const storeDevices = devices.filter((d) => d.store_id === s.id);
-      return {
-        ...s,
-        devices_count: storeDevices.length,
-        online_count: storeDevices.filter((d) => d.status === "online").length,
-      } as StoreData;
-    });
+    // Map data - coordinates from metadata
+    const storeMap = stores
+      .filter((s) => {
+        const meta = s.metadata as any;
+        return meta?.latitude && meta?.longitude;
+      })
+      .map((s) => {
+        const meta = s.metadata as any;
+        const storeDevices = devices.filter((d) => d.store_id === s.id);
+        return {
+          id: s.id,
+          name: s.name,
+          code: s.code,
+          latitude: meta.latitude,
+          longitude: meta.longitude,
+          city_id: s.city_id,
+          is_active: s.is_active,
+          devices_count: storeDevices.length,
+          online_count: storeDevices.filter((d) => d.status === "online").length,
+        } as StoreData;
+      });
     setStoresWithCoords(storeMap);
 
     setStats({
