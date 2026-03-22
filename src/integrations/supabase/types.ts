@@ -1674,6 +1674,154 @@ export type Database = {
         }
         Relationships: []
       }
+      impression_logs: {
+        Row: {
+          advertiser_id: string | null
+          campaign_id: string | null
+          city_id: string | null
+          content_id: string | null
+          created_at: string | null
+          device_id: string | null
+          device_type_id: string | null
+          duration: number | null
+          id: string
+          metadata: Json | null
+          played_at: string
+          region_id: string | null
+          sector_id: string | null
+          state_id: string | null
+          status: string | null
+          store_id: string | null
+          tenant_id: string | null
+          zone_id: string | null
+        }
+        Insert: {
+          advertiser_id?: string | null
+          campaign_id?: string | null
+          city_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          device_type_id?: string | null
+          duration?: number | null
+          id?: string
+          metadata?: Json | null
+          played_at?: string
+          region_id?: string | null
+          sector_id?: string | null
+          state_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          tenant_id?: string | null
+          zone_id?: string | null
+        }
+        Update: {
+          advertiser_id?: string | null
+          campaign_id?: string | null
+          city_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          device_type_id?: string | null
+          duration?: number | null
+          id?: string
+          metadata?: Json | null
+          played_at?: string
+          region_id?: string | null
+          sector_id?: string | null
+          state_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          tenant_id?: string | null
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impression_logs_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "advertisers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_device_type_id_fkey"
+            columns: ["device_type_id"]
+            isOneToOne: false
+            referencedRelation: "device_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "states"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_logs_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_posts: {
         Row: {
           caption: string | null
@@ -3995,6 +4143,15 @@ export type Database = {
           p_name: string
           p_store_code?: string
           p_store_id: string
+        }
+        Returns: Json
+      }
+      register_impression: {
+        Args: {
+          p_campaign_id?: string
+          p_content_id: string
+          p_device_token: string
+          p_duration?: number
         }
         Returns: Json
       }
