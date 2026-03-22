@@ -57,9 +57,6 @@ import {
 
 const menuItems = [
 { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
-{ title: "Lojas", url: "/admin/stores", icon: Store },
-{ title: "Enterprise", url: "/admin/regions", icon: Network },
-{ title: "Dispositivos", url: "/admin/devices", icon: Monitor },
 { title: "Grupos", url: "/admin/device-groups", icon: Layers },
 { title: "Canais", url: "/admin/channels", icon: Tv },
 { title: "Playlists", url: "/admin/playlists", icon: ListVideo },
@@ -71,6 +68,12 @@ const menuItems = [
 { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
 { title: "Inky Intelligence", url: "/admin/inky", icon: Brain },
 { title: "Configurações", url: "/admin/settings", icon: Settings }];
+
+const enterpriseItems = [
+{ title: "Lojas", url: "/admin/stores", icon: Store },
+{ title: "Dispositivos", url: "/admin/devices", icon: Monitor },
+{ title: "Setor", url: "/admin/regions", icon: Network },
+];
 
 
 const autoContentItems = [
