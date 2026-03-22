@@ -57,8 +57,6 @@ import {
 
 const menuItems = [
 { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
-{ title: "Grupos", url: "/admin/device-groups", icon: Layers },
-{ title: "Canais", url: "/admin/channels", icon: Tv },
 { title: "Playlists", url: "/admin/playlists", icon: ListVideo },
 { title: "Galeria", url: "/admin/media", icon: Image },
 { title: "Creator Img", url: "/admin/graphic-editor", icon: Palette },
@@ -70,9 +68,11 @@ const menuItems = [
 { title: "Configurações", url: "/admin/settings", icon: Settings }];
 
 const enterpriseItems = [
-{ title: "Lojas", url: "/admin/stores", icon: Store },
-{ title: "Dispositivos", url: "/admin/devices", icon: Monitor },
-{ title: "Setor", url: "/admin/regions", icon: Network },
+  { title: "Lojas", url: "/admin/stores", icon: Store },
+  { title: "Dispositivos", url: "/admin/devices", icon: Monitor },
+  { title: "Setor", url: "/admin/regions", icon: Network },
+  { title: "Tags", url: "/admin/tags", icon: Layers },
+  { title: "Campanhas", url: "/admin/campaigns", icon: Tv },
 ];
 
 

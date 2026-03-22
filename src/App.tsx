@@ -32,11 +32,9 @@ import Stores from "./pages/admin/Stores";
 import { NewsModule } from "./pages/admin/news/NewsModule";
 import StoresMap from "./pages/admin/StoresMap";
 import EnterpriseManager from "./pages/admin/EnterpriseManager";
-import Channels from "./pages/admin/Channels";
 import RetailMedia from "./pages/RetailMedia";
 import Playlists from "./pages/admin/Playlists";
 import PlaylistEditorPage from "./pages/admin/PlaylistEditor";
-import DeviceGroups from "./pages/admin/DeviceGroups";
 import Tenants from "./pages/admin/Tenants";
 import Companies from "./pages/admin/Companies";
 import ProductDisplayConfig from "./pages/admin/ProductDisplayConfig";
@@ -63,6 +61,8 @@ import MotivationalTV from "./pages/MotivationalTV";
 import EnterpriseCRUD from "./pages/admin/EnterpriseCRUD";
 import EnterpriseHierarchy from "./pages/admin/EnterpriseHierarchy";
 import EnterpriseReports from "./pages/admin/EnterpriseReports";
+import TagsManager from "./pages/admin/TagsManager";
+import CampaignsManager from "./pages/admin/CampaignsManager";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
 import AssaiPresentation from "./pages/AssaiPresentation";
@@ -186,10 +186,8 @@ function AppContent() {
                       <Routes>
                         <Route path="dashboard" element={<Dashboard />} />
                         <Route path="devices" element={<Devices />} />
-                        <Route path="device-groups" element={<DeviceGroups />} />
                         <Route path="stores" element={<Stores />} />
                         <Route path="regions" element={<EnterpriseManager />} />
-                        <Route path="channels" element={<Channels />} />
                         <Route path="playlists" element={<Playlists />} />
                         <Route path="playlists/:id/edit" element={<PlaylistEditorPage />} />
                         <Route path="playlists/new" element={<PlaylistEditorPage />} />
@@ -226,6 +224,8 @@ function AppContent() {
                         <Route path="enterprise" element={<EnterpriseCRUD />} />
                         <Route path="enterprise/hierarchy" element={<EnterpriseHierarchy />} />
                         <Route path="enterprise/reports" element={<EnterpriseReports />} />
+                        <Route path="tags" element={<TagsManager />} />
+                        <Route path="campaigns" element={<CampaignsManager />} />
                       </Routes>
                     </AppLayout>
                   </div>
