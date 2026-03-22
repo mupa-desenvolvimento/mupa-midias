@@ -106,8 +106,10 @@ export const HierarchyTree = ({ onSelect }: HierarchyTreeProps) => {
 
   useEffect(() => {
     if (!tenantId) return;
-    loadTree();
+    loadTreeData();
   }, [tenantId]);
+
+  const loadTreeData = async () => {
 
   const loadTree = async () => {
     setLoading(true);
