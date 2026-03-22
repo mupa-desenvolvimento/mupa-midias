@@ -73,6 +73,7 @@ const enterpriseItems = [
   { title: "Setor", url: "/admin/regions", icon: Network },
   { title: "Tags", url: "/admin/tags", icon: Layers },
   { title: "Campanhas", url: "/admin/campaigns", icon: Tv },
+  { title: "Programação", url: "/admin/schedule", icon: Calendar },
 ];
 
 

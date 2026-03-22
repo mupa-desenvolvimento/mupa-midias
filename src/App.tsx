@@ -227,6 +227,7 @@ function AppContent() {
                         <Route path="enterprise/reports" element={<EnterpriseReports />} />
                         <Route path="tags" element={<TagsManager />} />
                         <Route path="campaigns" element={<CampaignsManager />} />
+                        <Route path="schedule" element={<ScheduleTimeline />} />
                       </Routes>
                     </AppLayout>
                   </div>
