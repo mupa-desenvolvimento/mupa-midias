@@ -178,6 +178,7 @@ const AppSidebar = () => {
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || "U";
 
   const isAutoContentActive = location.pathname.startsWith("/admin/auto-content");
+  const isEnterpriseActive = enterpriseItems.some((i) => location.pathname === i.url);
   const isSuperAdminActive = superAdminItems.some((i) => location.pathname.startsWith(i.url));
 
   const filteredMenuItems = menuItems.filter((item) => isMenuItemAllowed(item.url));
