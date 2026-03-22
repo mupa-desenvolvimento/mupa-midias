@@ -110,8 +110,6 @@ export const HierarchyTree = ({ onSelect }: HierarchyTreeProps) => {
   }, [tenantId]);
 
   const loadTreeData = async () => {
-
-  const loadTreeInner = async () => {
     setLoading(true);
     try {
       // Load all data in parallel
