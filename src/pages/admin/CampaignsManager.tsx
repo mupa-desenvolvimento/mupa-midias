@@ -234,14 +234,14 @@ const CampaignsManager = () => {
 
   const addTarget = useMutation({
     mutationFn: async (t: { campaign_id: string; target_type: string; state_id?: string; tag_id?: string; sector_id?: string; store_id?: string }) => {
-      const payload: Record<string, unknown> = {
+      const payload = {
         campaign_id: t.campaign_id,
         target_type: t.target_type,
+        state_id: t.target_type === "state" && t.state_id ? t.state_id : null,
+        tag_id: t.target_type === "tag" && t.tag_id ? t.tag_id : null,
+        sector_id: t.target_type === "sector" && t.sector_id ? t.sector_id : null,
+        store_id: t.target_type === "store" && t.store_id ? t.store_id : null,
       };
-      if (t.target_type === "state" && t.state_id) payload.state_id = t.state_id;
-      if (t.target_type === "tag" && t.tag_id) payload.tag_id = t.tag_id;
-      if (t.target_type === "sector" && t.sector_id) payload.sector_id = t.sector_id;
-      if (t.target_type === "store" && t.store_id) payload.store_id = t.store_id;
       const { error } = await supabase.from("campaign_targets").insert([payload]);
       if (error) throw error;
     },
