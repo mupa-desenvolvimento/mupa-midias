@@ -760,6 +760,53 @@ export type Database = {
           },
         ]
       }
+      device_types: {
+        Row: {
+          code: string
+          created_at: string | null
+          default_orientation: string | null
+          default_resolution: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          default_orientation?: string | null
+          default_resolution?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          default_orientation?: string | null
+          default_resolution?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_types_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devices: {
         Row: {
           api_integration_id: string | null
@@ -771,6 +818,7 @@ export type Database = {
           current_playlist_id: string | null
           device_code: string
           device_token: string | null
+          device_type_id: string | null
           display_profile_id: string | null
           group_id: string | null
           id: string
@@ -786,10 +834,12 @@ export type Database = {
           price_integration_id: string | null
           region_id: string | null
           resolution: string | null
+          sector_id: string | null
           status: string
           store_code: string | null
           store_id: string | null
           updated_at: string
+          zone_id: string | null
         }
         Insert: {
           api_integration_id?: string | null
@@ -801,6 +851,7 @@ export type Database = {
           current_playlist_id?: string | null
           device_code: string
           device_token?: string | null
+          device_type_id?: string | null
           display_profile_id?: string | null
           group_id?: string | null
           id?: string
@@ -816,10 +867,12 @@ export type Database = {
           price_integration_id?: string | null
           region_id?: string | null
           resolution?: string | null
+          sector_id?: string | null
           status?: string
           store_code?: string | null
           store_id?: string | null
           updated_at?: string
+          zone_id?: string | null
         }
         Update: {
           api_integration_id?: string | null
@@ -831,6 +884,7 @@ export type Database = {
           current_playlist_id?: string | null
           device_code?: string
           device_token?: string | null
+          device_type_id?: string | null
           display_profile_id?: string | null
           group_id?: string | null
           id?: string
@@ -846,10 +900,12 @@ export type Database = {
           price_integration_id?: string | null
           region_id?: string | null
           resolution?: string | null
+          sector_id?: string | null
           status?: string
           store_code?: string | null
           store_id?: string | null
           updated_at?: string
+          zone_id?: string | null
         }
         Relationships: [
           {
@@ -878,6 +934,13 @@ export type Database = {
             columns: ["current_playlist_id"]
             isOneToOne: false
             referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devices_device_type_id_fkey"
+            columns: ["device_type_id"]
+            isOneToOne: false
+            referencedRelation: "device_types"
             referencedColumns: ["id"]
           },
           {
@@ -916,10 +979,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "devices_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "devices_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devices_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
             referencedColumns: ["id"]
           },
         ]
@@ -2737,6 +2814,57 @@ export type Database = {
           },
         ]
       }
+      sectors: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          store_id: string
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          store_id: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          store_id?: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sectors_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sectors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       states: {
         Row: {
           code: string
@@ -3194,6 +3322,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "weather_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zones: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sector_id: string
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sector_id: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sector_id?: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zones_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zones_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
