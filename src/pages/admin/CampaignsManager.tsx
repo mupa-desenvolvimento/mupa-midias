@@ -335,7 +335,7 @@ const CampaignsManager = () => {
   const getPriorityInfo = (p: number) => PRIORITY_LABELS[p] || { label: `P${p}`, color: "bg-muted" };
 
   return (
-    <PageShell title="Campanhas" description="Gerencie campanhas com segmentação, prioridade e período">
+    <PageShell header={<div><h1 className="text-2xl font-bold">Campanhas</h1><p className="text-sm text-muted-foreground">Gerencie campanhas com segmentação, prioridade e período</p></div>}>
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
