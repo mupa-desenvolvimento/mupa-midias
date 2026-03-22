@@ -571,7 +571,11 @@ const CampaignsSection = () => {
 // ─── MAIN PAGE ───
 const EnterpriseCRUD = () => {
   return (
-    <PageShell title="Enterprise" subtitle="Gerenciamento de Tags, Setores, Anunciantes e Campanhas">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Enterprise</h1>
+        <p className="text-sm text-muted-foreground">Gerenciamento de Tags, Setores, Anunciantes e Campanhas</p>
+      </div>
       <Tabs defaultValue="campaigns" className="space-y-4">
         <TabsList>
           <TabsTrigger value="campaigns" className="gap-1.5"><Megaphone className="w-4 h-4" /> Campanhas</TabsTrigger>
