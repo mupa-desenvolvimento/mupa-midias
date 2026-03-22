@@ -184,10 +184,8 @@ function AppContent() {
                       <Routes>
                         <Route path="dashboard" element={<Dashboard />} />
                         <Route path="devices" element={<Devices />} />
-                        <Route path="device-groups" element={<DeviceGroups />} />
                         <Route path="stores" element={<Stores />} />
                         <Route path="regions" element={<EnterpriseManager />} />
-                        <Route path="channels" element={<Channels />} />
                         <Route path="playlists" element={<Playlists />} />
                         <Route path="playlists/:id/edit" element={<PlaylistEditorPage />} />
                         <Route path="playlists/new" element={<PlaylistEditorPage />} />

@@ -57,8 +57,6 @@ import {
 
 const menuItems = [
 { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
-{ title: "Grupos", url: "/admin/device-groups", icon: Layers },
-{ title: "Canais", url: "/admin/channels", icon: Tv },
 { title: "Playlists", url: "/admin/playlists", icon: ListVideo },
 { title: "Galeria", url: "/admin/media", icon: Image },
 { title: "Creator Img", url: "/admin/graphic-editor", icon: Palette },
