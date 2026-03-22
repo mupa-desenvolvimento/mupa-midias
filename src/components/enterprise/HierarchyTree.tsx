@@ -142,7 +142,7 @@ export const HierarchyTree = ({ onSelect }: HierarchyTreeProps) => {
         });
 
         // Group stores by city > state
-        const storesByCityId: Record<string, any[]> = {};
+        const storesByCityId = new globalThis.Map() as Map<string, any[]>;
         for (const store of companyStores) {
           if (!store.city_id) continue;
           if (!storesByCityId.has(store.city_id)) storesByCityId.set(store.city_id, []);
