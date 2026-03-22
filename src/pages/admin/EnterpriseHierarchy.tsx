@@ -1,11 +1,14 @@
 import { HierarchyExplorer } from "@/components/enterprise/HierarchyExplorer";
-import { PageShell } from "@/components/layout/PageShell";
 
 const EnterpriseHierarchy = () => {
   return (
-    <PageShell title="Hierarquia Enterprise" subtitle="Navegação em árvore: Empresa > Estado > Cidade > Loja > Setor > Zona > Dispositivo">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Hierarquia Enterprise</h1>
+        <p className="text-sm text-muted-foreground">Navegação em árvore: Empresa > Estado > Cidade > Loja > Setor > Zona > Dispositivo</p>
+      </div>
       <HierarchyExplorer />
-    </PageShell>
+    </div>
   );
 };
 

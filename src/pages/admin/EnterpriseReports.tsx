@@ -136,7 +136,11 @@ const EnterpriseReports = () => {
   });
 
   return (
-    <PageShell title="Relatórios Enterprise" subtitle="Impressões, campanhas e performance por anunciante">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Relatórios Enterprise</h1>
+        <p className="text-sm text-muted-foreground">Impressões, campanhas e performance por anunciante</p>
+      </div>
       {/* Filters */}
       <div className="flex gap-4 items-end mb-6">
         <div>

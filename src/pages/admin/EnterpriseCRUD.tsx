@@ -588,7 +588,7 @@ const EnterpriseCRUD = () => {
         <TabsContent value="tags"><TagsSection /></TabsContent>
         <TabsContent value="sectors"><SectorsSection /></TabsContent>
       </Tabs>
-    </PageShell>
+    </div>
   );
 };
 
