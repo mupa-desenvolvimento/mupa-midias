@@ -60,6 +60,9 @@ import InstagramCallback from "./pages/admin/InstagramCallback";
 import QRCodeCampaigns from "./pages/admin/QRCodeCampaigns";
 import PlatformLogs from "./pages/admin/PlatformLogs";
 import MotivationalTV from "./pages/MotivationalTV";
+import EnterpriseCRUD from "./pages/admin/EnterpriseCRUD";
+import EnterpriseHierarchy from "./pages/admin/EnterpriseHierarchy";
+import EnterpriseReports from "./pages/admin/EnterpriseReports";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
 import AssaiPresentation from "./pages/AssaiPresentation";
@@ -220,6 +223,9 @@ function AppContent() {
                         <Route path="list-example" element={<ExampleListPage />} />
                         <Route path="qrcode-campaigns" element={<QRCodeCampaigns />} />
                         <Route path="logs" element={<PlatformLogs />} />
+                        <Route path="enterprise" element={<EnterpriseCRUD />} />
+                        <Route path="enterprise/hierarchy" element={<EnterpriseHierarchy />} />
+                        <Route path="enterprise/reports" element={<EnterpriseReports />} />
                       </Routes>
                     </AppLayout>
                   </div>
