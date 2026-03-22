@@ -22,7 +22,8 @@ import {
   Link,
   ChevronDown,
   Crown,
-  AlertTriangle } from
+  AlertTriangle,
+  Network } from
 "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
