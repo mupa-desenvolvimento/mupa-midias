@@ -86,6 +86,9 @@ const autoContentItems = [
 const superAdminItems = [
 { title: "Clientes", url: "/admin/tenants", icon: Building2 },
 { title: "Empresas", url: "/admin/companies", icon: Plug2 },
+{ title: "Enterprise", url: "/admin/enterprise", icon: Layers },
+{ title: "Hierarquia", url: "/admin/enterprise/hierarchy", icon: MapPin },
+{ title: "Relatórios", url: "/admin/enterprise/reports", icon: BarChart3 },
 { title: "Integrações", url: "/admin/integrations", icon: Link },
 { title: "Price API Integrations", url: "/admin/api-integrations", icon: Link },
 { title: "Logs", url: "/admin/logs", icon: Eye }];

@@ -223,6 +223,9 @@ function AppContent() {
                         <Route path="list-example" element={<ExampleListPage />} />
                         <Route path="qrcode-campaigns" element={<QRCodeCampaigns />} />
                         <Route path="logs" element={<PlatformLogs />} />
+                        <Route path="enterprise" element={<EnterpriseCRUD />} />
+                        <Route path="enterprise/hierarchy" element={<EnterpriseHierarchy />} />
+                        <Route path="enterprise/reports" element={<EnterpriseReports />} />
                       </Routes>
                     </AppLayout>
                   </div>
