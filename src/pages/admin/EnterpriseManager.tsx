@@ -571,7 +571,7 @@ export default function EnterpriseManager() {
               <Button size="sm" className="gap-1 h-8"><Plus className="w-3.5 h-3.5" />Novo</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {(Object.keys(entityLabels) as EntityType[]).map((type) => {
+              {(["state", "region", "store", "sector", "device"] as EntityType[]).map((type) => {
                 const Icon = entityIcons[type];
                 return (
                   <DropdownMenuItem key={type} onClick={() => setCreateType(type)}>
