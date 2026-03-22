@@ -31,7 +31,7 @@ import CanvaCallback from "./pages/admin/CanvaCallback";
 import Stores from "./pages/admin/Stores";
 import { NewsModule } from "./pages/admin/news/NewsModule";
 import StoresMap from "./pages/admin/StoresMap";
-import Regions from "./pages/admin/Regions";
+import EnterpriseManager from "./pages/admin/EnterpriseManager";
 import Channels from "./pages/admin/Channels";
 import RetailMedia from "./pages/RetailMedia";
 import Playlists from "./pages/admin/Playlists";
@@ -188,7 +188,7 @@ function AppContent() {
                         <Route path="devices" element={<Devices />} />
                         <Route path="device-groups" element={<DeviceGroups />} />
                         <Route path="stores" element={<Stores />} />
-                        <Route path="regions" element={<Regions />} />
+                        <Route path="regions" element={<EnterpriseManager />} />
                         <Route path="channels" element={<Channels />} />
                         <Route path="playlists" element={<Playlists />} />
                         <Route path="playlists/:id/edit" element={<PlaylistEditorPage />} />
