@@ -63,6 +63,7 @@ import EnterpriseHierarchy from "./pages/admin/EnterpriseHierarchy";
 import EnterpriseReports from "./pages/admin/EnterpriseReports";
 import TagsManager from "./pages/admin/TagsManager";
 import CampaignsManager from "./pages/admin/CampaignsManager";
+import ScheduleTimeline from "./pages/admin/ScheduleTimeline";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
 import AssaiPresentation from "./pages/AssaiPresentation";
