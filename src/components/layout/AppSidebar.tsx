@@ -57,7 +57,7 @@ import {
 const menuItems = [
 { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
 { title: "Lojas", url: "/admin/stores", icon: Store },
-{ title: "Regiões", url: "/admin/regions", icon: MapPin },
+{ title: "Enterprise", url: "/admin/regions", icon: Network },
 { title: "Dispositivos", url: "/admin/devices", icon: Monitor },
 { title: "Grupos", url: "/admin/device-groups", icon: Layers },
 { title: "Canais", url: "/admin/channels", icon: Tv },
