@@ -23,7 +23,8 @@ import {
   ChevronDown,
   Crown,
   AlertTriangle,
-  Network } from
+  Network,
+  Calendar } from
 "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,7 +58,7 @@ import {
 
 const menuItems = [
 { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
-{ title: "Playlists", url: "/admin/playlists", icon: ListVideo },
+{ title: "Programações", url: "/admin/playlists", icon: ListVideo },
 { title: "Galeria", url: "/admin/media", icon: Image },
 { title: "Creator Img", url: "/admin/graphic-editor", icon: Palette },
 { title: "Canva", url: "/admin/canva", icon: Brush },
@@ -73,6 +74,7 @@ const enterpriseItems = [
   { title: "Setor", url: "/admin/regions", icon: Network },
   { title: "Tags", url: "/admin/tags", icon: Layers },
   { title: "Campanhas", url: "/admin/campaigns", icon: Tv },
+  { title: "Programação", url: "/admin/schedule", icon: Calendar },
 ];
 
 

@@ -63,6 +63,7 @@ import EnterpriseHierarchy from "./pages/admin/EnterpriseHierarchy";
 import EnterpriseReports from "./pages/admin/EnterpriseReports";
 import TagsManager from "./pages/admin/TagsManager";
 import CampaignsManager from "./pages/admin/CampaignsManager";
+import ScheduleTimeline from "./pages/admin/ScheduleTimeline";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
 import AssaiPresentation from "./pages/AssaiPresentation";
@@ -226,6 +227,7 @@ function AppContent() {
                         <Route path="enterprise/reports" element={<EnterpriseReports />} />
                         <Route path="tags" element={<TagsManager />} />
                         <Route path="campaigns" element={<CampaignsManager />} />
+                        <Route path="schedule" element={<ScheduleTimeline />} />
                       </Routes>
                     </AppLayout>
                   </div>

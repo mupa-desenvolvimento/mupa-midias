@@ -82,7 +82,37 @@ export const useDevicePlayerData = (deviceCode: string | undefined) => {
         }
       }
 
-      // If no playlist assigned, return empty
+      // Try campaign engine first for dynamic playlist
+      try {
+        const { data: campaignData, error: campaignError } = await supabase.functions.invoke("campaign-engine", {
+          body: null,
+          method: "GET",
+        });
+        // The edge function expects GET with query param, use fetch directly
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const campaignRes = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/campaign-engine/playlist?device_code=${device.device_code}`,
+          { headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+        );
+        if (campaignRes.ok) {
+          const campaignPlaylist = await campaignRes.json();
+          if (campaignPlaylist.items && campaignPlaylist.items.length > 0) {
+            const campaignMedia: MediaItem[] = campaignPlaylist.items.map((item: any) => ({
+              id: item.media.id,
+              name: item.media.name,
+              type: item.media.type,
+              file_url: item.media.file_url,
+              duration: item.media.duration,
+              metadata: item.media.metadata,
+            }));
+            return { device, playlist: { id: "campaign-dynamic", name: "Campanha Dinâmica", has_channels: false, content_scale: null }, mediaItems: campaignMedia, overrideMedia };
+          }
+        }
+      } catch (e) {
+        console.log("[Player] Campaign engine unavailable, falling back to playlist", e);
+      }
+
+      // Fallback: If no playlist assigned, return empty
       if (!device.current_playlist_id) {
         return { device, playlist: null, mediaItems: [], overrideMedia };
       }
