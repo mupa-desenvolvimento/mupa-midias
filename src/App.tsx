@@ -31,7 +31,7 @@ import CanvaCallback from "./pages/admin/CanvaCallback";
 import Stores from "./pages/admin/Stores";
 import { NewsModule } from "./pages/admin/news/NewsModule";
 import StoresMap from "./pages/admin/StoresMap";
-import Regions from "./pages/admin/Regions";
+import EnterpriseManager from "./pages/admin/EnterpriseManager";
 import Channels from "./pages/admin/Channels";
 import RetailMedia from "./pages/RetailMedia";
 import Playlists from "./pages/admin/Playlists";
