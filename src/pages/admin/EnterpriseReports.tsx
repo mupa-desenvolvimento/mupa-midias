@@ -280,7 +280,7 @@ const EnterpriseReports = () => {
           </Table>
         </CardContent>
       </Card>
-    </PageShell>
+    </div>
   );
 };
 
