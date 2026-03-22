@@ -224,6 +224,8 @@ function AppContent() {
                         <Route path="enterprise" element={<EnterpriseCRUD />} />
                         <Route path="enterprise/hierarchy" element={<EnterpriseHierarchy />} />
                         <Route path="enterprise/reports" element={<EnterpriseReports />} />
+                        <Route path="tags" element={<TagsManager />} />
+                        <Route path="campaigns" element={<CampaignsManager />} />
                       </Routes>
                     </AppLayout>
                   </div>
