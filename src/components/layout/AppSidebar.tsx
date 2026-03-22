@@ -57,9 +57,6 @@ import {
 
 const menuItems = [
 { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
-{ title: "Lojas", url: "/admin/stores", icon: Store },
-{ title: "Enterprise", url: "/admin/regions", icon: Network },
-{ title: "Dispositivos", url: "/admin/devices", icon: Monitor },
 { title: "Grupos", url: "/admin/device-groups", icon: Layers },
 { title: "Canais", url: "/admin/channels", icon: Tv },
 { title: "Playlists", url: "/admin/playlists", icon: ListVideo },
@@ -71,6 +68,12 @@ const menuItems = [
 { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
 { title: "Inky Intelligence", url: "/admin/inky", icon: Brain },
 { title: "Configurações", url: "/admin/settings", icon: Settings }];
+
+const enterpriseItems = [
+{ title: "Lojas", url: "/admin/stores", icon: Store },
+{ title: "Dispositivos", url: "/admin/devices", icon: Monitor },
+{ title: "Setor", url: "/admin/regions", icon: Network },
+];
 
 
 const autoContentItems = [
@@ -175,6 +178,7 @@ const AppSidebar = () => {
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || "U";
 
   const isAutoContentActive = location.pathname.startsWith("/admin/auto-content");
+  const isEnterpriseActive = enterpriseItems.some((i) => location.pathname === i.url);
   const isSuperAdminActive = superAdminItems.some((i) => location.pathname.startsWith(i.url));
 
   const filteredMenuItems = menuItems.filter((item) => isMenuItemAllowed(item.url));
@@ -243,7 +247,32 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Auto Content — collapsible */}
+        {/* Enterprise section */}
+        {!isLite && (
+        <SidebarGroup>
+          <Collapsible defaultOpen={isEnterpriseActive}>
+            <CollapsibleTrigger className="w-full">
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/40 px-3 mb-1 flex items-center justify-between cursor-pointer hover:text-sidebar-foreground/60 transition-colors">
+                Enterprise
+                {!collapsed && <ChevronDown className="w-3 h-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-0.5">
+                  {enterpriseItems.map((item) =>
+                  <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="p-0">
+                        <SidebarNavItem item={item} />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+        )}
         {isSectionAllowed('auto_content') &&
         <SidebarGroup>
           <Collapsible defaultOpen={isAutoContentActive}>
