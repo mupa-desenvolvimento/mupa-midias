@@ -149,11 +149,13 @@ const CreateEntityDialog = ({ open, onOpenChange, entityType, tenantId, onCreate
         }
         case "store": {
           if (!form.city_id) { toast.error("Selecione uma cidade"); setSaving(false); return; }
+          const metadata: Record<string, any> = {};
+          if (form.latitude) metadata.latitude = parseFloat(form.latitude);
+          if (form.longitude) metadata.longitude = parseFloat(form.longitude);
           const { error: e } = await supabase.from("stores").insert({
             name: form.name, code: form.code || form.name.substring(0, 6).toUpperCase(),
             city_id: form.city_id, tenant_id: tenantId,
-            latitude: form.latitude ? parseFloat(form.latitude) : null,
-            longitude: form.longitude ? parseFloat(form.longitude) : null,
+            metadata: Object.keys(metadata).length > 0 ? metadata : null,
           });
           error = e; break;
         }
