@@ -3351,7 +3351,11 @@ export type Database = {
           code: string | null
           country_id: string
           created_at: string
+          description: string
           id: string
+          is_active: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
           tenant_id: string | null
           updated_at: string
@@ -3360,7 +3364,11 @@ export type Database = {
           code?: string | null
           country_id: string
           created_at?: string
+          description?: string
           id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
           tenant_id?: string | null
           updated_at?: string
@@ -3369,7 +3377,11 @@ export type Database = {
           code?: string | null
           country_id?: string
           created_at?: string
+          description?: string
           id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           tenant_id?: string | null
           updated_at?: string
@@ -3487,6 +3499,52 @@ export type Database = {
           },
         ]
       }
+      store_regions: {
+        Row: {
+          created_at: string
+          id: string
+          region_id: string
+          store_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          region_id: string
+          store_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          region_id?: string
+          store_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_regions_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_regions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_regions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_tags: {
         Row: {
           created_at: string | null
@@ -3532,10 +3590,12 @@ export type Database = {
           cnpj: string | null
           code: string
           created_at: string
+          email: string | null
           id: string
           is_active: boolean
           metadata: Json | null
           name: string
+          phone: string | null
           regional_responsavel: string | null
           tenant_id: string | null
           updated_at: string
@@ -3548,10 +3608,12 @@ export type Database = {
           cnpj?: string | null
           code: string
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           metadata?: Json | null
           name: string
+          phone?: string | null
           regional_responsavel?: string | null
           tenant_id?: string | null
           updated_at?: string
@@ -3564,10 +3626,12 @@ export type Database = {
           cnpj?: string | null
           code?: string
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           metadata?: Json | null
           name?: string
+          phone?: string | null
           regional_responsavel?: string | null
           tenant_id?: string | null
           updated_at?: string
@@ -3674,6 +3738,44 @@ export type Database = {
           },
         ]
       }
+      tenant_data_resets: {
+        Row: {
+          actor_email: string | null
+          actor_id: string | null
+          created_at: string
+          deleted_counts: Json
+          id: string
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          deleted_counts?: Json
+          id?: string
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          deleted_counts?: Json
+          id?: string
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_data_resets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_licenses: {
         Row: {
           allow_video_upload: boolean
@@ -3737,6 +3839,69 @@ export type Database = {
             foreignKeyName: "tenant_licenses_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_onboarding_progress: {
+        Row: {
+          created_at: string
+          current_step: number
+          id: string
+          language: string
+          region_payload: Json | null
+          report: Json | null
+          reset_id: string
+          sector_names: string[] | null
+          status: string
+          store_payload: Json | null
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_step?: number
+          id?: string
+          language?: string
+          region_payload?: Json | null
+          report?: Json | null
+          reset_id: string
+          sector_names?: string[] | null
+          status: string
+          store_payload?: Json | null
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_step?: number
+          id?: string
+          language?: string
+          region_payload?: Json | null
+          report?: Json | null
+          reset_id?: string
+          sector_names?: string[] | null
+          status?: string
+          store_payload?: Json | null
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_onboarding_progress_reset_id_fkey"
+            columns: ["reset_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_data_resets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_onboarding_progress_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -4057,6 +4222,25 @@ export type Database = {
         }
         Returns: boolean
       }
+      complete_tenant_onboarding_create_store: {
+        Args: {
+          p_language: string
+          p_region_description?: string
+          p_region_latitude?: number
+          p_region_longitude?: number
+          p_region_name: string
+          p_reset_id: string
+          p_sector_names?: string[]
+          p_store_address: string
+          p_store_bairro: string
+          p_store_cep: string
+          p_store_cnpj: string
+          p_store_email: string
+          p_store_name: string
+          p_store_phone: string
+        }
+        Returns: Json
+      }
       create_tenant_schema: {
         Args: { p_schema_name: string; p_tenant_id: string }
         Returns: undefined
@@ -4102,6 +4286,7 @@ export type Database = {
         Returns: Json
       }
       get_tenant_license: { Args: { p_tenant_id: string }; Returns: Json }
+      get_tenant_onboarding_status: { Args: never; Returns: Json }
       get_user_tenant_id: { Args: { check_user_id?: string }; Returns: string }
       get_user_tenant_id_strict: {
         Args: { check_user_id?: string }
@@ -4159,8 +4344,29 @@ export type Database = {
         Args: { p_device_token: string; p_logs: Json }
         Returns: Json
       }
+      seed_default_sectors_for_store: {
+        Args: { p_store_id: string; p_tenant_id: string }
+        Returns: undefined
+      }
       seed_tenant_defaults: {
         Args: { p_company_id: string; p_tenant_id: string }
+        Returns: undefined
+      }
+      tenant_reset_stores_and_regions: {
+        Args: { p_confirm: string; p_reason?: string }
+        Returns: Json
+      }
+      upsert_tenant_onboarding_progress: {
+        Args: {
+          p_current_step?: number
+          p_language?: string
+          p_region_payload?: Json
+          p_report?: Json
+          p_reset_id: string
+          p_sector_names?: string[]
+          p_status: string
+          p_store_payload?: Json
+        }
         Returns: undefined
       }
     }
