@@ -82,7 +82,7 @@ const ScheduleTimeline = () => {
   // Campaign detail dialog (contents, target, preview)
   const [detailCampaignId, setDetailCampaignId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState("contents");
-  const [targetForm, setTargetForm] = useState({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "" });
+  const [targetForm, setTargetForm] = useState({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" });
   const [addMediaId, setAddMediaId] = useState("");
 
   // ── Data queries ──
