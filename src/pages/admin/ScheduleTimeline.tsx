@@ -128,9 +128,9 @@ const ScheduleTimeline = () => {
     queryKey: ["tags-schedule"],
     queryFn: async () => { const { data } = await supabase.from("tags").select("id, name, slug, color").order("name"); return data || []; },
   });
-  const { data: states = [] } = useQuery({
+  const { data: statesData = [] } = useQuery({
     queryKey: ["states-schedule"],
-    queryFn: async () => { const { data } = await supabase.from("states").select("id, name, code").order("name"); return data || []; },
+    queryFn: async () => { const { data } = await supabase.from("states").select("id, name, code, region_id").order("name"); return data || []; },
   });
   const { data: sectors = [] } = useQuery({
     queryKey: ["sectors-schedule"],
