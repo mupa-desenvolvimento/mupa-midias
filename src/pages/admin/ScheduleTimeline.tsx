@@ -295,7 +295,15 @@ const ScheduleTimeline = () => {
     return t.target_type;
   };
 
-  // Filter campaigns
+  // Build hierarchy lookup for filtering
+  const storeHierarchy = useMemo(() => {
+    // For each store, find its city, state, region
+    const map: Record<string, { city_id?: string; state_id?: string; region_id?: string }> = {};
+    // We need to fetch this from the stores data with joins - for now build from available data
+    return map;
+  }, []);
+
+  // Filter campaigns using hierarchy rules
   const filteredCampaigns = useMemo(() => {
     let result = campaigns;
     if (search) {
@@ -305,18 +313,57 @@ const ScheduleTimeline = () => {
     if (targetType !== "all" && targetValue) {
       result = result.filter((c: any) => {
         const targets = c.campaign_targets || [];
+        // Campaigns with no targets = global = always match
         if (targets.length === 0) return true;
+
         return targets.some((t: any) => {
-          if (targetType === "device" && t.target_type === "device" && t.device_id === targetValue) return true;
-          if (targetType === "store" && t.target_type === "store" && t.store_id === targetValue) return true;
-          if (targetType === "region" && t.target_type === "region" && t.region_id === targetValue) return true;
-          if (targetType === "tag" && t.target_type === "tag" && t.tag_id === targetValue) return true;
+          // Direct match by target type
+          if (targetType === "device") {
+            if (t.target_type === "device" && t.device_id === targetValue) return true;
+            // Check if device belongs to a store that matches
+            const dev = devices.find((d: any) => d.id === targetValue);
+            if (dev?.store_id) {
+              if (t.target_type === "store" && t.store_id === dev.store_id) return true;
+              // Check hierarchy: store → city → state → region
+              const store = storesWithHierarchy.find((s: any) => s.id === dev.store_id);
+              if (store) {
+                if (t.target_type === "city" && t.city_id === store.city_id) return true;
+                if (t.target_type === "state" && t.state_id === store.state_id) return true;
+                if (t.target_type === "region" && t.region_id === store.region_id) return true;
+              }
+            }
+            if (dev?.sector_id && t.target_type === "sector" && t.sector_id === dev.sector_id) return true;
+          }
+          if (targetType === "store") {
+            if (t.target_type === "store" && t.store_id === targetValue) return true;
+            // Check parent hierarchy: store belongs to city → state → region
+            const store = storesWithHierarchy.find((s: any) => s.id === targetValue);
+            if (store) {
+              if (t.target_type === "city" && t.city_id === store.city_id) return true;
+              if (t.target_type === "state" && t.state_id === store.state_id) return true;
+              if (t.target_type === "region" && t.region_id === store.region_id) return true;
+            }
+          }
+          if (targetType === "region") {
+            if (t.target_type === "region" && t.region_id === targetValue) return true;
+            // Also match states within this region
+            const regionStates = statesData.filter((s: any) => s.region_id === targetValue);
+            if (t.target_type === "state" && regionStates.some((s: any) => s.id === t.state_id)) return true;
+          }
+          if (targetType === "group") {
+            if (t.target_type === "group" && t.device_id === targetValue) return true;
+            // Groups contain devices → check if any device in group matches store targets
+            // For simplicity, show all campaigns when filtering by group for now
+          }
+          if (targetType === "tag") {
+            if (t.target_type === "tag" && t.tag_id === targetValue) return true;
+          }
           return false;
         });
       });
     }
     return result;
-  }, [campaigns, search, targetType, targetValue]);
+  }, [campaigns, search, targetType, targetValue, devices, storesWithHierarchy, statesData]);
 
   const colorMap = useMemo(() => {
     const map: Record<string, string> = {};
