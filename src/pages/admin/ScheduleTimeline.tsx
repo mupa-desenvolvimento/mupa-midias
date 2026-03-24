@@ -725,7 +725,7 @@ const ScheduleTimeline = () => {
                 {targetForm.target_type === "state" && (
                   <Select value={targetForm.state_id} onValueChange={v => setTargetForm({ ...targetForm, state_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
-                    <SelectContent>{states.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{statesData.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
                 {targetForm.target_type === "tag" && (
