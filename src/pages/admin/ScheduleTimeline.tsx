@@ -15,10 +15,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, Search, Pencil, Trash2, CheckCircle2, Monitor, Store, MapPin, Tag, Users, Info, ChevronDown, Image, Target, Eye, Layers, Calendar
+  Plus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, ChevronDown, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus
 } from "lucide-react";
 
+/* ── constants ── */
 const CAMPAIGN_COLORS = [
   "#22c55e", "#ef4444", "#3b82f6", "#f59e0b", "#8b5cf6",
   "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
@@ -26,18 +28,11 @@ const CAMPAIGN_COLORS = [
 ];
 
 const STATUS_DOT: Record<string, string> = {
-  active: "bg-green-500",
-  draft: "bg-gray-400",
-  paused: "bg-yellow-500",
-  expired: "bg-red-500",
+  active: "bg-green-500", draft: "bg-gray-400", paused: "bg-yellow-500", expired: "bg-red-500",
 };
 
-const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: "Máxima", color: "bg-red-500" },
-  2: { label: "Alta", color: "bg-orange-500" },
-  3: { label: "Média", color: "bg-yellow-500" },
-  5: { label: "Normal", color: "bg-blue-500" },
-  8: { label: "Baixa", color: "bg-muted" },
+const PRIORITY_LABELS: Record<number, { label: string }> = {
+  1: { label: "Máxima" }, 2: { label: "Alta" }, 3: { label: "Média" }, 5: { label: "Normal" }, 8: { label: "Baixa" },
 };
 
 const CAMPAIGN_TYPES = [
@@ -50,13 +45,8 @@ const CAMPAIGN_TYPES = [
 ];
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Dom" },
-  { value: 1, label: "Seg" },
-  { value: 2, label: "Ter" },
-  { value: 3, label: "Qua" },
-  { value: 4, label: "Qui" },
-  { value: 5, label: "Sex" },
-  { value: 6, label: "Sáb" },
+  { value: 0, label: "Dom" }, { value: 1, label: "Seg" }, { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" }, { value: 4, label: "Qui" }, { value: 5, label: "Sex" }, { value: 6, label: "Sáb" },
 ];
 
 const DEFAULT_FORM = {
@@ -67,25 +57,36 @@ const DEFAULT_FORM = {
 
 const ScheduleTimeline = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [targetType, setTargetType] = useState("all");
-  const [targetValue, setTargetValue] = useState("");
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [groupLabel, setGroupLabel] = useState("TODAS AS CAMPANHAS");
 
-  // Campaign create/edit dialog
+  // Group selector
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+
+  // Campaign selection for bottom preview
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+
+  // Campaign CRUD dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<any>(null);
   const [form, setForm] = useState({ ...DEFAULT_FORM });
 
-  // Campaign detail dialog (contents, target, preview)
+  // Detail dialog (contents, target, preview)
   const [detailCampaignId, setDetailCampaignId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState("contents");
   const [targetForm, setTargetForm] = useState({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" });
   const [addMediaId, setAddMediaId] = useState("");
 
-  // ── Data queries ──
+  // Group CRUD dialog
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [groupForm, setGroupForm] = useState({ name: "", description: "" });
+  const [editingGroup, setEditingGroup] = useState<any>(null);
+
+  // Add devices to group dialog
+  const [addDeviceGroupId, setAddDeviceGroupId] = useState<string | null>(null);
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
+
+  /* ── Queries ── */
   const { data: campaigns = [] } = useQuery({
     queryKey: ["schedule-campaigns"],
     queryFn: async () => {
@@ -97,10 +98,27 @@ const ScheduleTimeline = () => {
     },
   });
 
+  const { data: deviceGroups = [] } = useQuery({
+    queryKey: ["device-groups-schedule"],
+    queryFn: async () => {
+      const { data } = await supabase.from("device_groups").select("id, name, description, store_id, tenant_id").order("name");
+      return data || [];
+    },
+  });
+
+  const { data: groupMembers = [] } = useQuery({
+    queryKey: ["group-members-schedule"],
+    queryFn: async () => {
+      const { data } = await supabase.from("device_group_members").select("id, group_id, device_id");
+      return data || [];
+    },
+  });
+
   const { data: stores = [] } = useQuery({
     queryKey: ["stores-schedule"],
     queryFn: async () => { const { data } = await supabase.from("stores").select("id, name").order("name"); return data || []; },
   });
+
   const { data: storesWithHierarchy = [] } = useQuery({
     queryKey: ["stores-hierarchy-schedule"],
     queryFn: async () => {
@@ -112,34 +130,37 @@ const ScheduleTimeline = () => {
       }));
     },
   });
+
   const { data: devices = [] } = useQuery({
     queryKey: ["devices-schedule"],
-    queryFn: async () => { const { data } = await supabase.from("devices").select("id, name, device_code, store_id, sector_id").eq("is_active", true).order("name").limit(200); return data || []; },
+    queryFn: async () => { const { data } = await supabase.from("devices").select("id, name, device_code, store_id, sector_id, group_id").eq("is_active", true).order("name").limit(500); return data || []; },
   });
-  const { data: deviceGroups = [] } = useQuery({
-    queryKey: ["device-groups-schedule"],
-    queryFn: async () => { const { data } = await supabase.from("device_groups").select("id, name").order("name"); return data || []; },
-  });
+
   const { data: regions = [] } = useQuery({
     queryKey: ["regions-schedule"],
     queryFn: async () => { const { data } = await supabase.from("regions").select("id, name").order("name"); return data || []; },
   });
+
   const { data: tags = [] } = useQuery({
     queryKey: ["tags-schedule"],
     queryFn: async () => { const { data } = await supabase.from("tags").select("id, name, slug, color").order("name"); return data || []; },
   });
+
   const { data: statesData = [] } = useQuery({
     queryKey: ["states-schedule"],
     queryFn: async () => { const { data } = await supabase.from("states").select("id, name, code, region_id").order("name"); return data || []; },
   });
+
   const { data: sectors = [] } = useQuery({
     queryKey: ["sectors-schedule"],
     queryFn: async () => { const { data } = await supabase.from("sectors").select("id, name").order("name"); return data || []; },
   });
+
   const { data: cities = [] } = useQuery({
     queryKey: ["cities-schedule"],
     queryFn: async () => { const { data } = await supabase.from("cities").select("id, name, state_id").order("name"); return data || []; },
   });
+
   const { data: mediaList = [] } = useQuery({
     queryKey: ["media-list-schedule"],
     queryFn: async () => {
@@ -158,6 +179,7 @@ const ScheduleTimeline = () => {
     },
     enabled: !!detailCampaignId,
   });
+
   const { data: detailContents = [] } = useQuery({
     queryKey: ["detail-contents", detailCampaignId],
     queryFn: async () => {
@@ -167,6 +189,7 @@ const ScheduleTimeline = () => {
     },
     enabled: !!detailCampaignId,
   });
+
   const { data: previewData } = useQuery({
     queryKey: ["detail-preview", detailCampaignId, detailTargets],
     queryFn: async () => {
@@ -180,17 +203,16 @@ const ScheduleTimeline = () => {
       for (const t of detailTargets) {
         if (t.target_type === "store" && t.store_id) {
           const { count } = await supabase.from("devices").select("id", { count: "exact", head: true }).eq("store_id", t.store_id).eq("is_active", true);
-          deviceCount += count || 0;
-          storeCount += 1;
+          deviceCount += count || 0; storeCount += 1;
         } else if (t.target_type === "state" && t.state_id) {
-          const { data: cities } = await supabase.from("cities").select("id").eq("state_id", t.state_id);
-          const cityIds = (cities || []).map((c: any) => c.id);
-          if (cityIds.length > 0) {
-            const { data: storesData } = await supabase.from("stores").select("id").in("city_id", cityIds).eq("is_active", true);
-            const storeIds = (storesData || []).map((s: any) => s.id);
-            storeCount += storeIds.length;
-            if (storeIds.length > 0) {
-              const { count } = await supabase.from("devices").select("id", { count: "exact", head: true }).in("store_id", storeIds).eq("is_active", true);
+          const { data: ct } = await supabase.from("cities").select("id").eq("state_id", t.state_id);
+          const cIds = (ct || []).map((c: any) => c.id);
+          if (cIds.length > 0) {
+            const { data: st } = await supabase.from("stores").select("id").in("city_id", cIds).eq("is_active", true);
+            const sIds = (st || []).map((s: any) => s.id);
+            storeCount += sIds.length;
+            if (sIds.length > 0) {
+              const { count } = await supabase.from("devices").select("id", { count: "exact", head: true }).in("store_id", sIds).eq("is_active", true);
               deviceCount += count || 0;
             }
           }
@@ -204,8 +226,9 @@ const ScheduleTimeline = () => {
     enabled: !!detailCampaignId && detailTab === "preview",
   });
 
-  // ── Mutations ──
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["schedule-campaigns"] });
+  /* ── Mutations ── */
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["schedule-campaigns"] });
+  const invalidateGroups = () => { qc.invalidateQueries({ queryKey: ["device-groups-schedule"] }); qc.invalidateQueries({ queryKey: ["group-members-schedule"] }); };
 
   const createCampaign = useMutation({
     mutationFn: async (c: typeof form) => {
@@ -242,7 +265,7 @@ const ScheduleTimeline = () => {
       const { error } = await supabase.from("campaigns").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast({ title: "Campanha excluída" }); setDetailCampaignId(null); },
+    onSuccess: () => { invalidate(); toast({ title: "Campanha excluída" }); setDetailCampaignId(null); setSelectedCampaignId(null); },
   });
 
   const addTarget = useMutation({
@@ -259,12 +282,12 @@ const ScheduleTimeline = () => {
       }]);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }); toast({ title: "Segmentação adicionada" }); setTargetForm({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }); toast({ title: "Segmentação adicionada" }); setTargetForm({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" }); },
   });
 
   const removeTarget = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("campaign_targets").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }),
   });
 
   const addContent = useMutation({
@@ -273,15 +296,55 @@ const ScheduleTimeline = () => {
       const { error } = await supabase.from("campaign_contents").insert([{ campaign_id: campaignId, media_id: mediaId, position: maxPos, is_active: true, weight: 1 }]);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Conteúdo adicionado" }); setAddMediaId(""); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Conteúdo adicionado" }); setAddMediaId(""); },
   });
 
   const removeContent = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("campaign_contents").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Conteúdo removido" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Conteúdo removido" }); },
   });
 
-  // ── Helpers ──
+  // Group mutations
+  const createGroup = useMutation({
+    mutationFn: async (g: { name: string; description: string }) => {
+      const { error } = await supabase.from("device_groups").insert([{ name: g.name, description: g.description || null }]);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateGroups(); toast({ title: "Grupo criado" }); setGroupDialogOpen(false); setGroupForm({ name: "", description: "" }); },
+    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const updateGroup = useMutation({
+    mutationFn: async ({ id, ...g }: { id: string; name: string; description: string }) => {
+      const { error } = await supabase.from("device_groups").update({ name: g.name, description: g.description || null }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateGroups(); toast({ title: "Grupo atualizado" }); setGroupDialogOpen(false); setEditingGroup(null); },
+    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const addDevicesToGroup = useMutation({
+    mutationFn: async ({ groupId, deviceIds }: { groupId: string; deviceIds: string[] }) => {
+      const existing = groupMembers.filter(m => m.group_id === groupId).map(m => m.device_id);
+      const newIds = deviceIds.filter(id => !existing.includes(id));
+      if (newIds.length === 0) return;
+      const rows = newIds.map(id => ({ group_id: groupId, device_id: id }));
+      const { error } = await supabase.from("device_group_members").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateGroups(); toast({ title: "Dispositivos adicionados ao grupo" }); setAddDeviceGroupId(null); setSelectedDeviceIds([]); },
+    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const removeDeviceFromGroup = useMutation({
+    mutationFn: async ({ groupId, deviceId }: { groupId: string; deviceId: string }) => {
+      const { error } = await supabase.from("device_group_members").delete().eq("group_id", groupId).eq("device_id", deviceId);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateGroups(); toast({ title: "Dispositivo removido do grupo" }); },
+  });
+
+  /* ── Helpers ── */
   const closeDialog = () => { setDialogOpen(false); setEditingCampaign(null); setForm({ ...DEFAULT_FORM }); };
   const openCreate = () => { setEditingCampaign(null); setForm({ ...DEFAULT_FORM }); setDialogOpen(true); };
   const openEdit = (c: any) => {
@@ -316,69 +379,49 @@ const ScheduleTimeline = () => {
     return t.target_type;
   };
 
-  // Remove unused storeHierarchy memo - we use storesWithHierarchy query directly
-
-  // Filter campaigns using hierarchy rules
+  // Filter campaigns
   const filteredCampaigns = useMemo(() => {
     let result = campaigns;
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((c: any) => c.name?.toLowerCase().includes(q));
     }
-    if (targetType !== "all" && targetValue) {
+    // If a group is selected, filter by devices in group → stores → hierarchy
+    if (selectedGroupId !== "all") {
+      const devicesInGroup = groupMembers.filter(m => m.group_id === selectedGroupId).map(m => m.device_id);
+      const groupDevices = devices.filter(d => devicesInGroup.includes(d.id));
+      const groupStoreIds = [...new Set(groupDevices.map(d => d.store_id).filter(Boolean))] as string[];
+
       result = result.filter((c: any) => {
         const targets = c.campaign_targets || [];
-        // Campaigns with no targets = global = always match
-        if (targets.length === 0) return true;
-
+        if (targets.length === 0) return true; // global
         return targets.some((t: any) => {
-          // Direct match by target type
-          if (targetType === "device") {
-            if (t.target_type === "device" && t.device_id === targetValue) return true;
-            // Check if device belongs to a store that matches
-            const dev = devices.find((d: any) => d.id === targetValue);
-            if (dev?.store_id) {
-              if (t.target_type === "store" && t.store_id === dev.store_id) return true;
-              // Check hierarchy: store → city → state → region
-              const store = storesWithHierarchy.find((s: any) => s.id === dev.store_id);
-              if (store) {
-                if (t.target_type === "city" && t.city_id === store.city_id) return true;
-                if (t.target_type === "state" && t.state_id === store.state_id) return true;
-                if (t.target_type === "region" && t.region_id === store.region_id) return true;
-              }
-            }
-            if (dev?.sector_id && t.target_type === "sector" && t.sector_id === dev.sector_id) return true;
+          if (t.target_type === "device" && devicesInGroup.includes(t.device_id)) return true;
+          if (t.target_type === "store" && groupStoreIds.includes(t.store_id)) return true;
+          if (t.target_type === "state") {
+            return groupStoreIds.some(sid => {
+              const store = storesWithHierarchy.find((s: any) => s.id === sid);
+              return store && store.state_id === t.state_id;
+            });
           }
-          if (targetType === "store") {
-            if (t.target_type === "store" && t.store_id === targetValue) return true;
-            // Check parent hierarchy: store belongs to city → state → region
-            const store = storesWithHierarchy.find((s: any) => s.id === targetValue);
-            if (store) {
-              if (t.target_type === "city" && t.city_id === store.city_id) return true;
-              if (t.target_type === "state" && t.state_id === store.state_id) return true;
-              if (t.target_type === "region" && t.region_id === store.region_id) return true;
-            }
+          if (t.target_type === "region") {
+            return groupStoreIds.some(sid => {
+              const store = storesWithHierarchy.find((s: any) => s.id === sid);
+              return store && store.region_id === t.region_id;
+            });
           }
-          if (targetType === "region") {
-            if (t.target_type === "region" && t.region_id === targetValue) return true;
-            // Also match states within this region
-            const regionStates = statesData.filter((s: any) => s.region_id === targetValue);
-            if (t.target_type === "state" && regionStates.some((s: any) => s.id === t.state_id)) return true;
-          }
-          if (targetType === "group") {
-            if (t.target_type === "group" && t.device_id === targetValue) return true;
-            // Groups contain devices → check if any device in group matches store targets
-            // For simplicity, show all campaigns when filtering by group for now
-          }
-          if (targetType === "tag") {
-            if (t.target_type === "tag" && t.tag_id === targetValue) return true;
+          if (t.target_type === "city") {
+            return groupStoreIds.some(sid => {
+              const store = storesWithHierarchy.find((s: any) => s.id === sid);
+              return store && store.city_id === t.city_id;
+            });
           }
           return false;
         });
       });
     }
     return result;
-  }, [campaigns, search, targetType, targetValue, devices, storesWithHierarchy, statesData]);
+  }, [campaigns, search, selectedGroupId, groupMembers, devices, storesWithHierarchy]);
 
   const colorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -390,59 +433,52 @@ const ScheduleTimeline = () => {
   const selectedContents = selectedCampaign?.campaign_contents || [];
   const detailCampaign = campaigns.find((c: any) => c.id === detailCampaignId);
 
-  const targetOptions = useMemo(() => {
-    switch (targetType) {
-      case "device": return devices.map((d: any) => ({ id: d.id, label: d.name }));
-      case "group": return deviceGroups.map((g: any) => ({ id: g.id, label: g.name }));
-      case "store": return stores.map((s: any) => ({ id: s.id, label: s.name }));
-      case "region": return regions.map((r: any) => ({ id: r.id, label: r.name }));
-      case "tag": return tags.map((t: any) => ({ id: t.id, label: t.name }));
-      default: return [];
-    }
-  }, [targetType, devices, deviceGroups, stores, regions, tags]);
-
-  const handleTargetTypeChange = (val: string) => {
-    setTargetType(val);
-    setTargetValue("");
-    const labels: Record<string, string> = { all: "TODAS AS CAMPANHAS", device: "DISPOSITIVO", group: "GRUPO", store: "LOJA", region: "REGIÃO", tag: "TAG" };
-    setGroupLabel(labels[val] || "TODAS");
-  };
+  const selectedGroupName = selectedGroupId === "all" ? "TODOS" : deviceGroups.find((g: any) => g.id === selectedGroupId)?.name || "GRUPO";
+  const devicesInSelectedGroup = selectedGroupId === "all" ? [] : groupMembers.filter(m => m.group_id === selectedGroupId).map(m => m.device_id);
 
   return (
     <PageShell header={
       <div className="flex items-center justify-between w-full">
         <div>
           <h1 className="text-2xl font-bold">Programações</h1>
-          <p className="text-sm text-muted-foreground">Gerencie campanhas e suas programações</p>
+          <p className="text-sm text-muted-foreground">Gerencie campanhas, grupos e segmentações</p>
         </div>
       </div>
     }>
-      {/* Top bar */}
+      {/* ═══ Top bar ═══ */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 border border-border rounded-md px-3 py-1.5 bg-card">
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{groupLabel}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        </div>
-
-        <Select value={targetType} onValueChange={handleTargetTypeChange}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Veicular em..." /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all"><span className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Todos</span></SelectItem>
-            <SelectItem value="device"><span className="flex items-center gap-2"><Monitor className="h-3.5 w-3.5" /> Dispositivo</span></SelectItem>
-            <SelectItem value="group"><span className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Grupo</span></SelectItem>
-            <SelectItem value="store"><span className="flex items-center gap-2"><Store className="h-3.5 w-3.5" /> Loja</span></SelectItem>
-            <SelectItem value="region"><span className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> Região</span></SelectItem>
-            <SelectItem value="tag"><span className="flex items-center gap-2"><Tag className="h-3.5 w-3.5" /> Tag</span></SelectItem>
-          </SelectContent>
-        </Select>
-
-        {targetType !== "all" && (
-          <Select value={targetValue} onValueChange={setTargetValue}>
-            <SelectTrigger className="w-52"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+        {/* Group selector */}
+        <div className="flex items-center gap-2">
+          <Settings2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">GRUPO</span>
+          <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+            <SelectTrigger className="w-52 font-semibold"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {targetOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
+              <SelectItem value="all">Todos os grupos</SelectItem>
+              {deviceGroups.map((g: any) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingGroup(null); setGroupForm({ name: "", description: "" }); setGroupDialogOpen(true); }}>
+          <FolderPlus className="h-4 w-4" /> Novo Grupo
+        </Button>
+
+        {selectedGroupId !== "all" && (
+          <>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+              const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
+              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
+            }}>
+              <Pencil className="h-3.5 w-3.5" /> Atualizar grupo
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setAddDeviceGroupId(selectedGroupId); setSelectedDeviceIds(devicesInSelectedGroup); }}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar dispositivos
+            </Button>
+            <Badge variant="secondary" className="text-xs">{devicesInSelectedGroup.length} dispositivo(s)</Badge>
+          </>
         )}
 
         <div className="ml-auto flex items-center gap-2">
@@ -451,14 +487,14 @@ const ScheduleTimeline = () => {
             <Input placeholder="Buscar uma campanha" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-64" />
           </div>
           <Button className="gap-1.5" size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4" />Nova campanha
+            <Plus className="h-4 w-4" /> Nova campanha
           </Button>
         </div>
       </div>
 
-      {/* Campaign list */}
+      {/* ═══ Campaign list ═══ */}
       <div className="border border-border rounded-lg bg-card overflow-hidden">
-        <ScrollArea className="max-h-[50vh]">
+        <ScrollArea className="max-h-[48vh]">
           {filteredCampaigns.length === 0 ? (
             <p className="text-center text-muted-foreground py-12">Nenhuma campanha encontrada</p>
           ) : (
@@ -468,19 +504,23 @@ const ScheduleTimeline = () => {
                 const color = colorMap[c.id] || "#888";
                 const isSelected = selectedCampaignId === c.id;
                 const contentsCount = (c.campaign_contents || []).length;
-                const pri = PRIORITY_LABELS[c.priority] || { label: `P${c.priority}`, color: "bg-muted" };
+                const targetsCount = (c.campaign_targets || []).length;
+                const pri = PRIORITY_LABELS[c.priority] || { label: `P${c.priority}` };
+                const typeLabel = CAMPAIGN_TYPES.find(t => t.value === c.campaign_type)?.label || c.campaign_type;
 
                 return (
                   <div
                     key={c.id}
-                    className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-accent/40 ${isSelected ? "bg-accent/60" : ""}`}
+                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-accent/40 ${isSelected ? "bg-primary/10" : ""}`}
+                    style={{ borderLeft: `4px solid ${color}` }}
                     onClick={() => setSelectedCampaignId(isSelected ? null : c.id)}
                   >
-                    <div className={`w-3 h-3 rounded-full shrink-0 ${STATUS_DOT[status] || "bg-gray-400"}`} />
-                    <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+                    <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="flex-1 text-sm font-medium truncate">{c.name}</span>
 
-                    <Badge variant="outline" className="text-[10px] hidden md:inline-flex">{pri.label}</Badge>
+                    <Badge variant="outline" className="text-[10px] hidden lg:inline-flex">{typeLabel}</Badge>
+                    <Badge variant="secondary" className="text-[10px] hidden md:inline-flex">{pri.label}</Badge>
 
                     {c.start_date && (
                       <span className="text-[10px] text-muted-foreground font-mono hidden md:inline">
@@ -489,22 +529,26 @@ const ScheduleTimeline = () => {
                       </span>
                     )}
 
+                    {targetsCount > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger><Target className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                        <TooltipContent>{targetsCount} segmentação(ões)</TooltipContent>
+                      </Tooltip>
+                    )}
+
                     {contentsCount > 0 && (
                       <Tooltip>
-                        <TooltipTrigger><Info className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                        <TooltipTrigger><Info className="h-3.5 w-3.5 text-blue-500" /></TooltipTrigger>
                         <TooltipContent>{contentsCount} mídia(s)</TooltipContent>
                       </Tooltip>
                     )}
 
                     <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                       <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => openEdit(c)}>
-                        <Pencil className="h-3 w-3" /> Editar
+                        Editar <Settings2 className="h-3 w-3" />
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => { setDetailCampaignId(c.id); setDetailTab("contents"); }}>
-                        <Layers className="h-3 w-3" /> Detalhes
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteCampaign.mutate(c.id)}>
-                        <Trash2 className="h-3 w-3" />
+                      <Button variant="outline" size="sm" className="gap-1 text-xs h-7 text-primary" onClick={() => { setDetailCampaignId(c.id); setDetailTab("contents"); }}>
+                        Adicionar <CheckCircle2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -515,13 +559,13 @@ const ScheduleTimeline = () => {
         </ScrollArea>
       </div>
 
-      {/* Selected campaign media preview */}
+      {/* ═══ Selected campaign content strip (bottom preview) ═══ */}
       {selectedCampaign && selectedContents.length > 0 && (
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-sm font-medium">{selectedCampaign.name} — Conteúdos</span>
-            <Button size="sm" className="gap-1.5 text-xs ml-auto" onClick={() => { setDetailCampaignId(selectedCampaign.id); setDetailTab("contents"); }}>
-              <Plus className="h-3.5 w-3.5" /> Gerenciar conteúdos
+            <span className="text-sm font-semibold">{selectedCampaign.name} — Conteúdos</span>
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs ml-auto" onClick={() => { setDetailCampaignId(selectedCampaign.id); setDetailTab("contents"); }}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar conteúdo
             </Button>
           </div>
           <ScrollArea className="w-full">
@@ -543,6 +587,9 @@ const ScheduleTimeline = () => {
                         )}
                       </div>
                       <p className="text-xs font-medium truncate mt-1.5">{media.name}</p>
+                      <div className="flex gap-1 mt-1 justify-center">
+                        <Tooltip><TooltipTrigger><Eye className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger><TooltipContent>Visualizar</TooltipContent></Tooltip>
+                      </div>
                       <div className="mt-1 rounded px-2 py-0.5 text-[10px] font-bold text-white truncate text-center" style={{ backgroundColor: color }}>
                         {selectedCampaign.name}
                       </div>
@@ -554,13 +601,13 @@ const ScheduleTimeline = () => {
         </div>
       )}
 
-      {/* Timeline */}
+      {/* ═══ Timeline ═══ */}
       {filteredCampaigns.length > 0 && (
         <div className="mt-6">
           <h3 className="text-sm font-semibold mb-3">Timeline de Programação</h3>
           <div className="border border-border rounded-lg bg-card p-4 overflow-x-auto">
             <div className="flex items-center gap-0 mb-2 min-w-[800px]">
-              <div className="w-36 shrink-0" />
+              <div className="w-40 shrink-0" />
               <div className="flex-1 flex">
                 {Array.from({ length: 18 }, (_, i) => i + 6).map(h => (
                   <div key={h} className="flex-1 text-center text-[10px] text-muted-foreground font-mono border-l border-border/40 first:border-l-0">
@@ -579,8 +626,8 @@ const ScheduleTimeline = () => {
                 const leftPct = ((s - 6) / 17) * 100;
                 const widthPct = ((e - s) / 17) * 100;
                 return (
-                  <div key={c.id} className="flex items-center gap-0">
-                    <div className="w-36 shrink-0 truncate text-xs font-medium pr-2 text-right">{c.name}</div>
+                  <div key={c.id} className="flex items-center gap-0 cursor-pointer" onClick={() => setSelectedCampaignId(c.id)}>
+                    <div className="w-40 shrink-0 truncate text-xs font-medium pr-2 text-right">{c.name}</div>
                     <div className="flex-1 h-7 bg-muted/20 rounded relative">
                       <div className="absolute top-0.5 bottom-0.5 rounded flex items-center px-2" style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 3)}%`, backgroundColor: color, opacity: 0.85 }}>
                         <span className="text-[9px] text-white font-semibold truncate">{(c.campaign_contents || []).length} itens</span>
@@ -594,7 +641,7 @@ const ScheduleTimeline = () => {
         </div>
       )}
 
-      {/* ── Create/Edit Campaign Dialog ── */}
+      {/* ═══ Create/Edit Campaign Dialog ═══ */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editingCampaign ? "Editar Campanha" : "Nova Campanha"}</DialogTitle></DialogHeader>
@@ -605,7 +652,7 @@ const ScheduleTimeline = () => {
               <TabsTrigger value="rules" className="flex-1">Regras</TabsTrigger>
             </TabsList>
             <TabsContent value="general" className="space-y-4 mt-4">
-              <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Coca verão" /></div>
+              <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Trade Páscoa 2025" /></div>
               <div><Label>Descrição</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} /></div>
               <div><Label>Tipo</Label>
                 <Select value={form.campaign_type} onValueChange={v => setForm({ ...form, campaign_type: v })}>
@@ -649,7 +696,7 @@ const ScheduleTimeline = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── Campaign Detail Dialog (Contents, Target, Preview) ── */}
+      {/* ═══ Campaign Detail Dialog (Contents, Target, Preview) ═══ */}
       <Dialog open={!!detailCampaignId} onOpenChange={v => { if (!v) setDetailCampaignId(null); }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -672,7 +719,7 @@ const ScheduleTimeline = () => {
                   {detailContents.map((c: any, idx: number) => (
                     <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                       <span className="text-xs text-muted-foreground w-6 text-center font-mono">{idx + 1}</span>
-                      {c.media?.file_url && c.media.type === "image" ? (
+                      {c.media?.file_url && (c.media.type === "image" || c.media.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
                         <img src={c.media.file_url} alt="" className="w-12 h-8 object-cover rounded" />
                       ) : (
                         <div className="w-12 h-8 bg-muted rounded flex items-center justify-center"><Image className="h-4 w-4 text-muted-foreground" /></div>
@@ -812,6 +859,57 @@ const ScheduleTimeline = () => {
               </div>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ Group Create/Edit Dialog ═══ */}
+      <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>{editingGroup ? "Editar Grupo" : "Novo Grupo"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Nome do grupo</Label><Input value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })} placeholder="Ex: Consulta Preço" /></div>
+            <div><Label>Descrição</Label><Textarea value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })} rows={2} placeholder="Descrição opcional" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGroupDialogOpen(false)}>Cancelar</Button>
+            <Button disabled={!groupForm.name} onClick={() => {
+              if (editingGroup) { updateGroup.mutate({ id: editingGroup.id, ...groupForm }); }
+              else { createGroup.mutate(groupForm); }
+            }}>{editingGroup ? "Salvar" : "Criar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ Add Devices to Group Dialog ═══ */}
+      <Dialog open={!!addDeviceGroupId} onOpenChange={v => { if (!v) { setAddDeviceGroupId(null); setSelectedDeviceIds([]); } }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Adicionar dispositivos ao grupo</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground mb-2">Selecione os dispositivos para incluir no grupo "{deviceGroups.find((g: any) => g.id === addDeviceGroupId)?.name}"</p>
+
+          <ScrollArea className="h-[40vh] border rounded-lg p-2">
+            {devices.map((d: any) => {
+              const checked = selectedDeviceIds.includes(d.id);
+              return (
+                <div key={d.id} className="flex items-center gap-3 py-2 px-2 hover:bg-accent/40 rounded">
+                  <Checkbox checked={checked} onCheckedChange={(v) => {
+                    setSelectedDeviceIds(prev => v ? [...prev, d.id] : prev.filter(id => id !== d.id));
+                  }} />
+                  <Monitor className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{d.name}</p>
+                    <p className="text-xs text-muted-foreground">{d.device_code}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAddDeviceGroupId(null); setSelectedDeviceIds([]); }}>Cancelar</Button>
+            <Button onClick={() => { if (addDeviceGroupId) addDevicesToGroup.mutate({ groupId: addDeviceGroupId, deviceIds: selectedDeviceIds }); }}>
+              Salvar ({selectedDeviceIds.length} selecionado{selectedDeviceIds.length !== 1 ? "s" : ""})
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageShell>
