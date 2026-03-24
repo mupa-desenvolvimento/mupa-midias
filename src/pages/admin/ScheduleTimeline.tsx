@@ -57,6 +57,7 @@ const DEFAULT_FORM = {
 
 /* ── View modes ── */
 type ViewMode = "campaigns" | "contents" | "timeline";
+type SortMode = "campaign" | "name" | "type" | "position";
 
 const ScheduleTimeline = () => {
   const { toast } = useToast();
