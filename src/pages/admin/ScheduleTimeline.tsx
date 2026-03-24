@@ -101,9 +101,20 @@ const ScheduleTimeline = () => {
     queryKey: ["stores-schedule"],
     queryFn: async () => { const { data } = await supabase.from("stores").select("id, name").order("name"); return data || []; },
   });
+  const { data: storesWithHierarchy = [] } = useQuery({
+    queryKey: ["stores-hierarchy-schedule"],
+    queryFn: async () => {
+      const { data } = await supabase.from("stores").select("id, name, city_id, cities(id, state_id, states(id, region_id))").order("name");
+      return (data || []).map((s: any) => ({
+        id: s.id, name: s.name, city_id: s.city_id,
+        state_id: s.cities?.state_id || null,
+        region_id: s.cities?.states?.region_id || null,
+      }));
+    },
+  });
   const { data: devices = [] } = useQuery({
     queryKey: ["devices-schedule"],
-    queryFn: async () => { const { data } = await supabase.from("devices").select("id, name, device_code, store_id").eq("is_active", true).order("name").limit(200); return data || []; },
+    queryFn: async () => { const { data } = await supabase.from("devices").select("id, name, device_code, store_id, sector_id").eq("is_active", true).order("name").limit(200); return data || []; },
   });
   const { data: deviceGroups = [] } = useQuery({
     queryKey: ["device-groups-schedule"],
