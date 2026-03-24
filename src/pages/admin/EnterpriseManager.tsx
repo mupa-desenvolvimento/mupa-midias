@@ -31,7 +31,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-type EntityType = "state" | "region" | "city" | "store" | "sector" | "zone" | "device_type" | "device";
+type EntityType = "state" | "region" | "city" | "store" | "sector" | "group" | "zone" | "device_type" | "device";
 
 const entityLabels: Record<EntityType, string> = {
   state: "Estado",
@@ -39,6 +39,7 @@ const entityLabels: Record<EntityType, string> = {
   city: "Cidade",
   store: "Loja",
   sector: "Setor",
+  group: "Grupo",
   zone: "Zona",
   device_type: "Tipo de Dispositivo",
   device: "Dispositivo",
@@ -50,6 +51,7 @@ const entityIcons: Record<EntityType, any> = {
   city: Building2,
   store: Store,
   sector: Layers,
+  group: Layers,
   zone: Box,
   device_type: Monitor,
   device: Monitor,
@@ -108,6 +110,7 @@ interface CreateDialogProps {
     cities: { id: string; name: string }[];
     stores: { id: string; name: string }[];
     sectors: { id: string; name: string }[];
+    groups?: { id: string; name: string }[];
     zones: { id: string; name: string }[];
     countries: { id: string; name: string }[];
   };
@@ -163,6 +166,17 @@ const CreateEntityDialog = ({ open, onOpenChange, entityType, tenantId, onCreate
           if (!form.store_id) { toast.error("Selecione uma loja"); setSaving(false); return; }
           const { error: e } = await supabase.from("sectors").insert({
             name: form.name, store_id: form.store_id, tenant_id: tenantId,
+          });
+          error = e; break;
+        }
+        case "group": {
+          if (!form.store_id) { toast.error("Selecione uma loja"); setSaving(false); return; }
+          const { error: e } = await supabase.from("device_groups").insert({
+            name: form.name,
+            description: form.description || null,
+            store_id: form.store_id,
+            tenant_id: tenantId,
+            screen_type: "tv",
           });
           error = e; break;
         }
@@ -267,6 +281,20 @@ const CreateEntityDialog = ({ open, onOpenChange, entityType, tenantId, onCreate
             </div>
           </>
         );
+      case "group":
+        return (
+          <>
+            <div><Label>Nome</Label><Input value={form.name || ""} onChange={(e) => set("name", e.target.value)} placeholder="Ex: TVs" /></div>
+            <div>
+              <Label>Loja</Label>
+              <Select value={form.store_id || ""} onValueChange={(v) => set("store_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>{parentData?.stores?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Descrição</Label><Input value={form.description || ""} onChange={(e) => set("description", e.target.value)} placeholder="Opcional" /></div>
+          </>
+        );
       case "zone":
         return (
           <>
@@ -355,13 +383,13 @@ const PropertiesPanel = ({ node, onRefresh }: { node: TreeNode | null; onRefresh
 
   const typeLabels: Record<string, string> = {
     company: "Empresa", state: "Estado", region: "Região", city: "Cidade",
-    store: "Loja", sector: "Setor", zone: "Zona", device: "Dispositivo",
+    store: "Loja", sector: "Setor", group: "Grupo", zone: "Zona", device: "Dispositivo",
   };
 
   const handleSave = async () => {
     const tableMap: Record<string, string> = {
       company: "companies", state: "states", region: "regions", city: "cities",
-      store: "stores", sector: "sectors", zone: "zones", device: "devices",
+      store: "stores", sector: "sectors", group: "device_groups", zone: "zones", device: "devices",
     };
     const table = tableMap[node.type];
     if (!table) return;
@@ -571,7 +599,7 @@ export default function EnterpriseManager() {
               <Button size="sm" className="gap-1 h-8"><Plus className="w-3.5 h-3.5" />Novo</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {(["state", "region", "store", "sector", "device"] as EntityType[]).map((type) => {
+              {(["state", "region", "city", "store", "sector", "group", "zone", "device_type", "device"] as EntityType[]).map((type) => {
                 const Icon = entityIcons[type];
                 return (
                   <DropdownMenuItem key={type} onClick={() => setCreateType(type)}>
@@ -597,7 +625,7 @@ export default function EnterpriseManager() {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
-            <HierarchyTree key={treeKey} onSelect={setSelectedNode} />
+            <HierarchyTree key={treeKey} onSelect={setSelectedNode} search={searchTerm} />
           </CardContent>
         </Card>
 

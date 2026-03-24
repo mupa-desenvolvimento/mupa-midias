@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -11,13 +11,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus, Download, Hand, Copy, Printer, RefreshCw, Play
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { HierarchyTree, type TreeNode } from "@/components/enterprise/HierarchyTree";
+import FabricHierarchy from "@/components/enterprise/FabricHierarchy";
+import { useUserTenant } from "@/hooks/useUserTenant";
+import {
+  Plus, Minus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus, Download, Hand, Copy, Printer, RefreshCw, Play, GripVertical
 } from "lucide-react";
 
 /* ── constants ── */
@@ -56,7 +78,7 @@ const DEFAULT_FORM = {
 };
 
 /* ── View modes ── */
-type ViewMode = "campaigns" | "contents" | "timeline";
+type ViewMode = "campaigns" | "contents" | "timeline" | "hierarchy" | "hierarchy-visual";
 type SortMode = "campaign" | "name" | "type" | "position";
 
 const ScheduleTimeline = () => {
@@ -100,6 +122,81 @@ const ScheduleTimeline = () => {
 
   // Preview lightbox
   const [previewMedia, setPreviewMedia] = useState<any>(null);
+  const [previewZoom, setPreviewZoom] = useState<number>(100);
+  const previewZoomMin = 50;
+  const previewZoomMax = 200;
+  const previewBaseWidth = 112;
+  const [orderedDetailIds, setOrderedDetailIds] = useState<string[]>([]);
+  const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
+  const [orderedPreviewIds, setOrderedPreviewIds] = useState<string[]>([]);
+  const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
+  const [hierarchySearch, setHierarchySearch] = useState("");
+  const [hierarchySelected, setHierarchySelected] = useState<TreeNode | null>(null);
+  const [createType, setCreateType] = useState<string>("city");
+  const [createName, setCreateName] = useState("");
+  const [createCode, setCreateCode] = useState("");
+  const [hierarchyRefreshKey, setHierarchyRefreshKey] = useState(0);
+  const { tenantId } = useUserTenant();
+  const [regionOptions, setRegionOptions] = useState<{ id: string; name: string }[]>([]);
+  const [parentRegionId, setParentRegionId] = useState<string | null>(null);
+  const [hierarchyMode, setHierarchyMode] = useState<"json" | "db">("json");
+  const [jsonImportOpen, setJsonImportOpen] = useState(false);
+  const [jsonImportText, setJsonImportText] = useState("");
+  type HLDevice = { id: string; name: string; device_code?: string };
+  type HLGroup = { id: string; name: string; devices: HLDevice[] };
+  type HLSector = { id: string; name: string; devices: HLDevice[] };
+  type HLStore = { id: string; name: string; code?: string; sectors: HLSector[]; groups: HLGroup[]; devices: HLDevice[] };
+  type HLCity = { id: string; name: string; stores: HLStore[] };
+  type HLRegion = { id: string; name: string; cities: HLCity[] };
+  type HLState = { id: string; name: string; code?: string; regions: HLRegion[] };
+  type HLModel = { states: HLState[] };
+  const [hlModel, setHlModel] = useState<HLModel>(() => {
+    try {
+      const raw = localStorage.getItem("hierarchy:model");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { states: [] };
+  });
+  const saveHlModel = (m: HLModel) => {
+    setHlModel(m);
+    try { localStorage.setItem("hierarchy:model", JSON.stringify(m)); } catch {}
+  };
+  const exportHlModel = () => {
+    const blob = new Blob([JSON.stringify(hlModel, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "hierarquia.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const canCreateHere = useMemo(() => {
+    if (!createName) return false;
+    const t = createType;
+    const selType = hierarchySelected?.type || null;
+    if (t === "region") return selType === "company" || selType === null;
+    if (t === "state") return Boolean(parentRegionId || (selType === "region"));
+    if (t === "city") return selType === "state";
+    if (t === "store") return selType === "city";
+    if (t === "sector") return selType === "store";
+    if (t === "group") return selType === "store";
+    if (t === "zone") return selType === "sector";
+    return false;
+  }, [createType, createName, hierarchySelected]);
+
+  useEffect(() => {
+    if (createType === "state" && hierarchySelected?.type === "region") {
+      setParentRegionId(hierarchySelected.id);
+    }
+  }, [createType, hierarchySelected]);
+
+  useEffect(() => {
+    if (viewMode !== "hierarchy" || !tenantId) return;
+    (async () => {
+      const { data, error } = await supabase.from("regions").select("id, name").eq("tenant_id", tenantId);
+      if (!error) setRegionOptions(data || []);
+    })();
+  }, [viewMode, tenantId, hierarchyRefreshKey]);
 
   /* ── Queries ── */
   const { data: campaigns = [] } = useQuery({
@@ -320,6 +417,18 @@ const ScheduleTimeline = () => {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Conteúdo removido" }); },
   });
 
+  const reorderContents = useMutation({
+    mutationFn: async (updates: { id: string; position: number }[]) => {
+      await Promise.all(
+        updates.map(u =>
+          supabase.from("campaign_contents").update({ position: u.position }).eq("id", u.id)
+        )
+      );
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Ordem atualizada" }); },
+    onError: (e: any) => toast({ title: "Erro ao reordenar", description: e.message, variant: "destructive" }),
+  });
+
   // Group mutations
   const createGroup = useMutation({
     mutationFn: async (g: { name: string; description: string }) => {
@@ -371,7 +480,14 @@ const ScheduleTimeline = () => {
     });
     setDialogOpen(true);
   };
-  const handleSave = () => { if (!form.name) return; editingCampaign ? updateCampaign.mutate({ id: editingCampaign.id, ...form }) : createCampaign.mutate(form); };
+  const handleSave = () => {
+    if (!form.name) return;
+    if (editingCampaign) {
+      updateCampaign.mutate({ id: editingCampaign.id, ...form });
+    } else {
+      createCampaign.mutate(form);
+    }
+  };
   const toggleDay = (day: number) => setForm(p => ({ ...p, days_of_week: p.days_of_week.includes(day) ? p.days_of_week.filter(d => d !== day) : [...p.days_of_week, day] }));
 
   const getStatus = (c: any) => {
@@ -470,6 +586,153 @@ const ScheduleTimeline = () => {
   const detailCampaign = campaigns.find((c: any) => c.id === detailCampaignId);
   const selectedGroupName = selectedGroupId === "all" ? "TODOS" : deviceGroups.find((g: any) => g.id === selectedGroupId)?.name || "GRUPO";
   const devicesInSelectedGroup = selectedGroupId === "all" ? [] : groupMembers.filter(m => m.group_id === selectedGroupId).map(m => m.device_id);
+  const orderedDetailContents = useMemo(() => {
+    if (orderedDetailIds.length === 0) return detailContents;
+    const byId = new Map(detailContents.map((c: any) => [c.id, c]));
+    return orderedDetailIds.map(id => byId.get(id)).filter(Boolean);
+  }, [detailContents, orderedDetailIds]);
+
+  useEffect(() => {
+    setOrderedDetailIds(detailContents.map((c: any) => c.id));
+  }, [detailContents]);
+  useEffect(() => {
+    setOrderedPreviewIds(allContents.map((i) => i.content.id));
+  }, [allContents]);
+
+  const detailDndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  const previewDndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const onDetailDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDetailId(null);
+    if (!over || String(active.id) === String(over.id)) return;
+    const oldIndex = orderedDetailIds.indexOf(String(active.id));
+    const newIndex = orderedDetailIds.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    const nextIds = arrayMove(orderedDetailIds, oldIndex, newIndex);
+    setOrderedDetailIds(nextIds);
+    reorderContents.mutate(nextIds.map((id, idx) => ({ id, position: idx })));
+  };
+
+  const SortableContentCard = ({ item }: { item: any }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+    const isImg = item.media?.type === "image" || item.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+    const style: React.CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.6 : 1,
+    };
+
+    return (
+      <div ref={setNodeRef} style={style} className="relative group">
+        <div className="absolute left-1 top-1 z-10">
+          <button
+            className="h-7 w-7 rounded-md bg-background/80 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
+            {...attributes}
+            {...listeners}
+            title="Arraste para reordenar"
+            type="button"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        </div>
+        <div className={`aspect-video rounded-lg overflow-hidden bg-muted border ${isDragging ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+          {isImg && item.media?.file_url ? (
+            <img src={item.media.file_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
+          )}
+        </div>
+        <p className="text-xs font-medium truncate mt-1">{item.media?.name || "Mídia"}</p>
+        <p className="text-[10px] text-muted-foreground">{item.media?.type} · {item.duration_override || item.media?.duration || 10}s</p>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-1 right-1 h-7 w-7 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
+          onClick={() => removeContent.mutate(item.id)}
+          type="button"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  };
+  const previewById = useMemo(() => {
+    const map = new Map<string, { content: any; campaign: any; color: string }>();
+    allContents.forEach((i) => map.set(i.content.id, i));
+    return map;
+  }, [allContents]);
+  const SortablePreviewItem = ({ id, item, width, onClick }: { id: string; item: { content: any; campaign: any; color: string }; width: number; onClick: () => void }) => {
+    const media = item.content.media;
+    const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style: React.CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      width: `${width}px`,
+      opacity: isDragging ? 0.7 : 1,
+    };
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="shrink-0 cursor-pointer relative"
+        onClick={onClick}
+      >
+        <button
+          className="absolute left-1 top-1 z-10 h-6 w-6 rounded bg-background/80 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
+          {...attributes}
+          {...listeners}
+          title="Arraste para reordenar"
+          type="button"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+        <div className={`relative aspect-video rounded overflow-hidden bg-muted border ${isDragging ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+          {isImage && media.file_url ? (
+            <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-black/60">
+              <Play className="h-4 w-4 text-white/70" />
+            </div>
+          )}
+        </div>
+        <p className="text-[9px] truncate mt-1 font-medium">{media.name}</p>
+        <div className="rounded px-1.5 py-0.5 text-[8px] font-bold text-white truncate text-center uppercase mt-0.5" style={{ backgroundColor: item.color }}>
+          {item.campaign.name}
+        </div>
+      </div>
+    );
+  };
+  const onPreviewDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActivePreviewId(null);
+    if (!over || String(active.id) === String(over.id)) return;
+    const a = previewById.get(String(active.id));
+    const b = previewById.get(String(over.id));
+    if (!a || !b) return;
+    if (a.campaign.id !== b.campaign.id) {
+      toast({ title: "Só é possível reordenar dentro da mesma campanha" });
+      return;
+    }
+    const campaignId = a.campaign.id;
+    const indices = orderedPreviewIds
+      .map((id, idx) => ({ id, idx }))
+      .filter(({ id }) => previewById.get(id)?.campaign.id === campaignId);
+    const fromPos = indices.find((x) => x.id === String(active.id))?.idx;
+    const toPos = indices.find((x) => x.id === String(over.id))?.idx;
+    if (fromPos === undefined || toPos === undefined) return;
+    const next = arrayMove(orderedPreviewIds, fromPos, toPos);
+    setOrderedPreviewIds(next);
+    const orderedCampaignIds = next.filter((id) => previewById.get(id)?.campaign.id === campaignId);
+    reorderContents.mutate(orderedCampaignIds.map((id, position) => ({ id, position })));
+  };
 
   return (
     <PageShell header={
@@ -532,6 +795,12 @@ const ScheduleTimeline = () => {
         </Button>
         <Button variant={viewMode === "timeline" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("timeline")}>
           <Calendar className="h-4 w-4" /> Timeline
+        </Button>
+        <Button variant={viewMode === "hierarchy" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("hierarchy")}>
+          <Layers className="h-4 w-4" /> Hierarquia
+        </Button>
+        <Button variant={viewMode === "hierarchy-visual" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("hierarchy-visual")}>
+          <Layers className="h-4 w-4" /> Hierarquia Visual
         </Button>
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setAddContentDialogOpen(true)}>
@@ -649,41 +918,59 @@ const ScheduleTimeline = () => {
             <div className="flex items-center gap-3 mb-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview — Sequência de exibição</p>
               <div className="flex items-center gap-2 ml-auto">
-                <Search className="h-3 w-3 text-muted-foreground" />
                 <div className="flex items-center gap-1">
-                  <button className="text-muted-foreground hover:text-foreground"><Search className="h-3.5 w-3.5" /></button>
-                  <div className="w-24 h-1 bg-muted rounded-full mx-1">
-                    <div className="w-12 h-1 bg-primary rounded-full" />
-                  </div>
-                  <button className="text-muted-foreground hover:text-foreground"><Search className="h-3.5 w-3.5" /></button>
+                  <button
+                    className="text-muted-foreground hover:text-foreground p-1 rounded"
+                    onClick={() => setPreviewZoom((z) => Math.max(previewZoomMin, z - 10))}
+                    title="Diminuir zoom"
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <Slider
+                    value={[previewZoom]}
+                    onValueChange={(v) => setPreviewZoom(v[0])}
+                    min={previewZoomMin}
+                    max={previewZoomMax}
+                    step={10}
+                    className="w-28"
+                  />
+                  <button
+                    className="text-muted-foreground hover:text-foreground p-1 rounded"
+                    onClick={() => setPreviewZoom((z) => Math.min(previewZoomMax, z + 10))}
+                    title="Aumentar zoom"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <span className="text-[10px] text-muted-foreground">100%</span>
+                <span className="text-[10px] text-muted-foreground">{previewZoom}%</span>
               </div>
             </div>
             {allContents.length > 0 ? (
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                {allContents.map(({ content, campaign, color }, idx) => {
-                  const media = content.media;
-                  const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
-                  return (
-                    <div key={content.id} className="shrink-0 w-28 cursor-pointer" onClick={() => setPreviewMedia(media)}>
-                      <div className="relative aspect-video rounded overflow-hidden bg-muted border border-border">
-                        {isImage && media.file_url ? (
-                          <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-black/60">
-                            <Play className="h-4 w-4 text-white/70" />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-[9px] truncate mt-1 font-medium">{media.name}</p>
-                      <div className="rounded px-1.5 py-0.5 text-[8px] font-bold text-white truncate text-center uppercase mt-0.5" style={{ backgroundColor: color }}>
-                        {campaign.name}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <DndContext
+                sensors={previewDndSensors}
+                collisionDetection={closestCenter}
+                onDragStart={(e) => setActivePreviewId(String(e.active.id))}
+                onDragEnd={onPreviewDragEnd}
+                onDragCancel={() => setActivePreviewId(null)}
+              >
+                <SortableContext items={orderedPreviewIds} strategy={rectSortingStrategy}>
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                    {orderedPreviewIds.map((id) => {
+                      const item = previewById.get(id);
+                      if (!item) return null;
+                      return (
+                        <SortablePreviewItem
+                          key={id}
+                          id={id}
+                          item={item}
+                          width={(previewBaseWidth * previewZoom) / 100}
+                          onClick={() => setPreviewMedia(item.content.media)}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             ) : (
               <p className="text-xs text-muted-foreground text-center py-4">Nenhum conteúdo programado</p>
             )}
@@ -744,6 +1031,371 @@ const ScheduleTimeline = () => {
               </div>
             )}
           </ScrollArea>
+        </div>
+      )}
+
+      {/* ═══ VIEW: HIERARCHY ═══ */}
+      {viewMode === "hierarchy" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-3 flex items-center gap-2">
+            <Label className="text-xs">Fonte</Label>
+            <Select value={hierarchyMode} onValueChange={(v) => setHierarchyMode(v as any)}>
+              <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="json">JSON (local)</SelectItem>
+                <SelectItem value="db">Banco de dados</SelectItem>
+              </SelectContent>
+            </Select>
+            {hierarchyMode === "json" && (
+              <div className="ml-auto flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => exportHlModel()}>Exportar JSON</Button>
+                <Button variant="outline" size="sm" onClick={() => setJsonImportOpen(true)}>Importar JSON</Button>
+                <Button size="sm" onClick={() => saveHlModel(hlModel)}>Salvar</Button>
+              </div>
+            )}
+          </div>
+          {hierarchyMode === "db" && (
+            <>
+              <div className="md:col-span-2 border border-border rounded-lg bg-card overflow-hidden min-h-[60vh] flex flex-col">
+                <div className="p-3 border-b border-border flex items-center gap-2">
+                  <Input value={hierarchySearch} onChange={(e) => setHierarchySearch(e.target.value)} placeholder="Buscar na hierarquia..." className="h-8 text-sm" />
+                </div>
+                <div className="flex-1 min-h-0">
+                  <HierarchyTree key={hierarchyRefreshKey} onSelect={(n) => setHierarchySelected(n)} search={hierarchySearch} />
+                </div>
+              </div>
+              <div className="border border-border rounded-lg bg-card p-4">
+                <p className="text-sm font-medium mb-2">Selecionado</p>
+                {hierarchySelected ? (
+                  <div className="mb-4">
+                    <p className="text-sm">{hierarchySelected.name}</p>
+                    <p className="text-xs text-muted-foreground">{hierarchySelected.type}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground mb-4">Nenhum nó selecionado</p>
+                )}
+                <div className="space-y-2">
+                  <Label className="text-xs">Tipo</Label>
+                  <Select value={createType} onValueChange={(v) => setCreateType(v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="state">Estado</SelectItem>
+                      <SelectItem value="region">Região</SelectItem>
+                      <SelectItem value="city">Cidade</SelectItem>
+                      <SelectItem value="store">Loja</SelectItem>
+                      <SelectItem value="sector">Setor</SelectItem>
+                      <SelectItem value="group">Grupo</SelectItem>
+                      <SelectItem value="zone">Zona</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Label className="text-xs">Nome</Label>
+                  <Input value={createName} onChange={(e) => setCreateName(e.target.value)} className="h-8 text-sm" />
+                  <Label className="text-xs">Código (opcional)</Label>
+                  <Input value={createCode} onChange={(e) => setCreateCode(e.target.value)} className="h-8 text-sm" />
+                  {createType === "state" && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Região</Label>
+                      <Select value={parentRegionId || ""} onValueChange={(v) => setParentRegionId(v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione a região" /></SelectTrigger>
+                        <SelectContent>{regionOptions.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      {regionOptions.length === 0 && <p className="text-[11px] text-muted-foreground">Crie uma Região primeiro para habilitar Estados.</p>}
+                    </div>
+                  )}
+                  <Button className="w-full" disabled={!canCreateHere} onClick={async () => {
+                    try {
+                      if (createType === "state") {
+                        const payload: any = { name: createName, code: createCode || null, tenant_id: tenantId };
+                        payload.region_id = parentRegionId || hierarchySelected?.id;
+                        if (!payload.region_id) { toast({ title: "Selecione a Região", variant: "destructive" }); return; }
+                        const { error } = await supabase.from("states").insert(payload);
+                        if (error) throw error;
+                        toast({ title: "Estado criado" });
+                      } else if (createType === "region") {
+                        const { error } = await supabase.from("regions").insert({ name: createName, code: createCode || null, country_id: null, tenant_id: tenantId });
+                        if (error) throw error;
+                        toast({ title: "Região criada" });
+                      } else if (createType === "city") {
+                        const { error } = await supabase.from("cities").insert({ name: createName, state_id: hierarchySelected!.id, tenant_id: tenantId });
+                        if (error) throw error;
+                        toast({ title: "Cidade criada" });
+                      } else if (createType === "store") {
+                        const { error } = await supabase.from("stores").insert({ name: createName, code: createCode || null, city_id: hierarchySelected!.id, tenant_id: tenantId });
+                        if (error) throw error;
+                        toast({ title: "Loja criada" });
+                      } else if (createType === "sector") {
+                        const { error } = await supabase.from("sectors").insert({ name: createName, store_id: hierarchySelected!.id, tenant_id: tenantId });
+                        if (error) throw error;
+                        toast({ title: "Setor criado" });
+                      } else if (createType === "group") {
+                        const { error } = await supabase.from("device_groups").insert({ name: createName, store_id: hierarchySelected!.id, tenant_id: tenantId });
+                        if (error) throw error;
+                        toast({ title: "Grupo criado" });
+                      } else if (createType === "zone") {
+                        const { error } = await supabase.from("zones").insert({ name: createName, sector_id: hierarchySelected!.id, tenant_id: tenantId });
+                        if (error) throw error;
+                        toast({ title: "Zona criada" });
+                      }
+                      setCreateName(""); setCreateCode(""); setHierarchyRefreshKey((k) => k + 1);
+                    } catch (e: any) { toast({ title: "Erro ao criar", description: e.message, variant: "destructive" }); }
+                  }}>Criar</Button>
+                  <p className="text-xs text-muted-foreground mt-2">Use drag-and-drop para mover nós dentro de combinações permitidas.</p>
+                </div>
+              </div>
+            </>
+          )}
+          {hierarchyMode === "json" && (
+            <>
+              <div className="md:col-span-2 border border-border rounded-lg bg-card p-3">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold mb-2">Estados</p>
+                    <DndContext onDragEnd={(e) => {
+                      const { active, over } = e;
+                      if (!over || active.id === over.id) return;
+                      const ids = hlModel.states.map(s => s.id);
+                      const from = ids.indexOf(String(active.id));
+                      const to = ids.indexOf(String(over.id));
+                      if (from < 0 || to < 0) return;
+                      const nextStates = arrayMove(hlModel.states, from, to);
+                      saveHlModel({ ...hlModel, states: nextStates });
+                    }}>
+                      <SortableContext items={hlModel.states.map(s => s.id)} strategy={rectSortingStrategy}>
+                        <div className="space-y-1">
+                          {hlModel.states.map((s) => {
+                            const { attributes, listeners, setNodeRef } = useSortable({ id: s.id });
+                            return (
+                              <div key={s.id} ref={setNodeRef} className="flex items-center gap-2 bg-muted/30 rounded px-2 py-1" {...attributes} {...listeners}>
+                                <span className="flex-1 text-sm">{s.name}</span>
+                                <Button size="sm" variant="outline" onClick={() => {
+                                  const name = prompt("Nome da região");
+                                  if (!name) return;
+                                  const region: HLRegion = { id: crypto.randomUUID(), name, cities: [] };
+                                  const nextStates = hlModel.states.map(st => st.id === s.id ? { ...st, regions: [...st.regions, region] } : st);
+                                  saveHlModel({ ...hlModel, states: nextStates });
+                                }}>+ Região</Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                    <div className="mt-2">
+                      <Button size="sm" onClick={() => {
+                        const name = prompt("Nome do estado");
+                        if (!name) return;
+                        const code = prompt("Código (opcional)") || undefined;
+                        const st: HLState = { id: crypto.randomUUID(), name, code, regions: [] };
+                        saveHlModel({ ...hlModel, states: [...hlModel.states, st] });
+                      }}>+ Estado</Button>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold mb-2">Regiões</p>
+                    <div className="space-y-3">
+                      {hlModel.states.map(st => (
+                        <div key={st.id} className="rounded border border-border p-2">
+                          <p className="text-xs font-medium mb-1">{st.name}</p>
+                          <DndContext onDragEnd={(e) => {
+                            const { active, over } = e;
+                            if (!over || active.id === over.id) return;
+                            const ids = st.regions.map(r => r.id);
+                            const from = ids.indexOf(String(active.id));
+                            const to = ids.indexOf(String(over.id));
+                            if (from < 0 || to < 0) return;
+                            const nextRegs = arrayMove(st.regions, from, to);
+                            const nextStates = hlModel.states.map(s2 => s2.id === st.id ? { ...s2, regions: nextRegs } : s2);
+                            saveHlModel({ ...hlModel, states: nextStates });
+                          }}>
+                            <SortableContext items={st.regions.map(r => r.id)} strategy={rectSortingStrategy}>
+                              <div className="space-y-1">
+                                {st.regions.map(r => {
+                                  const { attributes, listeners, setNodeRef } = useSortable({ id: r.id });
+                                  return (
+                                    <div key={r.id} ref={setNodeRef} className="flex items-center gap-2 bg-muted/20 rounded px-2 py-1" {...attributes} {...listeners}>
+                                      <span className="flex-1 text-sm">{r.name}</span>
+                                      <Button size="sm" variant="outline" onClick={() => {
+                                        const name = prompt("Nome da cidade");
+                                        if (!name) return;
+                                        const city: HLCity = { id: crypto.randomUUID(), name, stores: [] };
+                                        const nextStates = hlModel.states.map(s2 => s2.id === st.id ? { ...s2, regions: s2.regions.map(rr => rr.id === r.id ? { ...rr, cities: [...rr.cities, city] } : rr) } : s2);
+                                        saveHlModel({ ...hlModel, states: nextStates });
+                                      }}>+ Cidade</Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold mb-2">Cidades e Lojas</p>
+                    <div className="space-y-3">
+                      {hlModel.states.map(st => st.regions.map(r => (
+                        <div key={r.id} className="rounded border border-border p-2">
+                          <p className="text-xs font-medium">{st.name} · {r.name}</p>
+                          <div className="mt-2 space-y-2">
+                            {r.cities.map(city => (
+                              <div key={city.id} className="rounded bg-muted/20 p-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium flex-1">{city.name}</span>
+                                  <Button size="sm" variant="outline" onClick={() => {
+                                    const name = prompt("Nome da loja");
+                                    if (!name) return;
+                                    const code = prompt("Código da loja (opcional)") || undefined;
+                                    const store: HLStore = { id: crypto.randomUUID(), name, code, sectors: [], groups: [], devices: [] };
+                                    const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
+                                      ...s2,
+                                      regions: s2.regions.map(rr => rr.id === r.id ? {
+                                        ...rr,
+                                        cities: rr.cities.map(cc => cc.id === city.id ? { ...cc, stores: [...cc.stores, store] } : cc)
+                                      } : rr)
+                                    } : s2);
+                                    saveHlModel({ ...hlModel, states: nextStates });
+                                  }}>+ Loja</Button>
+                                </div>
+                                <div className="mt-2 space-y-1">
+                                  {city.stores.map(store => (
+                                    <div key={store.id} className="rounded border border-border p-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium flex-1">{store.name}</span>
+                                        <Button size="sm" variant="outline" onClick={() => {
+                                          const name = prompt("Nome do setor");
+                                          if (!name) return;
+                                          const sector: HLSector = { id: crypto.randomUUID(), name, devices: [] };
+                                          const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
+                                            ...s2,
+                                            regions: s2.regions.map(rr => rr.id === r.id ? {
+                                              ...rr,
+                                              cities: rr.cities.map(cc => cc.id === city.id ? {
+                                                ...cc,
+                                                stores: cc.stores.map(ss => ss.id === store.id ? { ...ss, sectors: [...ss.sectors, sector] } : ss)
+                                              } : cc)
+                                            } : rr)
+                                          } : s2);
+                                          saveHlModel({ ...hlModel, states: nextStates });
+                                        }}>+ Setor</Button>
+                                        <Button size="sm" variant="outline" onClick={() => {
+                                          const name = prompt("Nome do grupo");
+                                          if (!name) return;
+                                          const group: HLGroup = { id: crypto.randomUUID(), name, devices: [] };
+                                          const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
+                                            ...s2,
+                                            regions: s2.regions.map(rr => rr.id === r.id ? {
+                                              ...rr,
+                                              cities: rr.cities.map(cc => cc.id === city.id ? {
+                                                ...cc,
+                                                stores: cc.stores.map(ss => ss.id === store.id ? { ...ss, groups: [...ss.groups, group] } : ss)
+                                              } : cc)
+                                            } : rr)
+                                          } : s2);
+                                          saveHlModel({ ...hlModel, states: nextStates });
+                                        }}>+ Grupo</Button>
+                                      </div>
+                                      <div className="mt-2 space-y-1">
+                                        {store.sectors.map(sec => (
+                                          <div key={sec.id} className="rounded bg-muted/30 p-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm flex-1">{sec.name}</span>
+                                              <Button size="sm" variant="outline" onClick={() => {
+                                                const name = prompt("Nome do dispositivo");
+                                                if (!name) return;
+                                                const dev: HLDevice = { id: crypto.randomUUID(), name };
+                                                const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
+                                                  ...s2,
+                                                  regions: s2.regions.map(rr => rr.id === r.id ? {
+                                                    ...rr,
+                                                    cities: rr.cities.map(cc => cc.id === city.id ? {
+                                                      ...cc,
+                                                      stores: cc.stores.map(ss => ss.id === store.id ? {
+                                                        ...ss,
+                                                        sectors: ss.sectors.map(se => se.id === sec.id ? { ...se, devices: [...se.devices, dev] } : se)
+                                                      } : ss)
+                                                    } : cc)
+                                                  } : rr)
+                                                } : s2);
+                                                saveHlModel({ ...hlModel, states: nextStates });
+                                              }}>+ Dispositivo</Button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                        {store.groups.map(gr => (
+                                          <div key={gr.id} className="rounded bg-muted/30 p-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm flex-1">{gr.name}</span>
+                                              <Button size="sm" variant="outline" onClick={() => {
+                                                const name = prompt("Nome do dispositivo");
+                                                if (!name) return;
+                                                const dev: HLDevice = { id: crypto.randomUUID(), name };
+                                                const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
+                                                  ...s2,
+                                                  regions: s2.regions.map(rr => rr.id === r.id ? {
+                                                    ...rr,
+                                                    cities: rr.cities.map(cc => cc.id === city.id ? {
+                                                      ...cc,
+                                                      stores: cc.stores.map(ss => ss.id === store.id ? {
+                                                        ...ss,
+                                                        groups: ss.groups.map(g2 => g2.id === gr.id ? { ...g2, devices: [...g2.devices, dev] } : g2)
+                                                      } : ss)
+                                                    } : cc)
+                                                  } : rr)
+                                                } : s2);
+                                                saveHlModel({ ...hlModel, states: nextStates });
+                                              }}>+ Dispositivo</Button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <Dialog open={jsonImportOpen} onOpenChange={setJsonImportOpen}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader><DialogTitle>Importar JSON</DialogTitle></DialogHeader>
+                  <Textarea value={jsonImportText} onChange={(e) => setJsonImportText(e.target.value)} rows={10} />
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setJsonImportOpen(false)}>Cancelar</Button>
+                    <Button onClick={() => {
+                      try {
+                        const parsed = JSON.parse(jsonImportText);
+                        saveHlModel(parsed);
+                        setJsonImportText("");
+                        setJsonImportOpen(false);
+                      } catch (e: any) {
+                        toast({ title: "JSON inválido", description: e.message, variant: "destructive" });
+                      }
+                    }}>Importar</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ═══ VIEW: HIERARCHY VISUAL ═══ */}
+      {viewMode === "hierarchy-visual" && (
+        <div className="border border-border rounded-lg bg-card p-3">
+          <FabricHierarchy
+            initialTree={[]}
+            onExportJson={() => {}}
+            onImportJson={() => {}}
+            onSaveToDb={async () => {}}
+            height={650}
+            width={1100}
+          />
         </div>
       )}
 
@@ -862,27 +1514,44 @@ const ScheduleTimeline = () => {
 
             <TabsContent value="contents" className="space-y-4 mt-4">
               {detailContents.length > 0 ? (
-                <div className="grid grid-cols-3 gap-3">
-                  {detailContents.map((c: any, idx: number) => {
-                    const isImg = c.media?.type === "image" || c.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                    return (
-                      <div key={c.id} className="relative group">
-                        <div className="aspect-video rounded-lg overflow-hidden bg-muted border border-border">
-                          {isImg && c.media?.file_url ? (
-                            <img src={c.media.file_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
-                          )}
-                        </div>
-                        <p className="text-xs font-medium truncate mt-1">{c.media?.name || "Mídia"}</p>
-                        <p className="text-[10px] text-muted-foreground">{c.media?.type} · {c.duration_override || c.media?.duration || 10}s</p>
-                        <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => removeContent.mutate(c.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                <DndContext
+                  sensors={detailDndSensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={(e) => setActiveDetailId(String(e.active.id))}
+                  onDragEnd={onDetailDragEnd}
+                  onDragCancel={() => setActiveDetailId(null)}
+                >
+                  <SortableContext items={orderedDetailIds} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {orderedDetailContents.map((c: any) => (
+                        <SortableContentCard key={c.id} item={c} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                  <DragOverlay>
+                    {activeDetailId ? (
+                      <div className="w-64">
+                        {(() => {
+                          const item = orderedDetailContents.find((c: any) => c.id === activeDetailId);
+                          if (!item) return null;
+                          const isImg = item.media?.type === "image" || item.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                          return (
+                            <div className="rounded-lg bg-background border border-border shadow-lg p-2">
+                              <div className="aspect-video rounded-md overflow-hidden bg-muted border border-border">
+                                {isImg && item.media?.file_url ? (
+                                  <img src={item.media.file_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
+                                )}
+                              </div>
+                              <p className="text-xs font-medium truncate mt-2">{item.media?.name || "Mídia"}</p>
+                            </div>
+                          );
+                        })()}
                       </div>
-                    );
-                  })}
-                </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum conteúdo adicionado</p>
               )}

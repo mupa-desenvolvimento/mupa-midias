@@ -310,29 +310,31 @@ const Hero = () => {
           </motion.div>
 
           {/* Floating Elements */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 1 }}
-            className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer z-20 group"
-            onClick={() => {
-              const featuresSection = document.getElementById('features');
-              if (featuresSection) {
-                featuresSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
-          >
-            <span className="text-xs text-white/70 group-hover:text-white transition-colors font-medium tracking-widest uppercase">
-              Descubra Mais
-            </span>
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
             <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="p-2 rounded-full bg-black/30 border border-white/15 group-hover:bg-black/40 group-hover:border-white/25 transition-all backdrop-blur-sm"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1, duration: 1 }}
+              className="flex flex-col items-center gap-2 cursor-pointer group"
+              onClick={() => {
+                const featuresSection = document.getElementById("features");
+                if (featuresSection) {
+                  featuresSection.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
             >
-              <ChevronsDown className="w-5 h-5 text-white" />
+              <span className="text-xs text-white/70 group-hover:text-white transition-colors font-medium tracking-widest uppercase">
+                Descubra Mais
+              </span>
+              <motion.div
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="p-2 rounded-full bg-black/30 border border-white/15 group-hover:bg-black/40 group-hover:border-white/25 transition-all backdrop-blur-sm"
+              >
+                <ChevronsDown className="w-5 h-5 text-white" />
+              </motion.div>
             </motion.div>
-          </motion.div>
+          </div>
         </motion.div>
 
         {/* Hero Visual */}

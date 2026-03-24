@@ -69,9 +69,9 @@ const menuItems = [
 { title: "Configurações", url: "/admin/settings", icon: Settings }];
 
 const enterpriseItems = [
+  { title: "Estrutura", url: "/admin/regions", icon: Network },
   { title: "Lojas", url: "/admin/stores", icon: Store },
   { title: "Dispositivos", url: "/admin/devices", icon: Monitor },
-  { title: "Setor", url: "/admin/regions", icon: Network },
   { title: "Tags", url: "/admin/tags", icon: Layers },
   { title: "Campanhas", url: "/admin/campaigns", icon: Tv },
   { title: "Programação", url: "/admin/schedule", icon: Calendar },

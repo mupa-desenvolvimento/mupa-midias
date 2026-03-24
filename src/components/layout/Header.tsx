@@ -24,7 +24,7 @@ const Header = () => {
       case "/admin/devices": return "Dispositivos";
       case "/admin/device-groups": return "Grupos de Dispositivos";
       case "/admin/stores": return "Lojas";
-      case "/admin/regions": return "Gerenciador Enterprise";
+      case "/admin/regions": return "Estrutura da Rede";
       case "/admin/channels": return "Canais";
       case "/admin/playlists": return "Playlists";
       case "/admin/media": return "Galeria";
