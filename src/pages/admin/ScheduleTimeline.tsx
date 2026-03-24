@@ -136,6 +136,10 @@ const ScheduleTimeline = () => {
     queryKey: ["sectors-schedule"],
     queryFn: async () => { const { data } = await supabase.from("sectors").select("id, name").order("name"); return data || []; },
   });
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities-schedule"],
+    queryFn: async () => { const { data } = await supabase.from("cities").select("id, name, state_id").order("name"); return data || []; },
+  });
   const { data: mediaList = [] } = useQuery({
     queryKey: ["media-list-schedule"],
     queryFn: async () => {
