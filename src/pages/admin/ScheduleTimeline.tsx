@@ -720,28 +720,31 @@ const ScheduleTimeline = () => {
                 <Select value={targetForm.target_type} onValueChange={v => setTargetForm({ ...targetForm, target_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="region">Região</SelectItem>
                     <SelectItem value="state">Estado</SelectItem>
-                    <SelectItem value="tag">Tag</SelectItem>
-                    <SelectItem value="sector">Setor</SelectItem>
+                    <SelectItem value="city">Cidade</SelectItem>
                     <SelectItem value="store">Loja</SelectItem>
+                    <SelectItem value="sector">Setor</SelectItem>
+                    <SelectItem value="device">Dispositivo</SelectItem>
+                    <SelectItem value="tag">Tag</SelectItem>
                   </SelectContent>
                 </Select>
+                {targetForm.target_type === "region" && (
+                  <Select value={targetForm.region_id} onValueChange={v => setTargetForm({ ...targetForm, region_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a região" /></SelectTrigger>
+                    <SelectContent>{regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
                 {targetForm.target_type === "state" && (
                   <Select value={targetForm.state_id} onValueChange={v => setTargetForm({ ...targetForm, state_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
                     <SelectContent>{statesData.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
-                {targetForm.target_type === "tag" && (
-                  <Select value={targetForm.tag_id} onValueChange={v => setTargetForm({ ...targetForm, tag_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione a tag" /></SelectTrigger>
-                    <SelectContent>{tags.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                )}
-                {targetForm.target_type === "sector" && (
-                  <Select value={targetForm.sector_id} onValueChange={v => setTargetForm({ ...targetForm, sector_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
-                    <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                {targetForm.target_type === "city" && (
+                  <Select value={targetForm.city_id} onValueChange={v => setTargetForm({ ...targetForm, city_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a cidade" /></SelectTrigger>
+                    <SelectContent>{cities.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
                 {targetForm.target_type === "store" && (
@@ -750,7 +753,34 @@ const ScheduleTimeline = () => {
                     <SelectContent>{stores.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
-                <Button className="w-full" size="sm" onClick={() => { if (!detailCampaignId) return; addTarget.mutate({ campaign_id: detailCampaignId, target_type: targetForm.target_type, state_id: targetForm.state_id || undefined, tag_id: targetForm.tag_id || undefined, sector_id: targetForm.sector_id || undefined, store_id: targetForm.store_id || undefined }); }}>
+                {targetForm.target_type === "sector" && (
+                  <Select value={targetForm.sector_id} onValueChange={v => setTargetForm({ ...targetForm, sector_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
+                    <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+                {targetForm.target_type === "device" && (
+                  <Select value={targetForm.device_id} onValueChange={v => setTargetForm({ ...targetForm, device_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o dispositivo" /></SelectTrigger>
+                    <SelectContent>{devices.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+                {targetForm.target_type === "tag" && (
+                  <Select value={targetForm.tag_id} onValueChange={v => setTargetForm({ ...targetForm, tag_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a tag" /></SelectTrigger>
+                    <SelectContent>{tags.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+                <Button className="w-full" size="sm" onClick={() => {
+                  if (!detailCampaignId) return;
+                  addTarget.mutate({
+                    campaign_id: detailCampaignId, target_type: targetForm.target_type,
+                    state_id: targetForm.state_id || undefined, tag_id: targetForm.tag_id || undefined,
+                    sector_id: targetForm.sector_id || undefined, store_id: targetForm.store_id || undefined,
+                    city_id: targetForm.city_id || undefined, region_id: targetForm.region_id || undefined,
+                    device_id: targetForm.device_id || undefined,
+                  });
+                }}>
                   <Plus className="h-4 w-4 mr-2" />Adicionar
                 </Button>
               </div>
