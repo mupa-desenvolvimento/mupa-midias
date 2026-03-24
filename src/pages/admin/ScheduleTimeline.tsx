@@ -82,7 +82,7 @@ const ScheduleTimeline = () => {
   // Campaign detail dialog (contents, target, preview)
   const [detailCampaignId, setDetailCampaignId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState("contents");
-  const [targetForm, setTargetForm] = useState({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "" });
+  const [targetForm, setTargetForm] = useState({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" });
   const [addMediaId, setAddMediaId] = useState("");
 
   // ── Data queries ──
@@ -101,9 +101,20 @@ const ScheduleTimeline = () => {
     queryKey: ["stores-schedule"],
     queryFn: async () => { const { data } = await supabase.from("stores").select("id, name").order("name"); return data || []; },
   });
+  const { data: storesWithHierarchy = [] } = useQuery({
+    queryKey: ["stores-hierarchy-schedule"],
+    queryFn: async () => {
+      const { data } = await supabase.from("stores").select("id, name, city_id, cities(id, state_id, states(id, region_id))").order("name");
+      return (data || []).map((s: any) => ({
+        id: s.id, name: s.name, city_id: s.city_id,
+        state_id: s.cities?.state_id || null,
+        region_id: s.cities?.states?.region_id || null,
+      }));
+    },
+  });
   const { data: devices = [] } = useQuery({
     queryKey: ["devices-schedule"],
-    queryFn: async () => { const { data } = await supabase.from("devices").select("id, name, device_code, store_id").eq("is_active", true).order("name").limit(200); return data || []; },
+    queryFn: async () => { const { data } = await supabase.from("devices").select("id, name, device_code, store_id, sector_id").eq("is_active", true).order("name").limit(200); return data || []; },
   });
   const { data: deviceGroups = [] } = useQuery({
     queryKey: ["device-groups-schedule"],
@@ -117,13 +128,17 @@ const ScheduleTimeline = () => {
     queryKey: ["tags-schedule"],
     queryFn: async () => { const { data } = await supabase.from("tags").select("id, name, slug, color").order("name"); return data || []; },
   });
-  const { data: states = [] } = useQuery({
+  const { data: statesData = [] } = useQuery({
     queryKey: ["states-schedule"],
-    queryFn: async () => { const { data } = await supabase.from("states").select("id, name, code").order("name"); return data || []; },
+    queryFn: async () => { const { data } = await supabase.from("states").select("id, name, code, region_id").order("name"); return data || []; },
   });
   const { data: sectors = [] } = useQuery({
     queryKey: ["sectors-schedule"],
     queryFn: async () => { const { data } = await supabase.from("sectors").select("id, name").order("name"); return data || []; },
+  });
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities-schedule"],
+    queryFn: async () => { const { data } = await supabase.from("cities").select("id, name, state_id").order("name"); return data || []; },
   });
   const { data: mediaList = [] } = useQuery({
     queryKey: ["media-list-schedule"],
@@ -231,17 +246,20 @@ const ScheduleTimeline = () => {
   });
 
   const addTarget = useMutation({
-    mutationFn: async (t: { campaign_id: string; target_type: string; state_id?: string; tag_id?: string; sector_id?: string; store_id?: string }) => {
+    mutationFn: async (t: { campaign_id: string; target_type: string; state_id?: string; tag_id?: string; sector_id?: string; store_id?: string; city_id?: string; region_id?: string; device_id?: string }) => {
       const { error } = await supabase.from("campaign_targets").insert([{
         campaign_id: t.campaign_id, target_type: t.target_type,
         state_id: t.target_type === "state" && t.state_id ? t.state_id : null,
+        region_id: t.target_type === "region" && t.region_id ? t.region_id : null,
+        city_id: t.target_type === "city" && t.city_id ? t.city_id : null,
         tag_id: t.target_type === "tag" && t.tag_id ? t.tag_id : null,
         sector_id: t.target_type === "sector" && t.sector_id ? t.sector_id : null,
         store_id: t.target_type === "store" && t.store_id ? t.store_id : null,
+        device_id: t.target_type === "device" && t.device_id ? t.device_id : null,
       }]);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }); toast({ title: "Segmentação adicionada" }); setTargetForm({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "" }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }); toast({ title: "Segmentação adicionada" }); setTargetForm({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" }); },
   });
 
   const removeTarget = useMutation({
@@ -288,14 +306,19 @@ const ScheduleTimeline = () => {
   };
 
   const getTargetLabel = (t: any) => {
-    if (t.target_type === "state") { const s = states.find((s: any) => s.id === t.state_id); return `Estado: ${s?.code || "?"}`; }
+    if (t.target_type === "state") { const s = statesData.find((s: any) => s.id === t.state_id); return `Estado: ${s?.code || "?"}`; }
+    if (t.target_type === "region") { const r = regions.find((r: any) => r.id === t.region_id); return `Região: ${r?.name || "?"}`; }
+    if (t.target_type === "city") { const c = cities.find((c: any) => c.id === t.city_id); return `Cidade: ${c?.name || "?"}`; }
     if (t.target_type === "tag") { const tag = tags.find((tg: any) => tg.id === t.tag_id); return `Tag: ${tag?.name || "?"}`; }
     if (t.target_type === "sector") { const sec = sectors.find((s: any) => s.id === t.sector_id); return `Setor: ${sec?.name || "?"}`; }
     if (t.target_type === "store") { const st = stores.find((s: any) => s.id === t.store_id); return `Loja: ${st?.name || "?"}`; }
+    if (t.target_type === "device") { const d = devices.find((d: any) => d.id === t.device_id); return `Dispositivo: ${d?.name || "?"}`; }
     return t.target_type;
   };
 
-  // Filter campaigns
+  // Remove unused storeHierarchy memo - we use storesWithHierarchy query directly
+
+  // Filter campaigns using hierarchy rules
   const filteredCampaigns = useMemo(() => {
     let result = campaigns;
     if (search) {
@@ -305,18 +328,57 @@ const ScheduleTimeline = () => {
     if (targetType !== "all" && targetValue) {
       result = result.filter((c: any) => {
         const targets = c.campaign_targets || [];
+        // Campaigns with no targets = global = always match
         if (targets.length === 0) return true;
+
         return targets.some((t: any) => {
-          if (targetType === "device" && t.target_type === "device" && t.device_id === targetValue) return true;
-          if (targetType === "store" && t.target_type === "store" && t.store_id === targetValue) return true;
-          if (targetType === "region" && t.target_type === "region" && t.region_id === targetValue) return true;
-          if (targetType === "tag" && t.target_type === "tag" && t.tag_id === targetValue) return true;
+          // Direct match by target type
+          if (targetType === "device") {
+            if (t.target_type === "device" && t.device_id === targetValue) return true;
+            // Check if device belongs to a store that matches
+            const dev = devices.find((d: any) => d.id === targetValue);
+            if (dev?.store_id) {
+              if (t.target_type === "store" && t.store_id === dev.store_id) return true;
+              // Check hierarchy: store → city → state → region
+              const store = storesWithHierarchy.find((s: any) => s.id === dev.store_id);
+              if (store) {
+                if (t.target_type === "city" && t.city_id === store.city_id) return true;
+                if (t.target_type === "state" && t.state_id === store.state_id) return true;
+                if (t.target_type === "region" && t.region_id === store.region_id) return true;
+              }
+            }
+            if (dev?.sector_id && t.target_type === "sector" && t.sector_id === dev.sector_id) return true;
+          }
+          if (targetType === "store") {
+            if (t.target_type === "store" && t.store_id === targetValue) return true;
+            // Check parent hierarchy: store belongs to city → state → region
+            const store = storesWithHierarchy.find((s: any) => s.id === targetValue);
+            if (store) {
+              if (t.target_type === "city" && t.city_id === store.city_id) return true;
+              if (t.target_type === "state" && t.state_id === store.state_id) return true;
+              if (t.target_type === "region" && t.region_id === store.region_id) return true;
+            }
+          }
+          if (targetType === "region") {
+            if (t.target_type === "region" && t.region_id === targetValue) return true;
+            // Also match states within this region
+            const regionStates = statesData.filter((s: any) => s.region_id === targetValue);
+            if (t.target_type === "state" && regionStates.some((s: any) => s.id === t.state_id)) return true;
+          }
+          if (targetType === "group") {
+            if (t.target_type === "group" && t.device_id === targetValue) return true;
+            // Groups contain devices → check if any device in group matches store targets
+            // For simplicity, show all campaigns when filtering by group for now
+          }
+          if (targetType === "tag") {
+            if (t.target_type === "tag" && t.tag_id === targetValue) return true;
+          }
           return false;
         });
       });
     }
     return result;
-  }, [campaigns, search, targetType, targetValue]);
+  }, [campaigns, search, targetType, targetValue, devices, storesWithHierarchy, statesData]);
 
   const colorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -658,28 +720,31 @@ const ScheduleTimeline = () => {
                 <Select value={targetForm.target_type} onValueChange={v => setTargetForm({ ...targetForm, target_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="region">Região</SelectItem>
                     <SelectItem value="state">Estado</SelectItem>
-                    <SelectItem value="tag">Tag</SelectItem>
-                    <SelectItem value="sector">Setor</SelectItem>
+                    <SelectItem value="city">Cidade</SelectItem>
                     <SelectItem value="store">Loja</SelectItem>
+                    <SelectItem value="sector">Setor</SelectItem>
+                    <SelectItem value="device">Dispositivo</SelectItem>
+                    <SelectItem value="tag">Tag</SelectItem>
                   </SelectContent>
                 </Select>
+                {targetForm.target_type === "region" && (
+                  <Select value={targetForm.region_id} onValueChange={v => setTargetForm({ ...targetForm, region_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a região" /></SelectTrigger>
+                    <SelectContent>{regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
                 {targetForm.target_type === "state" && (
                   <Select value={targetForm.state_id} onValueChange={v => setTargetForm({ ...targetForm, state_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
-                    <SelectContent>{states.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{statesData.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
-                {targetForm.target_type === "tag" && (
-                  <Select value={targetForm.tag_id} onValueChange={v => setTargetForm({ ...targetForm, tag_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione a tag" /></SelectTrigger>
-                    <SelectContent>{tags.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                )}
-                {targetForm.target_type === "sector" && (
-                  <Select value={targetForm.sector_id} onValueChange={v => setTargetForm({ ...targetForm, sector_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
-                    <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                {targetForm.target_type === "city" && (
+                  <Select value={targetForm.city_id} onValueChange={v => setTargetForm({ ...targetForm, city_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a cidade" /></SelectTrigger>
+                    <SelectContent>{cities.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
                 {targetForm.target_type === "store" && (
@@ -688,7 +753,34 @@ const ScheduleTimeline = () => {
                     <SelectContent>{stores.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
-                <Button className="w-full" size="sm" onClick={() => { if (!detailCampaignId) return; addTarget.mutate({ campaign_id: detailCampaignId, target_type: targetForm.target_type, state_id: targetForm.state_id || undefined, tag_id: targetForm.tag_id || undefined, sector_id: targetForm.sector_id || undefined, store_id: targetForm.store_id || undefined }); }}>
+                {targetForm.target_type === "sector" && (
+                  <Select value={targetForm.sector_id} onValueChange={v => setTargetForm({ ...targetForm, sector_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
+                    <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+                {targetForm.target_type === "device" && (
+                  <Select value={targetForm.device_id} onValueChange={v => setTargetForm({ ...targetForm, device_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o dispositivo" /></SelectTrigger>
+                    <SelectContent>{devices.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+                {targetForm.target_type === "tag" && (
+                  <Select value={targetForm.tag_id} onValueChange={v => setTargetForm({ ...targetForm, tag_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a tag" /></SelectTrigger>
+                    <SelectContent>{tags.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+                <Button className="w-full" size="sm" onClick={() => {
+                  if (!detailCampaignId) return;
+                  addTarget.mutate({
+                    campaign_id: detailCampaignId, target_type: targetForm.target_type,
+                    state_id: targetForm.state_id || undefined, tag_id: targetForm.tag_id || undefined,
+                    sector_id: targetForm.sector_id || undefined, store_id: targetForm.store_id || undefined,
+                    city_id: targetForm.city_id || undefined, region_id: targetForm.region_id || undefined,
+                    device_id: targetForm.device_id || undefined,
+                  });
+                }}>
                   <Plus className="h-4 w-4 mr-2" />Adicionar
                 </Button>
               </div>
