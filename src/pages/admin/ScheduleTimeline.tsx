@@ -455,8 +455,17 @@ const ScheduleTimeline = () => {
           }
         });
     });
+    // Apply sorting
+    if (sortMode === "name") {
+      items.sort((a, b) => (a.content.media?.name || "").localeCompare(b.content.media?.name || ""));
+    } else if (sortMode === "type") {
+      items.sort((a, b) => (a.content.media?.type || "").localeCompare(b.content.media?.type || ""));
+    } else if (sortMode === "position") {
+      items.sort((a, b) => (a.content.position || 0) - (b.content.position || 0));
+    }
+    // "campaign" = default grouped order (no extra sort needed)
     return items;
-  }, [filteredCampaigns, colorMap]);
+  }, [filteredCampaigns, colorMap, sortMode]);
 
   const detailCampaign = campaigns.find((c: any) => c.id === detailCampaignId);
   const selectedGroupName = selectedGroupId === "all" ? "TODOS" : deviceGroups.find((g: any) => g.id === selectedGroupId)?.name || "GRUPO";
