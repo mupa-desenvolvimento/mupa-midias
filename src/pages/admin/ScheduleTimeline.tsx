@@ -300,9 +300,12 @@ const ScheduleTimeline = () => {
 
   const getTargetLabel = (t: any) => {
     if (t.target_type === "state") { const s = statesData.find((s: any) => s.id === t.state_id); return `Estado: ${s?.code || "?"}`; }
+    if (t.target_type === "region") { const r = regions.find((r: any) => r.id === t.region_id); return `Região: ${r?.name || "?"}`; }
+    if (t.target_type === "city") { const c = cities.find((c: any) => c.id === t.city_id); return `Cidade: ${c?.name || "?"}`; }
     if (t.target_type === "tag") { const tag = tags.find((tg: any) => tg.id === t.tag_id); return `Tag: ${tag?.name || "?"}`; }
     if (t.target_type === "sector") { const sec = sectors.find((s: any) => s.id === t.sector_id); return `Setor: ${sec?.name || "?"}`; }
     if (t.target_type === "store") { const st = stores.find((s: any) => s.id === t.store_id); return `Loja: ${st?.name || "?"}`; }
+    if (t.target_type === "device") { const d = devices.find((d: any) => d.id === t.device_id); return `Dispositivo: ${d?.name || "?"}`; }
     return t.target_type;
   };
 
