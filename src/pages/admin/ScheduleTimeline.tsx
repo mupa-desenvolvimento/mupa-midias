@@ -571,14 +571,12 @@ const ScheduleTimeline = () => {
         </div>
       )}
 
-      {/* ═══ VIEW: CONTENTS (Card grid like reference image) ═══ */}
+      {/* ═══ VIEW: CONTENTS ═══ */}
       {viewMode === "contents" && (
-        <div>
+        <div className="flex flex-col" style={{ height: "calc(100vh - 20rem)" }}>
           {/* Sort controls & summary */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">{allContents.length} conteúdo(s) de {filteredCampaigns.length} campanha(s)</span>
-            </div>
+          <div className="flex items-center justify-between mb-2 shrink-0">
+            <span className="text-sm text-muted-foreground">{allContents.length} conteúdo(s) de {filteredCampaigns.length} campanha(s)</span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Ordenar:</span>
               <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
@@ -593,132 +591,103 @@ const ScheduleTimeline = () => {
             </div>
           </div>
 
-          {/* Preview strip - horizontal scroll showing all contents in sequence */}
-          {allContents.length > 0 && (
-            <div className="mb-6">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Preview — Sequência de exibição</p>
+          {/* Campaign list — scrollable, takes remaining space */}
+          <div className="flex-1 min-h-0 border border-border rounded-lg bg-card overflow-hidden">
+            <ScrollArea className="h-full">
+              {filteredCampaigns.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Nenhuma campanha encontrada</p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {filteredCampaigns.map((c: any) => {
+                    const status = getStatus(c);
+                    const color = colorMap[c.id] || "#888";
+                    const contentsCount = (c.campaign_contents || []).length;
+                    const pri = PRIORITY_LABELS[c.priority] || { label: `P${c.priority}` };
+                    const typeLabel = CAMPAIGN_TYPES.find(t => t.value === c.campaign_type)?.label || c.campaign_type;
+                    const isSelected = selectedCampaignId === c.id;
+
+                    return (
+                      <div
+                        key={c.id}
+                        className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${isSelected ? "bg-accent/60" : "hover:bg-accent/30"}`}
+                        style={{ borderLeft: `4px solid ${color}` }}
+                        onClick={() => setSelectedCampaignId(isSelected ? null : c.id)}
+                      >
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+                        <Monitor className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="flex-1 text-sm font-medium truncate">{c.name}</span>
+
+                        <Badge variant="outline" className="text-[10px] hidden lg:inline-flex">{typeLabel}</Badge>
+                        <Badge variant="secondary" className="text-[10px] hidden md:inline-flex">{pri.label}</Badge>
+
+                        {c.start_date && (
+                          <span className="text-[10px] text-muted-foreground font-mono hidden md:inline">
+                            {new Date(c.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                            {c.end_date && ` → ${new Date(c.end_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`}
+                          </span>
+                        )}
+
+                        <Tooltip><TooltipTrigger asChild><button className="p-1 rounded hover:bg-muted"><Settings2 className="h-3.5 w-3.5 text-muted-foreground" /></button></TooltipTrigger><TooltipContent>Configurações</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild><button className="p-1 rounded hover:bg-muted"><Info className="h-3.5 w-3.5 text-muted-foreground" /></button></TooltipTrigger><TooltipContent>Info</TooltipContent></Tooltip>
+
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
+                          Editar <Settings2 className="h-3 w-3" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1 text-xs h-7 text-primary" onClick={(e) => { e.stopPropagation(); setDetailCampaignId(c.id); setDetailTab("contents"); }}>
+                          Adicionar <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          {/* PREVIEW strip — fixed at bottom */}
+          <div className="shrink-0 mt-3">
+            <div className="flex items-center gap-3 mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview — Sequência de exibição</p>
+              <div className="flex items-center gap-2 ml-auto">
+                <Search className="h-3 w-3 text-muted-foreground" />
+                <div className="flex items-center gap-1">
+                  <button className="text-muted-foreground hover:text-foreground"><Search className="h-3.5 w-3.5" /></button>
+                  <div className="w-24 h-1 bg-muted rounded-full mx-1">
+                    <div className="w-12 h-1 bg-primary rounded-full" />
+                  </div>
+                  <button className="text-muted-foreground hover:text-foreground"><Search className="h-3.5 w-3.5" /></button>
+                </div>
+                <span className="text-[10px] text-muted-foreground">100%</span>
+              </div>
+            </div>
+            {allContents.length > 0 ? (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
                 {allContents.map(({ content, campaign, color }, idx) => {
                   const media = content.media;
                   const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
                   return (
-                    <div key={content.id} className="shrink-0 w-32 cursor-pointer" onClick={() => setPreviewMedia(media)}>
+                    <div key={content.id} className="shrink-0 w-28 cursor-pointer" onClick={() => setPreviewMedia(media)}>
                       <div className="relative aspect-video rounded overflow-hidden bg-muted border border-border">
                         {isImage && media.file_url ? (
                           <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-black/60">
-                            <Play className="h-5 w-5 text-white/70" />
+                            <Play className="h-4 w-4 text-white/70" />
                           </div>
                         )}
-                        <div className="absolute top-0.5 left-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white" style={{ backgroundColor: color }}>{idx + 1}</div>
                       </div>
-                      <p className="text-[10px] truncate mt-1 font-medium">{media.name}</p>
-                      <p className="text-[9px] truncate" style={{ color }}>{campaign.name}</p>
+                      <p className="text-[9px] truncate mt-1 font-medium">{media.name}</p>
+                      <div className="rounded px-1.5 py-0.5 text-[8px] font-bold text-white truncate text-center uppercase mt-0.5" style={{ backgroundColor: color }}>
+                        {campaign.name}
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-          )}
-          {allContents.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-lg font-medium">Nenhum conteúdo programado</p>
-              <p className="text-sm mt-1">Adicione conteúdos às campanhas para visualizar aqui</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
-              {allContents.map(({ content, campaign, color }) => {
-                const media = content.media;
-                const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
-                const isVideo = media.type === "video" || media.file_url?.match(/\.(mp4|webm|mov)$/i);
-
-                return (
-                  <div key={content.id} className="group">
-                    {/* Thumbnail */}
-                    <div
-                      className="relative aspect-video rounded-lg overflow-hidden bg-muted border border-border cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all"
-                      onClick={() => setPreviewMedia(media)}
-                    >
-                      {isImage && media.file_url ? (
-                        <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
-                      ) : isVideo && media.file_url ? (
-                        <div className="w-full h-full flex items-center justify-center bg-black/80">
-                          <Play className="h-8 w-8 text-white/70" />
-                        </div>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Image className="h-8 w-8 text-muted-foreground/50" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Media name */}
-                    <p className="text-xs font-medium truncate mt-2 px-0.5">{media.name}</p>
-
-                    {/* Action icons row */}
-                    <div className="flex items-center justify-center gap-2 mt-1.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => {
-                            if (media.file_url) {
-                              const a = document.createElement("a");
-                              a.href = media.file_url;
-                              a.download = media.name;
-                              a.target = "_blank";
-                              a.click();
-                            }
-                          }}>
-                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Download</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => {
-                            setDetailCampaignId(campaign.id);
-                            setDetailTab("contents");
-                          }}>
-                            <Hand className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Gerenciar</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => setPreviewMedia(media)}>
-                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Visualizar</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => {
-                            navigator.clipboard.writeText(media.file_url || "");
-                            toast({ title: "URL copiada" });
-                          }}>
-                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copiar URL</TooltipContent>
-                      </Tooltip>
-                    </div>
-
-                    {/* Campaign label badge */}
-                    <div
-                      className="mt-1.5 rounded px-2 py-1 text-[10px] font-bold text-white truncate text-center uppercase tracking-wide"
-                      style={{ backgroundColor: color }}
-                    >
-                      {campaign.name}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhum conteúdo programado</p>
+            )}
+          </div>
         </div>
       )}
 
