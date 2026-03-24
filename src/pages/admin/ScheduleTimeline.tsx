@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, ChevronDown, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus
+  Plus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus, Download, Hand, Copy, Printer, RefreshCw, Play
 } from "lucide-react";
 
 /* ── constants ── */
@@ -55,15 +55,19 @@ const DEFAULT_FORM = {
   days_of_week: [0, 1, 2, 3, 4, 5, 6] as number[],
 };
 
+/* ── View modes ── */
+type ViewMode = "campaigns" | "contents" | "timeline";
+
 const ScheduleTimeline = () => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("contents");
 
   // Group selector
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
 
-  // Campaign selection for bottom preview
+  // Campaign selection
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
   // Campaign CRUD dialog
@@ -85,6 +89,15 @@ const ScheduleTimeline = () => {
   // Add devices to group dialog
   const [addDeviceGroupId, setAddDeviceGroupId] = useState<string | null>(null);
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
+
+  // Add content to group dialog
+  const [addContentDialogOpen, setAddContentDialogOpen] = useState(false);
+  const [newContentCampaignId, setNewContentCampaignId] = useState("");
+  const [newContentMediaId, setNewContentMediaId] = useState("");
+  const [newContentScheduled, setNewContentScheduled] = useState(false);
+
+  // Preview lightbox
+  const [previewMedia, setPreviewMedia] = useState<any>(null);
 
   /* ── Queries ── */
   const { data: campaigns = [] } = useQuery({
@@ -292,11 +305,12 @@ const ScheduleTimeline = () => {
 
   const addContent = useMutation({
     mutationFn: async ({ campaignId, mediaId }: { campaignId: string; mediaId: string }) => {
-      const maxPos = detailContents.length;
+      const camp = campaigns.find((c: any) => c.id === campaignId);
+      const maxPos = (camp?.campaign_contents || []).length;
       const { error } = await supabase.from("campaign_contents").insert([{ campaign_id: campaignId, media_id: mediaId, position: maxPos, is_active: true, weight: 1 }]);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Conteúdo adicionado" }); setAddMediaId(""); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Conteúdo adicionado" }); setAddMediaId(""); setNewContentMediaId(""); setNewContentCampaignId(""); setAddContentDialogOpen(false); },
   });
 
   const removeContent = useMutation({
@@ -327,21 +341,18 @@ const ScheduleTimeline = () => {
     mutationFn: async ({ groupId, deviceIds }: { groupId: string; deviceIds: string[] }) => {
       const existing = groupMembers.filter(m => m.group_id === groupId).map(m => m.device_id);
       const newIds = deviceIds.filter(id => !existing.includes(id));
-      if (newIds.length === 0) return;
-      const rows = newIds.map(id => ({ group_id: groupId, device_id: id }));
-      const { error } = await supabase.from("device_group_members").insert(rows);
-      if (error) throw error;
+      const removedIds = existing.filter(id => !deviceIds.includes(id));
+      if (newIds.length > 0) {
+        const rows = newIds.map(id => ({ group_id: groupId, device_id: id }));
+        const { error } = await supabase.from("device_group_members").insert(rows);
+        if (error) throw error;
+      }
+      for (const id of removedIds) {
+        await supabase.from("device_group_members").delete().eq("group_id", groupId).eq("device_id", id);
+      }
     },
-    onSuccess: () => { invalidateGroups(); toast({ title: "Dispositivos adicionados ao grupo" }); setAddDeviceGroupId(null); setSelectedDeviceIds([]); },
+    onSuccess: () => { invalidateGroups(); toast({ title: "Dispositivos atualizados" }); setAddDeviceGroupId(null); setSelectedDeviceIds([]); },
     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
-  });
-
-  const removeDeviceFromGroup = useMutation({
-    mutationFn: async ({ groupId, deviceId }: { groupId: string; deviceId: string }) => {
-      const { error } = await supabase.from("device_group_members").delete().eq("group_id", groupId).eq("device_id", deviceId);
-      if (error) throw error;
-    },
-    onSuccess: () => { invalidateGroups(); toast({ title: "Dispositivo removido do grupo" }); },
   });
 
   /* ── Helpers ── */
@@ -386,7 +397,6 @@ const ScheduleTimeline = () => {
       const q = search.toLowerCase();
       result = result.filter((c: any) => c.name?.toLowerCase().includes(q));
     }
-    // If a group is selected, filter by devices in group → stores → hierarchy
     if (selectedGroupId !== "all") {
       const devicesInGroup = groupMembers.filter(m => m.group_id === selectedGroupId).map(m => m.device_id);
       const groupDevices = devices.filter(d => devicesInGroup.includes(d.id));
@@ -394,7 +404,7 @@ const ScheduleTimeline = () => {
 
       result = result.filter((c: any) => {
         const targets = c.campaign_targets || [];
-        if (targets.length === 0) return true; // global
+        if (targets.length === 0) return true;
         return targets.some((t: any) => {
           if (t.target_type === "device" && devicesInGroup.includes(t.device_id)) return true;
           if (t.target_type === "store" && groupStoreIds.includes(t.store_id)) return true;
@@ -429,10 +439,24 @@ const ScheduleTimeline = () => {
     return map;
   }, [campaigns]);
 
-  const selectedCampaign = campaigns.find((c: any) => c.id === selectedCampaignId);
-  const selectedContents = selectedCampaign?.campaign_contents || [];
-  const detailCampaign = campaigns.find((c: any) => c.id === detailCampaignId);
+  // All contents from filtered campaigns, flattened
+  const allContents = useMemo(() => {
+    const items: { content: any; campaign: any; color: string }[] = [];
+    filteredCampaigns.forEach((c: any) => {
+      const contents = c.campaign_contents || [];
+      const color = colorMap[c.id] || "#888";
+      contents
+        .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+        .forEach((content: any) => {
+          if (content.media) {
+            items.push({ content, campaign: c, color });
+          }
+        });
+    });
+    return items;
+  }, [filteredCampaigns, colorMap]);
 
+  const detailCampaign = campaigns.find((c: any) => c.id === detailCampaignId);
   const selectedGroupName = selectedGroupId === "all" ? "TODOS" : deviceGroups.find((g: any) => g.id === selectedGroupId)?.name || "GRUPO";
   const devicesInSelectedGroup = selectedGroupId === "all" ? [] : groupMembers.filter(m => m.group_id === selectedGroupId).map(m => m.device_id);
 
@@ -441,16 +465,14 @@ const ScheduleTimeline = () => {
       <div className="flex items-center justify-between w-full">
         <div>
           <h1 className="text-2xl font-bold">Programações</h1>
-          <p className="text-sm text-muted-foreground">Gerencie campanhas, grupos e segmentações</p>
+          <p className="text-sm text-muted-foreground">Gerencie campanhas, conteúdos e segmentações</p>
         </div>
       </div>
     }>
-      {/* ═══ Top bar ═══ */}
+      {/* ═══ Top bar: Group selector + actions ═══ */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        {/* Group selector */}
         <div className="flex items-center gap-2">
           <Settings2 className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">GRUPO</span>
           <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
             <SelectTrigger className="w-52 font-semibold"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -475,7 +497,7 @@ const ScheduleTimeline = () => {
               <Pencil className="h-3.5 w-3.5" /> Atualizar grupo
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setAddDeviceGroupId(selectedGroupId); setSelectedDeviceIds(devicesInSelectedGroup); }}>
-              <Plus className="h-3.5 w-3.5" /> Adicionar dispositivos
+              <Plus className="h-3.5 w-3.5" /> Dispositivos
             </Button>
             <Badge variant="secondary" className="text-xs">{devicesInSelectedGroup.length} dispositivo(s)</Badge>
           </>
@@ -484,161 +506,251 @@ const ScheduleTimeline = () => {
         <div className="ml-auto flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar uma campanha" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-64" />
+            <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-48" />
           </div>
+        </div>
+      </div>
+
+      {/* ═══ View tabs ═══ */}
+      <div className="flex items-center gap-1 mb-4 border-b border-border pb-2">
+        <Button variant={viewMode === "contents" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("contents")}>
+          <Layers className="h-4 w-4" /> Conteúdos
+        </Button>
+        <Button variant={viewMode === "campaigns" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("campaigns")}>
+          <Target className="h-4 w-4" /> Campanhas
+        </Button>
+        <Button variant={viewMode === "timeline" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("timeline")}>
+          <Calendar className="h-4 w-4" /> Timeline
+        </Button>
+        <div className="ml-auto flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setAddContentDialogOpen(true)}>
+            <Plus className="h-4 w-4" /> Adicionar conteúdo
+          </Button>
           <Button className="gap-1.5" size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" /> Nova campanha
           </Button>
         </div>
       </div>
 
-      {/* ═══ Campaign list ═══ */}
-      <div className="border border-border rounded-lg bg-card overflow-hidden">
-        <ScrollArea className="max-h-[48vh]">
-          {filteredCampaigns.length === 0 ? (
-            <p className="text-center text-muted-foreground py-12">Nenhuma campanha encontrada</p>
+      {/* ═══ GROUP HEADER BAR (when a group is selected) ═══ */}
+      {selectedGroupId !== "all" && (
+        <div className="flex items-center gap-3 px-4 py-2 mb-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+          <div className="w-3 h-3 rounded-full bg-primary" />
+          <Printer className="h-4 w-4 text-muted-foreground" />
+          <span className="font-bold text-sm uppercase tracking-wider">{selectedGroupName}</span>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => {
+              const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
+              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
+            }}>
+              <RefreshCw className="h-3.5 w-3.5" /> Atualizar grupo
+            </Button>
+            <Button size="sm" className="gap-1.5" onClick={() => setAddContentDialogOpen(true)}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar conteúdo
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ VIEW: CONTENTS (Card grid like reference image) ═══ */}
+      {viewMode === "contents" && (
+        <div>
+          {allContents.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium">Nenhum conteúdo programado</p>
+              <p className="text-sm mt-1">Adicione conteúdos às campanhas para visualizar aqui</p>
+            </div>
           ) : (
-            <div className="divide-y divide-border">
-              {filteredCampaigns.map((c: any) => {
-                const status = getStatus(c);
-                const color = colorMap[c.id] || "#888";
-                const isSelected = selectedCampaignId === c.id;
-                const contentsCount = (c.campaign_contents || []).length;
-                const targetsCount = (c.campaign_targets || []).length;
-                const pri = PRIORITY_LABELS[c.priority] || { label: `P${c.priority}` };
-                const typeLabel = CAMPAIGN_TYPES.find(t => t.value === c.campaign_type)?.label || c.campaign_type;
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
+              {allContents.map(({ content, campaign, color }) => {
+                const media = content.media;
+                const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+                const isVideo = media.type === "video" || media.file_url?.match(/\.(mp4|webm|mov)$/i);
 
                 return (
-                  <div
-                    key={c.id}
-                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-accent/40 ${isSelected ? "bg-primary/10" : ""}`}
-                    style={{ borderLeft: `4px solid ${color}` }}
-                    onClick={() => setSelectedCampaignId(isSelected ? null : c.id)}
-                  >
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
-                    <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="flex-1 text-sm font-medium truncate">{c.name}</span>
+                  <div key={content.id} className="group">
+                    {/* Thumbnail */}
+                    <div
+                      className="relative aspect-video rounded-lg overflow-hidden bg-muted border border-border cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all"
+                      onClick={() => setPreviewMedia(media)}
+                    >
+                      {isImage && media.file_url ? (
+                        <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : isVideo && media.file_url ? (
+                        <div className="w-full h-full flex items-center justify-center bg-black/80">
+                          <Play className="h-8 w-8 text-white/70" />
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Image className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                      )}
+                    </div>
 
-                    <Badge variant="outline" className="text-[10px] hidden lg:inline-flex">{typeLabel}</Badge>
-                    <Badge variant="secondary" className="text-[10px] hidden md:inline-flex">{pri.label}</Badge>
+                    {/* Media name */}
+                    <p className="text-xs font-medium truncate mt-2 px-0.5">{media.name}</p>
 
-                    {c.start_date && (
-                      <span className="text-[10px] text-muted-foreground font-mono hidden md:inline">
-                        {new Date(c.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                        {c.end_date && ` → ${new Date(c.end_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`}
-                      </span>
-                    )}
-
-                    {targetsCount > 0 && (
+                    {/* Action icons row */}
+                    <div className="flex items-center justify-center gap-2 mt-1.5">
                       <Tooltip>
-                        <TooltipTrigger><Target className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                        <TooltipContent>{targetsCount} segmentação(ões)</TooltipContent>
+                        <TooltipTrigger asChild>
+                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => {
+                            if (media.file_url) {
+                              const a = document.createElement("a");
+                              a.href = media.file_url;
+                              a.download = media.name;
+                              a.target = "_blank";
+                              a.click();
+                            }
+                          }}>
+                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download</TooltipContent>
                       </Tooltip>
-                    )}
-
-                    {contentsCount > 0 && (
                       <Tooltip>
-                        <TooltipTrigger><Info className="h-3.5 w-3.5 text-blue-500" /></TooltipTrigger>
-                        <TooltipContent>{contentsCount} mídia(s)</TooltipContent>
+                        <TooltipTrigger asChild>
+                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => {
+                            setDetailCampaignId(campaign.id);
+                            setDetailTab("contents");
+                          }}>
+                            <Hand className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Gerenciar</TooltipContent>
                       </Tooltip>
-                    )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => setPreviewMedia(media)}>
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Visualizar</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="p-1 rounded hover:bg-muted transition-colors" onClick={() => {
+                            navigator.clipboard.writeText(media.file_url || "");
+                            toast({ title: "URL copiada" });
+                          }}>
+                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copiar URL</TooltipContent>
+                      </Tooltip>
+                    </div>
 
-                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => openEdit(c)}>
-                        Editar <Settings2 className="h-3 w-3" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="gap-1 text-xs h-7 text-primary" onClick={() => { setDetailCampaignId(c.id); setDetailTab("contents"); }}>
-                        Adicionar <CheckCircle2 className="h-3 w-3" />
-                      </Button>
+                    {/* Campaign label badge */}
+                    <div
+                      className="mt-1.5 rounded px-2 py-1 text-[10px] font-bold text-white truncate text-center uppercase tracking-wide"
+                      style={{ backgroundColor: color }}
+                    >
+                      {campaign.name}
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </ScrollArea>
-      </div>
+        </div>
+      )}
 
-      {/* ═══ Selected campaign content strip (bottom preview) ═══ */}
-      {selectedCampaign && selectedContents.length > 0 && (
-        <div className="mt-4">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-sm font-semibold">{selectedCampaign.name} — Conteúdos</span>
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs ml-auto" onClick={() => { setDetailCampaignId(selectedCampaign.id); setDetailTab("contents"); }}>
-              <Plus className="h-3.5 w-3.5" /> Adicionar conteúdo
-            </Button>
-          </div>
-          <ScrollArea className="w-full">
-            <div className="flex gap-3 pb-2">
-              {selectedContents
-                .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
-                .map((content: any) => {
-                  const media = content.media;
-                  if (!media) return null;
-                  const color = colorMap[selectedCampaign.id] || "#888";
-                  const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+      {/* ═══ VIEW: CAMPAIGNS ═══ */}
+      {viewMode === "campaigns" && (
+        <div className="border border-border rounded-lg bg-card overflow-hidden">
+          <ScrollArea className="max-h-[60vh]">
+            {filteredCampaigns.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">Nenhuma campanha encontrada</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {filteredCampaigns.map((c: any) => {
+                  const status = getStatus(c);
+                  const color = colorMap[c.id] || "#888";
+                  const contentsCount = (c.campaign_contents || []).length;
+                  const targetsCount = (c.campaign_targets || []).length;
+                  const pri = PRIORITY_LABELS[c.priority] || { label: `P${c.priority}` };
+                  const typeLabel = CAMPAIGN_TYPES.find(t => t.value === c.campaign_type)?.label || c.campaign_type;
+
                   return (
-                    <div key={content.id} className="shrink-0 w-40">
-                      <div className="relative h-24 rounded-lg overflow-hidden bg-muted border border-border">
-                        {isImage && media.file_url ? (
-                          <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">{media.type || "Mídia"}</div>
-                        )}
-                      </div>
-                      <p className="text-xs font-medium truncate mt-1.5">{media.name}</p>
-                      <div className="flex gap-1 mt-1 justify-center">
-                        <Tooltip><TooltipTrigger><Eye className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger><TooltipContent>Visualizar</TooltipContent></Tooltip>
-                      </div>
-                      <div className="mt-1 rounded px-2 py-0.5 text-[10px] font-bold text-white truncate text-center" style={{ backgroundColor: color }}>
-                        {selectedCampaign.name}
+                    <div key={c.id} className="flex items-center gap-3 px-4 py-3 hover:bg-accent/40 transition-colors" style={{ borderLeft: `4px solid ${color}` }}>
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+                      <span className="flex-1 text-sm font-medium truncate">{c.name}</span>
+
+                      <Badge variant="outline" className="text-[10px] hidden lg:inline-flex">{typeLabel}</Badge>
+                      <Badge variant="secondary" className="text-[10px] hidden md:inline-flex">{pri.label}</Badge>
+
+                      {c.start_date && (
+                        <span className="text-[10px] text-muted-foreground font-mono hidden md:inline">
+                          {new Date(c.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                          {c.end_date && ` → ${new Date(c.end_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`}
+                        </span>
+                      )}
+
+                      <Badge variant="secondary" className="text-[10px]">{contentsCount} mídia(s)</Badge>
+                      {targetsCount > 0 && <Badge variant="outline" className="text-[10px]">{targetsCount} segm.</Badge>}
+
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => openEdit(c)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1 text-xs h-7 text-primary" onClick={() => { setDetailCampaignId(c.id); setDetailTab("contents"); }}>
+                          <Layers className="h-3 w-3" /> Detalhes
+                        </Button>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7 text-destructive" onClick={() => {
+                          if (confirm(`Excluir campanha "${c.name}"?`)) deleteCampaign.mutate(c.id);
+                        }}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   );
                 })}
-            </div>
+              </div>
+            )}
           </ScrollArea>
         </div>
       )}
 
-      {/* ═══ Timeline ═══ */}
-      {filteredCampaigns.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold mb-3">Timeline de Programação</h3>
-          <div className="border border-border rounded-lg bg-card p-4 overflow-x-auto">
-            <div className="flex items-center gap-0 mb-2 min-w-[800px]">
-              <div className="w-40 shrink-0" />
-              <div className="flex-1 flex">
-                {Array.from({ length: 18 }, (_, i) => i + 6).map(h => (
-                  <div key={h} className="flex-1 text-center text-[10px] text-muted-foreground font-mono border-l border-border/40 first:border-l-0">
-                    {String(h).padStart(2, "0")}h
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1 min-w-[800px]">
-              {filteredCampaigns.map((c: any) => {
-                const color = colorMap[c.id] || "#888";
-                const startH = c.start_time ? parseInt(c.start_time.split(":")[0]) : 6;
-                const endH = c.end_time ? parseInt(c.end_time.split(":")[0]) : 23;
-                const s = Math.max(startH, 6);
-                const e = Math.min(endH, 23);
-                const leftPct = ((s - 6) / 17) * 100;
-                const widthPct = ((e - s) / 17) * 100;
-                return (
-                  <div key={c.id} className="flex items-center gap-0 cursor-pointer" onClick={() => setSelectedCampaignId(c.id)}>
-                    <div className="w-40 shrink-0 truncate text-xs font-medium pr-2 text-right">{c.name}</div>
-                    <div className="flex-1 h-7 bg-muted/20 rounded relative">
-                      <div className="absolute top-0.5 bottom-0.5 rounded flex items-center px-2" style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 3)}%`, backgroundColor: color, opacity: 0.85 }}>
-                        <span className="text-[9px] text-white font-semibold truncate">{(c.campaign_contents || []).length} itens</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+      {/* ═══ VIEW: TIMELINE ═══ */}
+      {viewMode === "timeline" && filteredCampaigns.length > 0 && (
+        <div className="border border-border rounded-lg bg-card p-4 overflow-x-auto">
+          <div className="flex items-center gap-0 mb-2 min-w-[800px]">
+            <div className="w-44 shrink-0" />
+            <div className="flex-1 flex">
+              {Array.from({ length: 18 }, (_, i) => i + 6).map(h => (
+                <div key={h} className="flex-1 text-center text-[10px] text-muted-foreground font-mono border-l border-border/40 first:border-l-0">
+                  {String(h).padStart(2, "0")}h
+                </div>
+              ))}
             </div>
           </div>
+          <div className="space-y-1 min-w-[800px]">
+            {filteredCampaigns.map((c: any) => {
+              const color = colorMap[c.id] || "#888";
+              const startH = c.start_time ? parseInt(c.start_time.split(":")[0]) : 6;
+              const endH = c.end_time ? parseInt(c.end_time.split(":")[0]) : 23;
+              const s = Math.max(startH, 6);
+              const e = Math.min(endH, 23);
+              const leftPct = ((s - 6) / 17) * 100;
+              const widthPct = ((e - s) / 17) * 100;
+              return (
+                <div key={c.id} className="flex items-center gap-0 cursor-pointer hover:bg-accent/20 rounded transition-colors" onClick={() => { setDetailCampaignId(c.id); setDetailTab("contents"); }}>
+                  <div className="w-44 shrink-0 truncate text-xs font-medium pr-2 text-right">{c.name}</div>
+                  <div className="flex-1 h-8 bg-muted/20 rounded relative">
+                    <div className="absolute top-0.5 bottom-0.5 rounded flex items-center px-2" style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 3)}%`, backgroundColor: color, opacity: 0.85 }}>
+                      <span className="text-[9px] text-white font-semibold truncate">{(c.campaign_contents || []).length} itens</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      )}
+
+      {viewMode === "timeline" && filteredCampaigns.length === 0 && (
+        <p className="text-center text-muted-foreground py-12">Nenhuma campanha para exibir na timeline</p>
       )}
 
       {/* ═══ Create/Edit Campaign Dialog ═══ */}
@@ -696,7 +808,7 @@ const ScheduleTimeline = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Campaign Detail Dialog (Contents, Target, Preview) ═══ */}
+      {/* ═══ Campaign Detail Dialog ═══ */}
       <Dialog open={!!detailCampaignId} onOpenChange={v => { if (!v) setDetailCampaignId(null); }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -715,22 +827,26 @@ const ScheduleTimeline = () => {
 
             <TabsContent value="contents" className="space-y-4 mt-4">
               {detailContents.length > 0 ? (
-                <div className="space-y-2">
-                  {detailContents.map((c: any, idx: number) => (
-                    <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                      <span className="text-xs text-muted-foreground w-6 text-center font-mono">{idx + 1}</span>
-                      {c.media?.file_url && (c.media.type === "image" || c.media.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
-                        <img src={c.media.file_url} alt="" className="w-12 h-8 object-cover rounded" />
-                      ) : (
-                        <div className="w-12 h-8 bg-muted rounded flex items-center justify-center"><Image className="h-4 w-4 text-muted-foreground" /></div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{c.media?.name || "Mídia"}</p>
-                        <p className="text-xs text-muted-foreground">{c.media?.type} · {c.duration_override || c.media?.duration || 10}s</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {detailContents.map((c: any, idx: number) => {
+                    const isImg = c.media?.type === "image" || c.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                    return (
+                      <div key={c.id} className="relative group">
+                        <div className="aspect-video rounded-lg overflow-hidden bg-muted border border-border">
+                          {isImg && c.media?.file_url ? (
+                            <img src={c.media.file_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium truncate mt-1">{c.media?.name || "Mídia"}</p>
+                        <p className="text-[10px] text-muted-foreground">{c.media?.type} · {c.duration_override || c.media?.duration || 10}s</p>
+                        <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => removeContent.mutate(c.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeContent.mutate(c.id)}><Trash2 className="h-3 w-3" /></Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum conteúdo adicionado</p>
@@ -862,6 +978,79 @@ const ScheduleTimeline = () => {
         </DialogContent>
       </Dialog>
 
+      {/* ═══ Add Content Dialog (global) ═══ */}
+      <Dialog open={addContentDialogOpen} onOpenChange={setAddContentDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Adicionar Conteúdo</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Campanha</Label>
+              <Select value={newContentCampaignId} onValueChange={setNewContentCampaignId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a campanha" /></SelectTrigger>
+                <SelectContent>
+                  {filteredCampaigns.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colorMap[c.id] }} />
+                        {c.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Mídia</Label>
+              <Select value={newContentMediaId} onValueChange={setNewContentMediaId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a mídia" /></SelectTrigger>
+                <SelectContent>
+                  {mediaList.map((m: any) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <div className="flex items-center gap-2">
+                        {m.file_url && (m.type === "image" || m.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
+                          <img src={m.file_url} alt="" className="w-8 h-5 object-cover rounded" />
+                        ) : (
+                          <div className="w-8 h-5 bg-muted rounded flex items-center justify-center"><Image className="h-3 w-3" /></div>
+                        )}
+                        {m.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={newContentScheduled} onCheckedChange={setNewContentScheduled} />
+              <Label>Conteúdo programado (usar período da campanha)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddContentDialogOpen(false)}>Cancelar</Button>
+            <Button disabled={!newContentCampaignId || !newContentMediaId} onClick={() => addContent.mutate({ campaignId: newContentCampaignId, mediaId: newContentMediaId })}>
+              <Plus className="h-4 w-4 mr-1" /> Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ Preview Lightbox ═══ */}
+      <Dialog open={!!previewMedia} onOpenChange={v => { if (!v) setPreviewMedia(null); }}>
+        <DialogContent className="max-w-4xl p-2">
+          <DialogHeader>
+            <DialogTitle className="text-sm">{previewMedia?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center min-h-[400px] bg-black rounded-lg overflow-hidden">
+            {previewMedia?.file_url && (previewMedia.type === "video" || previewMedia.file_url?.match(/\.(mp4|webm|mov)$/i)) ? (
+              <video src={previewMedia.file_url} controls autoPlay className="max-w-full max-h-[70vh]" />
+            ) : previewMedia?.file_url ? (
+              <img src={previewMedia.file_url} alt={previewMedia.name} className="max-w-full max-h-[70vh] object-contain" />
+            ) : (
+              <p className="text-white">Preview indisponível</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ═══ Group Create/Edit Dialog ═══ */}
       <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
         <DialogContent className="max-w-sm">
@@ -883,8 +1072,8 @@ const ScheduleTimeline = () => {
       {/* ═══ Add Devices to Group Dialog ═══ */}
       <Dialog open={!!addDeviceGroupId} onOpenChange={v => { if (!v) { setAddDeviceGroupId(null); setSelectedDeviceIds([]); } }}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Adicionar dispositivos ao grupo</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground mb-2">Selecione os dispositivos para incluir no grupo "{deviceGroups.find((g: any) => g.id === addDeviceGroupId)?.name}"</p>
+          <DialogHeader><DialogTitle>Dispositivos do grupo</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground mb-2">Selecione os dispositivos para "{deviceGroups.find((g: any) => g.id === addDeviceGroupId)?.name}"</p>
 
           <ScrollArea className="h-[40vh] border rounded-lg p-2">
             {devices.map((d: any) => {
@@ -907,7 +1096,7 @@ const ScheduleTimeline = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => { setAddDeviceGroupId(null); setSelectedDeviceIds([]); }}>Cancelar</Button>
             <Button onClick={() => { if (addDeviceGroupId) addDevicesToGroup.mutate({ groupId: addDeviceGroupId, deviceIds: selectedDeviceIds }); }}>
-              Salvar ({selectedDeviceIds.length} selecionado{selectedDeviceIds.length !== 1 ? "s" : ""})
+              Salvar ({selectedDeviceIds.length})
             </Button>
           </DialogFooter>
         </DialogContent>
