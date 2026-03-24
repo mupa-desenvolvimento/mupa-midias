@@ -57,12 +57,14 @@ const DEFAULT_FORM = {
 
 /* ── View modes ── */
 type ViewMode = "campaigns" | "contents" | "timeline";
+type SortMode = "campaign" | "name" | "type" | "position";
 
 const ScheduleTimeline = () => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("contents");
+  const [sortMode, setSortMode] = useState<SortMode>("campaign");
 
   // Group selector
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
@@ -453,8 +455,17 @@ const ScheduleTimeline = () => {
           }
         });
     });
+    // Apply sorting
+    if (sortMode === "name") {
+      items.sort((a, b) => (a.content.media?.name || "").localeCompare(b.content.media?.name || ""));
+    } else if (sortMode === "type") {
+      items.sort((a, b) => (a.content.media?.type || "").localeCompare(b.content.media?.type || ""));
+    } else if (sortMode === "position") {
+      items.sort((a, b) => (a.content.position || 0) - (b.content.position || 0));
+    }
+    // "campaign" = default grouped order (no extra sort needed)
     return items;
-  }, [filteredCampaigns, colorMap]);
+  }, [filteredCampaigns, colorMap, sortMode]);
 
   const detailCampaign = campaigns.find((c: any) => c.id === detailCampaignId);
   const selectedGroupName = selectedGroupId === "all" ? "TODOS" : deviceGroups.find((g: any) => g.id === selectedGroupId)?.name || "GRUPO";
@@ -534,16 +545,24 @@ const ScheduleTimeline = () => {
 
       {/* ═══ GROUP HEADER BAR (when a group is selected) ═══ */}
       {selectedGroupId !== "all" && (
-        <div className="flex items-center gap-3 px-4 py-2 mb-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-3 px-4 py-3 mb-4 rounded-lg border-2 border-primary/20 bg-primary/5">
           <div className="w-3 h-3 rounded-full bg-primary" />
-          <Printer className="h-4 w-4 text-muted-foreground" />
+          <Users className="h-4 w-4 text-muted-foreground" />
           <span className="font-bold text-sm uppercase tracking-wider">{selectedGroupName}</span>
+          <div className="flex items-center gap-2 ml-2 px-3 py-1 rounded-md bg-primary/10 border border-primary/20">
+            <Monitor className="h-4 w-4 text-primary" />
+            <span className="text-lg font-bold text-primary">{devicesInSelectedGroup.length}</span>
+            <span className="text-xs text-muted-foreground">dispositivo(s)</span>
+          </div>
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => {
               const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
               if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
             }}>
-              <RefreshCw className="h-3.5 w-3.5" /> Atualizar grupo
+              <Pencil className="h-3.5 w-3.5" /> Editar grupo
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setAddDeviceGroupId(selectedGroupId); setSelectedDeviceIds(devicesInSelectedGroup); }}>
+              <Plus className="h-3.5 w-3.5" /> Dispositivos
             </Button>
             <Button size="sm" className="gap-1.5" onClick={() => setAddContentDialogOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Adicionar conteúdo
@@ -555,6 +574,53 @@ const ScheduleTimeline = () => {
       {/* ═══ VIEW: CONTENTS (Card grid like reference image) ═══ */}
       {viewMode === "contents" && (
         <div>
+          {/* Sort controls & summary */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{allContents.length} conteúdo(s) de {filteredCampaigns.length} campanha(s)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Ordenar:</span>
+              <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="campaign">Por campanha</SelectItem>
+                  <SelectItem value="name">Por nome</SelectItem>
+                  <SelectItem value="type">Por tipo</SelectItem>
+                  <SelectItem value="position">Por posição</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Preview strip - horizontal scroll showing all contents in sequence */}
+          {allContents.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Preview — Sequência de exibição</p>
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                {allContents.map(({ content, campaign, color }, idx) => {
+                  const media = content.media;
+                  const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+                  return (
+                    <div key={content.id} className="shrink-0 w-32 cursor-pointer" onClick={() => setPreviewMedia(media)}>
+                      <div className="relative aspect-video rounded overflow-hidden bg-muted border border-border">
+                        {isImage && media.file_url ? (
+                          <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-black/60">
+                            <Play className="h-5 w-5 text-white/70" />
+                          </div>
+                        )}
+                        <div className="absolute top-0.5 left-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white" style={{ backgroundColor: color }}>{idx + 1}</div>
+                      </div>
+                      <p className="text-[10px] truncate mt-1 font-medium">{media.name}</p>
+                      <p className="text-[9px] truncate" style={{ color }}>{campaign.name}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {allContents.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
