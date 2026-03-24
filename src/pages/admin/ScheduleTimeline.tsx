@@ -246,17 +246,20 @@ const ScheduleTimeline = () => {
   });
 
   const addTarget = useMutation({
-    mutationFn: async (t: { campaign_id: string; target_type: string; state_id?: string; tag_id?: string; sector_id?: string; store_id?: string }) => {
+    mutationFn: async (t: { campaign_id: string; target_type: string; state_id?: string; tag_id?: string; sector_id?: string; store_id?: string; city_id?: string; region_id?: string; device_id?: string }) => {
       const { error } = await supabase.from("campaign_targets").insert([{
         campaign_id: t.campaign_id, target_type: t.target_type,
         state_id: t.target_type === "state" && t.state_id ? t.state_id : null,
+        region_id: t.target_type === "region" && t.region_id ? t.region_id : null,
+        city_id: t.target_type === "city" && t.city_id ? t.city_id : null,
         tag_id: t.target_type === "tag" && t.tag_id ? t.tag_id : null,
         sector_id: t.target_type === "sector" && t.sector_id ? t.sector_id : null,
         store_id: t.target_type === "store" && t.store_id ? t.store_id : null,
+        device_id: t.target_type === "device" && t.device_id ? t.device_id : null,
       }]);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }); toast({ title: "Segmentação adicionada" }); setTargetForm({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "" }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }); toast({ title: "Segmentação adicionada" }); setTargetForm({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" }); },
   });
 
   const removeTarget = useMutation({
