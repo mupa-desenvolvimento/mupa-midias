@@ -545,16 +545,24 @@ const ScheduleTimeline = () => {
 
       {/* ═══ GROUP HEADER BAR (when a group is selected) ═══ */}
       {selectedGroupId !== "all" && (
-        <div className="flex items-center gap-3 px-4 py-2 mb-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-3 px-4 py-3 mb-4 rounded-lg border-2 border-primary/20 bg-primary/5">
           <div className="w-3 h-3 rounded-full bg-primary" />
-          <Printer className="h-4 w-4 text-muted-foreground" />
+          <Users className="h-4 w-4 text-muted-foreground" />
           <span className="font-bold text-sm uppercase tracking-wider">{selectedGroupName}</span>
+          <div className="flex items-center gap-2 ml-2 px-3 py-1 rounded-md bg-primary/10 border border-primary/20">
+            <Monitor className="h-4 w-4 text-primary" />
+            <span className="text-lg font-bold text-primary">{devicesInSelectedGroup.length}</span>
+            <span className="text-xs text-muted-foreground">dispositivo(s)</span>
+          </div>
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => {
               const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
               if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
             }}>
-              <RefreshCw className="h-3.5 w-3.5" /> Atualizar grupo
+              <Pencil className="h-3.5 w-3.5" /> Editar grupo
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setAddDeviceGroupId(selectedGroupId); setSelectedDeviceIds(devicesInSelectedGroup); }}>
+              <Plus className="h-3.5 w-3.5" /> Dispositivos
             </Button>
             <Button size="sm" className="gap-1.5" onClick={() => setAddContentDialogOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Adicionar conteúdo
