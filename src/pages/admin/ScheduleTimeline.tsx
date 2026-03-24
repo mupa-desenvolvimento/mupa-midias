@@ -299,7 +299,7 @@ const ScheduleTimeline = () => {
   };
 
   const getTargetLabel = (t: any) => {
-    if (t.target_type === "state") { const s = states.find((s: any) => s.id === t.state_id); return `Estado: ${s?.code || "?"}`; }
+    if (t.target_type === "state") { const s = statesData.find((s: any) => s.id === t.state_id); return `Estado: ${s?.code || "?"}`; }
     if (t.target_type === "tag") { const tag = tags.find((tg: any) => tg.id === t.tag_id); return `Tag: ${tag?.name || "?"}`; }
     if (t.target_type === "sector") { const sec = sectors.find((s: any) => s.id === t.sector_id); return `Setor: ${sec?.name || "?"}`; }
     if (t.target_type === "store") { const st = stores.find((s: any) => s.id === t.store_id); return `Loja: ${st?.name || "?"}`; }
