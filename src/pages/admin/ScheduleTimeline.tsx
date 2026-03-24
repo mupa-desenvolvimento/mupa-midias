@@ -64,6 +64,7 @@ const ScheduleTimeline = () => {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("contents");
+  const [sortMode, setSortMode] = useState<SortMode>("campaign");
 
   // Group selector
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
