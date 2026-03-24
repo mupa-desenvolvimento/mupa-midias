@@ -306,13 +306,7 @@ const ScheduleTimeline = () => {
     return t.target_type;
   };
 
-  // Build hierarchy lookup for filtering
-  const storeHierarchy = useMemo(() => {
-    // For each store, find its city, state, region
-    const map: Record<string, { city_id?: string; state_id?: string; region_id?: string }> = {};
-    // We need to fetch this from the stores data with joins - for now build from available data
-    return map;
-  }, []);
+  // Remove unused storeHierarchy memo - we use storesWithHierarchy query directly
 
   // Filter campaigns using hierarchy rules
   const filteredCampaigns = useMemo(() => {
