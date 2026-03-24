@@ -574,6 +574,53 @@ const ScheduleTimeline = () => {
       {/* ═══ VIEW: CONTENTS (Card grid like reference image) ═══ */}
       {viewMode === "contents" && (
         <div>
+          {/* Sort controls & summary */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{allContents.length} conteúdo(s) de {filteredCampaigns.length} campanha(s)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Ordenar:</span>
+              <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="campaign">Por campanha</SelectItem>
+                  <SelectItem value="name">Por nome</SelectItem>
+                  <SelectItem value="type">Por tipo</SelectItem>
+                  <SelectItem value="position">Por posição</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Preview strip - horizontal scroll showing all contents in sequence */}
+          {allContents.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Preview — Sequência de exibição</p>
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                {allContents.map(({ content, campaign, color }, idx) => {
+                  const media = content.media;
+                  const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+                  return (
+                    <div key={content.id} className="shrink-0 w-32 cursor-pointer" onClick={() => setPreviewMedia(media)}>
+                      <div className="relative aspect-video rounded overflow-hidden bg-muted border border-border">
+                        {isImage && media.file_url ? (
+                          <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-black/60">
+                            <Play className="h-5 w-5 text-white/70" />
+                          </div>
+                        )}
+                        <div className="absolute top-0.5 left-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white" style={{ backgroundColor: color }}>{idx + 1}</div>
+                      </div>
+                      <p className="text-[10px] truncate mt-1 font-medium">{media.name}</p>
+                      <p className="text-[9px] truncate" style={{ color }}>{campaign.name}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {allContents.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
