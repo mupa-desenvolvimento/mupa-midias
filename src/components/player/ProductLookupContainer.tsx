@@ -14,6 +14,12 @@ interface ProductData {
   savings_percent: number | null;
   image_url: string | null;
   store_code: string;
+  api_colors?: {
+    cor_assinatura_produto: string;
+    fundo_legibilidade: string;
+    cor_dominante_claro: string;
+    cor_dominante_escuro: string;
+  } | null;
 }
 
 interface ProductLookupContainerProps {
