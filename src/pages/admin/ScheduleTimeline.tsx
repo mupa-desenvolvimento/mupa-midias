@@ -42,6 +42,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Plus, Minus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus, Download, Hand, Copy, Printer, RefreshCw, Play, GripVertical, Network, ChevronDown, ChevronRight, ListFilter, AlertCircle
 } from "lucide-react";
+import { MediaThumbnail } from "@/components/media/MediaThumbnail";
 import { db } from "@/services/firebase";
 import { ref, update } from "firebase/database";
 
