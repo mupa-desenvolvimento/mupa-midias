@@ -1539,6 +1539,39 @@ const ScheduleTimeline = () => {
                         <Tooltip><TooltipTrigger asChild><button className="p-1 rounded hover:bg-muted"><Settings2 className="h-3.5 w-3.5 text-muted-foreground" /></button></TooltipTrigger><TooltipContent>Configurações</TooltipContent></Tooltip>
                         <Tooltip><TooltipTrigger asChild><button className="p-1 rounded hover:bg-muted"><Info className="h-3.5 w-3.5 text-muted-foreground" /></button></TooltipTrigger><TooltipContent>Info</TooltipContent></Tooltip>
 
+                        {/* Segment link/unlink toggle */}
+                        {selectedSegmentId && (() => {
+                          const campaignTargets = c.campaign_targets || [];
+                          const isLinked = campaignTargets.some((t: any) => t.segment_id === selectedSegmentId);
+                          return isLinked ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="gap-1 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                unlinkSegmentFromCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId });
+                              }}
+                              disabled={unlinkSegmentFromCampaign.isPending}
+                            >
+                              <Minus className="h-3 w-3" /> Remover segmento
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="gap-1 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                linkSegmentToCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId });
+                              }}
+                              disabled={linkSegmentToCampaign.isPending}
+                            >
+                              <Plus className="h-3 w-3" /> Vincular segmento
+                            </Button>
+                          );
+                        })()}
+
                         <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
                           Editar <Settings2 className="h-3 w-3" />
                         </Button>
