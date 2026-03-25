@@ -206,7 +206,7 @@ export function useCampaignSegmentTargets(segmentId?: string | null) {
         .eq("segment_id", segmentId)
         .order("created_at");
       if (error) throw error;
-      return (data || []) as CampaignSegmentTarget[];
+      return (data || []) as unknown as CampaignSegmentTarget[];
     },
   });
 }
