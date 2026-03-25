@@ -1013,7 +1013,6 @@ const ScheduleTimeline = () => {
   }, [allContents]);
   const SortablePreviewItem = ({ id, item, width, onClick }: { id: string; item: { content: any; campaign: any; color: string }; width: number; onClick: () => void }) => {
     const media = item.content.media;
-    const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
     const style: React.CSSProperties = {
       transform: CSS.Transform.toString(transform),
@@ -1038,13 +1037,7 @@ const ScheduleTimeline = () => {
           <GripVertical className="h-3.5 w-3.5" />
         </button>
         <div className={`relative aspect-video rounded overflow-hidden bg-muted border ${isDragging ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
-          {isImage && media.file_url ? (
-            <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-black/60">
-              <Play className="h-4 w-4 text-white/70" />
-            </div>
-          )}
+          <MediaThumbnail type={media.type} fileUrl={media.file_url} thumbnailUrl={media.thumbnail_url} name={media.name} />
         </div>
         <p className="text-[9px] truncate mt-1 font-medium">{media.name}</p>
         <div className="rounded px-1.5 py-0.5 text-[8px] font-bold text-white truncate text-center uppercase mt-0.5" style={{ backgroundColor: item.color }}>
