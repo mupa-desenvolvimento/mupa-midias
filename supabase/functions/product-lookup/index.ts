@@ -329,6 +329,13 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
         }
 
+        let resolvedImage = p.image ? { image_url: p.image, colors: null as any } : await resolveProductImage(normalizedEan, supabase, device.company_id);
+        // If we have the image but no colors yet, try fetching colors from Mupa
+        if (p.image && !resolvedImage.colors) {
+          const mupaResult = await resolveProductImage(normalizedEan, supabase, device.company_id);
+          if (mupaResult.colors) resolvedImage.colors = mupaResult.colors;
+        }
+
         const productData = {
           ean: p.barcode,
           name: p.description,
@@ -337,9 +344,10 @@ Deno.serve(async (req: Request) => {
           original_price: originalPrice,
           is_offer: isOffer,
           savings_percent: savingsPercent,
-          image_url: p.image || await resolveProductImage(normalizedEan, supabase, device.company_id),
+          image_url: resolvedImage.image_url || p.image,
           store_code: storeCode,
-          description: p.description // Legacy
+          description: p.description,
+          api_colors: resolvedImage.colors
         };
 
         // Salvar em cache (15 minutos)
