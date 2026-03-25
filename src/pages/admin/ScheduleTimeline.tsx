@@ -263,7 +263,7 @@ const ScheduleTimeline = () => {
   const { data: mediaList = [] } = useQuery({
     queryKey: ["media-list-schedule"],
     queryFn: async () => {
-      const { data } = await supabase.from("media_items").select("id, name, type, file_url, duration").eq("status", "active").order("name").limit(200);
+      const { data } = await supabase.from("media_items").select("id, name, type, file_url, thumbnail_url, duration").eq("status", "active").order("name").limit(200);
       return data || [];
     },
   });
