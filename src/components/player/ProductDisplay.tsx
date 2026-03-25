@@ -70,10 +70,17 @@ export const ProductDisplay = ({
   const originalPrice = product.original_price ? formatPrice(product.original_price) : null;
 
   const useColorExtraction = settings?.enable_color_extraction !== false;
-  const primaryColor = useColorExtraction ? colors.dominant : hexToRgb(settings?.container_primary_color || "#1E3A5F");
-  const secondaryColor = useColorExtraction ? colors.muted : hexToRgb(settings?.container_secondary_color || "#2D4A6F");
-  const accentColor = useColorExtraction ? colors.vibrant : hexToRgb(settings?.accent_color || "#3B82F6");
-
+  // Prioritize API colors from Mupa endpoint
+  const hasApiColors = !!product.api_colors;
+  const primaryColor = hasApiColors
+    ? hexToRgb(product.api_colors!.cor_assinatura_produto)
+    : useColorExtraction ? colors.dominant : hexToRgb(settings?.container_primary_color || "#1E3A5F");
+  const secondaryColor = hasApiColors
+    ? hexToRgb(product.api_colors!.fundo_legibilidade)
+    : useColorExtraction ? colors.muted : hexToRgb(settings?.container_secondary_color || "#2D4A6F");
+  const accentColor = hasApiColors
+    ? hexToRgb(product.api_colors!.cor_dominante_claro)
+    : useColorExtraction ? colors.vibrant : hexToRgb(settings?.accent_color || "#3B82F6");
   const darkPrimary = darkenRgb(primaryColor, 0.7);
   const lightPrimary = lightenRgb(primaryColor, 0.3);
 
