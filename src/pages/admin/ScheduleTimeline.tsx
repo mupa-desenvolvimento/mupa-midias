@@ -2228,15 +2228,10 @@ const ScheduleTimeline = () => {
                         {(() => {
                           const item = orderedDetailContents.find((c: any) => c.id === activeDetailId);
                           if (!item) return null;
-                          const isImg = item.media?.type === "image" || item.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
                           return (
                             <div className="rounded-lg bg-background border border-border shadow-lg p-2">
                               <div className="aspect-video rounded-md overflow-hidden bg-muted border border-border">
-                                {isImg && item.media?.file_url ? (
-                                  <img src={item.media.file_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
-                                )}
+                                <MediaThumbnail type={item.media?.type} fileUrl={item.media?.file_url} thumbnailUrl={item.media?.thumbnail_url} name={item.media?.name} />
                               </div>
                               <p className="text-xs font-medium truncate mt-2">{item.media?.name || "Mídia"}</p>
                             </div>
