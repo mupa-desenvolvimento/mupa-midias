@@ -938,9 +938,10 @@ const ScheduleTimeline = () => {
     setOrderedPreviewIds(allContents.map((i) => i.content.id));
   }, [allContents]);
 
+  // Only auto-select segment when on segments tab and nothing is selected
   useEffect(() => {
-    if (!selectedSegmentId && segments.length > 0) setSelectedSegmentId(segments[0].id);
-  }, [segments, selectedSegmentId]);
+    if (viewMode === "segments" && !selectedSegmentId && segments.length > 0) setSelectedSegmentId(segments[0].id);
+  }, [segments, selectedSegmentId, viewMode]);
 
   useEffect(() => {
     const segmentIds = [...new Set((detailTargets || []).map((t: any) => t.segment_id).filter(Boolean))] as string[];
