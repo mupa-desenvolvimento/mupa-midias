@@ -1151,6 +1151,17 @@ const ScheduleTimeline = () => {
           </Select>
         </div>
 
+        {/* Segment selector */}
+        <div className="flex items-center gap-2">
+          <SegmentsSelector
+            segments={segments}
+            value={selectedSegmentId}
+            onValueChange={setSelectedSegmentId}
+            placeholder="Selecionar segmento"
+            stats={segmentStats}
+          />
+        </div>
+
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingGroup(null); setGroupForm({ name: "", description: "" }); setGroupDialogOpen(true); }}>
           <FolderPlus className="h-4 w-4" /> Novo Grupo
         </Button>
@@ -1528,6 +1539,39 @@ const ScheduleTimeline = () => {
                         <Tooltip><TooltipTrigger asChild><button className="p-1 rounded hover:bg-muted"><Settings2 className="h-3.5 w-3.5 text-muted-foreground" /></button></TooltipTrigger><TooltipContent>Configurações</TooltipContent></Tooltip>
                         <Tooltip><TooltipTrigger asChild><button className="p-1 rounded hover:bg-muted"><Info className="h-3.5 w-3.5 text-muted-foreground" /></button></TooltipTrigger><TooltipContent>Info</TooltipContent></Tooltip>
 
+                        {/* Segment link/unlink toggle */}
+                        {selectedSegmentId && (() => {
+                          const campaignTargets = c.campaign_targets || [];
+                          const isLinked = campaignTargets.some((t: any) => t.segment_id === selectedSegmentId);
+                          return isLinked ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="gap-1 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                unlinkSegmentFromCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId });
+                              }}
+                              disabled={unlinkSegmentFromCampaign.isPending}
+                            >
+                              <Minus className="h-3 w-3" /> Remover segmento
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="gap-1 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                linkSegmentToCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId });
+                              }}
+                              disabled={linkSegmentToCampaign.isPending}
+                            >
+                              <Plus className="h-3 w-3" /> Vincular segmento
+                            </Button>
+                          );
+                        })()}
+
                         <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
                           Editar <Settings2 className="h-3 w-3" />
                         </Button>
@@ -1690,6 +1734,20 @@ const ScheduleTimeline = () => {
 
                       <Badge variant="secondary" className="text-[10px]">{contentsCount} mídia(s)</Badge>
                       {targetsCount > 0 && <Badge variant="outline" className="text-[10px]">{targetsCount} segm.</Badge>}
+
+                      {selectedSegmentId && (() => {
+                        const campaignTargets = c.campaign_targets || [];
+                        const isLinked = campaignTargets.some((t: any) => t.segment_id === selectedSegmentId);
+                        return isLinked ? (
+                          <Button variant="destructive" size="sm" className="gap-1 text-xs h-7" onClick={() => unlinkSegmentFromCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId })} disabled={unlinkSegmentFromCampaign.isPending}>
+                            <Minus className="h-3 w-3" /> Remover
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" size="sm" className="gap-1 text-xs h-7" onClick={() => linkSegmentToCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId })} disabled={linkSegmentToCampaign.isPending}>
+                            <Plus className="h-3 w-3" /> Vincular
+                          </Button>
+                        );
+                      })()}
 
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => openEdit(c)}>
