@@ -60,8 +60,26 @@ export const ProductLookupContainer = ({
     }
   }, [product, effectiveInputRef]);
 
-  // Preload image + extract colors in single pass
+  // Use API colors if available, otherwise extract from image
   useEffect(() => {
+    // If API provides colors, use them directly (no canvas needed)
+    if (product?.api_colors) {
+      const hexToRgb = (hex: string) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+          ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
+          : { r: 30, g: 58, b: 95 };
+      };
+      const apiColors = product.api_colors;
+      const dominant = hexToRgb(apiColors.cor_assinatura_produto);
+      const vibrant = hexToRgb(apiColors.cor_dominante_claro);
+      const muted = hexToRgb(apiColors.cor_dominante_escuro);
+      const luminance = (0.299 * dominant.r + 0.587 * dominant.g + 0.114 * dominant.b) / 255;
+      setColors({ dominant, vibrant, muted, isDark: luminance < 0.5 });
+      console.log("[ProductLookup] Using API colors:", apiColors);
+      return;
+    }
+
     if (!product?.image_url) {
       setColors(defaultColors);
       setImageLoaded(false);
@@ -78,7 +96,6 @@ export const ProductLookupContainer = ({
     preloadImage(url)
       .then((img) => {
         if (preloadAbortRef.current) return;
-        // Extract colors from the already-loaded image element (no extra download)
         const extracted = extractColorsFromElement(img);
         setColors(extracted);
         setPreloadedSrc(url);
@@ -88,14 +105,13 @@ export const ProductLookupContainer = ({
         console.warn("[ProductLookup] Image preload failed:", err);
         if (preloadAbortRef.current) return;
         setColors(defaultColors);
-        // Still set the src so the <img> tag can try loading it
         setPreloadedSrc(url);
       });
 
     return () => {
       preloadAbortRef.current = true;
     };
-  }, [product?.image_url]);
+  }, [product?.image_url, product?.api_colors]);
 
   // Countdown for auto-dismiss
   useEffect(() => {
