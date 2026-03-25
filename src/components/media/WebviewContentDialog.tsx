@@ -14,6 +14,7 @@ import { Globe, Loader2, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserTenant } from "@/hooks/useUserTenant";
+import { generateWebviewThumbnail, dataUrlToBlob } from "@/utils/webviewThumbnail";
 
 interface WebviewContentDialogProps {
   open: boolean;
@@ -30,12 +31,49 @@ export function WebviewContentDialog({ open, onOpenChange, onSuccess, folderId }
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [duration, setDuration] = useState(15);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
 
   const resetForm = () => {
     setName("");
     setUrl("");
     setThumbnailUrl("");
     setDuration(15);
+    setPreviewDataUrl(null);
+  };
+
+  // Generate preview when URL changes
+  const handleUrlChange = (newUrl: string) => {
+    setUrl(newUrl);
+    try {
+      new URL(newUrl);
+      setPreviewDataUrl(generateWebviewThumbnail(newUrl));
+    } catch {
+      setPreviewDataUrl(null);
+    }
+  };
+
+  const uploadThumbnail = async (webviewUrl: string): Promise<string | null> => {
+    try {
+      const dataUrl = generateWebviewThumbnail(webviewUrl);
+      const blob = dataUrlToBlob(dataUrl);
+      const fileName = `webview-thumb-${Date.now()}.png`;
+      const filePath = `thumbnails/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(filePath, blob, { contentType: "image/png", upsert: true });
+
+      if (uploadError) {
+        console.warn("Thumbnail upload failed, using inline:", uploadError);
+        return dataUrl; // fallback to data URL
+      }
+
+      const { data: publicData } = supabase.storage.from("media").getPublicUrl(filePath);
+      return publicData?.publicUrl || dataUrl;
+    } catch (err) {
+      console.warn("Thumbnail generation failed:", err);
+      return null;
+    }
   };
 
   const handleSave = async () => {
@@ -44,7 +82,6 @@ export function WebviewContentDialog({ open, onOpenChange, onSuccess, folderId }
       return;
     }
 
-    // Basic URL validation
     try {
       new URL(url);
     } catch {
@@ -54,18 +91,24 @@ export function WebviewContentDialog({ open, onOpenChange, onSuccess, folderId }
 
     setIsSaving(true);
     try {
+      // Use custom thumbnail if provided, otherwise auto-generate
+      let finalThumbnail = thumbnailUrl.trim() || null;
+      if (!finalThumbnail) {
+        finalThumbnail = await uploadThumbnail(url.trim());
+      }
+
       const { error } = await supabase.from("media_items").insert({
         name: name.trim(),
         type: "webview",
         file_url: url.trim(),
-        thumbnail_url: thumbnailUrl.trim() || null,
+        thumbnail_url: finalThumbnail,
         duration,
         status: "active",
         folder_id: folderId || null,
         tenant_id: tenantId || null,
         metadata: {
           webview_url: url.trim(),
-          thumbnail_url: thumbnailUrl.trim() || null,
+          thumbnail_url: finalThumbnail,
         },
       });
 
@@ -82,6 +125,8 @@ export function WebviewContentDialog({ open, onOpenChange, onSuccess, folderId }
       setIsSaving(false);
     }
   };
+
+  const showPreview = thumbnailUrl || previewDataUrl;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
@@ -115,16 +160,33 @@ export function WebviewContentDialog({ open, onOpenChange, onSuccess, folderId }
                 id="webview-url"
                 placeholder="https://exemplo.com"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => handleUrlChange(e.target.value)}
                 className="pl-10"
               />
             </div>
           </div>
 
+          {/* Auto-generated or custom thumbnail preview */}
+          {showPreview && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                {thumbnailUrl ? "Thumbnail customizada" : "Thumbnail auto-gerada"}
+              </Label>
+              <div className="rounded-md overflow-hidden border bg-muted/30 aspect-video flex items-center justify-center">
+                <img
+                  src={thumbnailUrl || previewDataUrl!}
+                  alt="Thumbnail preview"
+                  className="max-h-full max-w-full object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="webview-thumbnail" className="flex items-center gap-1.5">
               <ImageIcon className="w-4 h-4 text-muted-foreground" />
-              Thumbnail (opcional)
+              Thumbnail personalizada (opcional)
             </Label>
             <Input
               id="webview-thumbnail"
@@ -132,16 +194,6 @@ export function WebviewContentDialog({ open, onOpenChange, onSuccess, folderId }
               value={thumbnailUrl}
               onChange={(e) => setThumbnailUrl(e.target.value)}
             />
-            {thumbnailUrl && (
-              <div className="mt-2 rounded-md overflow-hidden border bg-muted/30 aspect-video flex items-center justify-center">
-                <img
-                  src={thumbnailUrl}
-                  alt="Thumbnail preview"
-                  className="max-h-full max-w-full object-contain"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-              </div>
-            )}
           </div>
 
           <div className="space-y-2">

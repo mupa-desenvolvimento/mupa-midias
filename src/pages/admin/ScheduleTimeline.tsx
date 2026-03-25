@@ -42,6 +42,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Plus, Minus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus, Download, Hand, Copy, Printer, RefreshCw, Play, GripVertical, Network, ChevronDown, ChevronRight, ListFilter, AlertCircle
 } from "lucide-react";
+import { MediaThumbnail } from "@/components/media/MediaThumbnail";
 import { db } from "@/services/firebase";
 import { ref, update } from "firebase/database";
 
@@ -190,7 +191,7 @@ const ScheduleTimeline = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("campaigns")
-        .select("*, campaign_contents(id, media:media_items(id, name, type, file_url, duration), position, duration_override), campaign_targets(id, target_type, include, segment_id, clause_id, company_id, region_id, state_id, city_id, store_id, sector_id, zone_id, device_type_id, device_group_id, device_id, tag_id)")
+        .select("*, campaign_contents(id, media:media_items(id, name, type, file_url, thumbnail_url, duration), position, duration_override), campaign_targets(id, target_type, include, segment_id, clause_id, company_id, region_id, state_id, city_id, store_id, sector_id, zone_id, device_type_id, device_group_id, device_id, tag_id)")
         .order("priority", { ascending: true });
       return data || [];
     },
@@ -262,7 +263,7 @@ const ScheduleTimeline = () => {
   const { data: mediaList = [] } = useQuery({
     queryKey: ["media-list-schedule"],
     queryFn: async () => {
-      const { data } = await supabase.from("media_items").select("id, name, type, file_url, duration").eq("status", "active").order("name").limit(200);
+      const { data } = await supabase.from("media_items").select("id, name, type, file_url, thumbnail_url, duration").eq("status", "active").order("name").limit(200);
       return data || [];
     },
   });
@@ -282,7 +283,7 @@ const ScheduleTimeline = () => {
     queryKey: ["detail-contents", detailCampaignId],
     queryFn: async () => {
       if (!detailCampaignId) return [];
-      const { data } = await supabase.from("campaign_contents").select("*, media:media_items(id, name, type, file_url, duration)").eq("campaign_id", detailCampaignId).order("position", { ascending: true });
+      const { data } = await supabase.from("campaign_contents").select("*, media:media_items(id, name, type, file_url, thumbnail_url, duration)").eq("campaign_id", detailCampaignId).order("position", { ascending: true });
       return (data || []) as any[];
     },
     enabled: !!detailCampaignId,
@@ -969,7 +970,6 @@ const ScheduleTimeline = () => {
 
   const SortableContentCard = ({ item }: { item: any }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-    const isImg = item.media?.type === "image" || item.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
     const style: React.CSSProperties = {
       transform: CSS.Transform.toString(transform),
       transition,
@@ -990,11 +990,7 @@ const ScheduleTimeline = () => {
           </button>
         </div>
         <div className={`aspect-video rounded-lg overflow-hidden bg-muted border ${isDragging ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
-          {isImg && item.media?.file_url ? (
-            <img src={item.media.file_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
-          )}
+          <MediaThumbnail type={item.media?.type} fileUrl={item.media?.file_url} thumbnailUrl={item.media?.thumbnail_url} name={item.media?.name} />
         </div>
         <p className="text-xs font-medium truncate mt-1">{item.media?.name || "Mídia"}</p>
         <p className="text-[10px] text-muted-foreground">{item.media?.type} · {item.duration_override || item.media?.duration || 10}s</p>
@@ -1017,7 +1013,6 @@ const ScheduleTimeline = () => {
   }, [allContents]);
   const SortablePreviewItem = ({ id, item, width, onClick }: { id: string; item: { content: any; campaign: any; color: string }; width: number; onClick: () => void }) => {
     const media = item.content.media;
-    const isImage = media.type === "image" || media.file_url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
     const style: React.CSSProperties = {
       transform: CSS.Transform.toString(transform),
@@ -1042,13 +1037,7 @@ const ScheduleTimeline = () => {
           <GripVertical className="h-3.5 w-3.5" />
         </button>
         <div className={`relative aspect-video rounded overflow-hidden bg-muted border ${isDragging ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
-          {isImage && media.file_url ? (
-            <img src={media.file_url} alt={media.name} className="w-full h-full object-cover" loading="lazy" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-black/60">
-              <Play className="h-4 w-4 text-white/70" />
-            </div>
-          )}
+          <MediaThumbnail type={media.type} fileUrl={media.file_url} thumbnailUrl={media.thumbnail_url} name={media.name} />
         </div>
         <p className="text-[9px] truncate mt-1 font-medium">{media.name}</p>
         <div className="rounded px-1.5 py-0.5 text-[8px] font-bold text-white truncate text-center uppercase mt-0.5" style={{ backgroundColor: item.color }}>
@@ -1620,12 +1609,10 @@ const ScheduleTimeline = () => {
                 {(devicePlaylistQuery.data as any).items.map((it: any, idx: number) => (
                   <div key={it.id ?? idx} className="border rounded-md p-2 bg-card shrink-0" style={{ width: (previewBaseWidth * previewZoom) / 100 }}>
                     <div className="text-[10px] text-muted-foreground mb-1 truncate">{it.campaign_name}</div>
-                    {it.media?.file_url ? (
-                      it.media.type === "video" || /\.(mp4|webm|mov)$/i.test(it.media.file_url) ? (
-                        <div className="w-full h-[64px] bg-muted flex items-center justify-center text-[10px]">vídeo</div>
-                      ) : (
-                        <img src={it.media.file_url} alt={it.media.name} className="w-full h-[64px] object-cover rounded" />
-                      )
+                    {it.media ? (
+                      <div className="w-full h-[64px] rounded overflow-hidden">
+                        <MediaThumbnail type={it.media.type} fileUrl={it.media.file_url} thumbnailUrl={it.media.thumbnail_url} name={it.media.name} />
+                      </div>
                     ) : (
                       <div className="w-full h-[64px] bg-muted rounded" />
                     )}
@@ -2241,15 +2228,10 @@ const ScheduleTimeline = () => {
                         {(() => {
                           const item = orderedDetailContents.find((c: any) => c.id === activeDetailId);
                           if (!item) return null;
-                          const isImg = item.media?.type === "image" || item.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
                           return (
                             <div className="rounded-lg bg-background border border-border shadow-lg p-2">
                               <div className="aspect-video rounded-md overflow-hidden bg-muted border border-border">
-                                {isImg && item.media?.file_url ? (
-                                  <img src={item.media.file_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
-                                )}
+                                <MediaThumbnail type={item.media?.type} fileUrl={item.media?.file_url} thumbnailUrl={item.media?.thumbnail_url} name={item.media?.name} />
                               </div>
                               <p className="text-xs font-medium truncate mt-2">{item.media?.name || "Mídia"}</p>
                             </div>
@@ -2506,11 +2488,9 @@ const ScheduleTimeline = () => {
                   {mediaList.map((m: any) => (
                     <SelectItem key={m.id} value={m.id}>
                       <div className="flex items-center gap-2">
-                        {m.file_url && (m.type === "image" || m.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
-                          <img src={m.file_url} alt="" className="w-8 h-5 object-cover rounded" />
-                        ) : (
-                          <div className="w-8 h-5 bg-muted rounded flex items-center justify-center"><Image className="h-3 w-3" /></div>
-                        )}
+                        <div className="w-8 h-5 rounded overflow-hidden">
+                          <MediaThumbnail type={m.type} fileUrl={m.file_url} thumbnailUrl={m.thumbnail_url} name={m.name} />
+                        </div>
                         {m.name}
                       </div>
                     </SelectItem>
@@ -2539,7 +2519,9 @@ const ScheduleTimeline = () => {
             <DialogTitle className="text-sm">{previewMedia?.name}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center min-h-[400px] bg-black rounded-lg overflow-hidden">
-            {previewMedia?.file_url && (previewMedia.type === "video" || previewMedia.file_url?.match(/\.(mp4|webm|mov)$/i)) ? (
+            {previewMedia?.type === "webview" ? (
+              <iframe src={previewMedia.file_url || ""} className="w-full h-[70vh] border-0 rounded" title={previewMedia.name} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
+            ) : previewMedia?.file_url && (previewMedia.type === "video" || previewMedia.file_url?.match(/\.(mp4|webm|mov)$/i)) ? (
               <video src={previewMedia.file_url} controls autoPlay className="max-w-full max-h-[70vh]" />
             ) : previewMedia?.file_url ? (
               <img src={previewMedia.file_url} alt={previewMedia.name} className="max-w-full max-h-[70vh] object-contain" />
