@@ -441,13 +441,19 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((normalPrice - promoPrice) / normalPrice) * 100);
         }
 
-        // Buscar URL de imagem se não existir ou converter URL direta para proxy
+        // Buscar URL de imagem + cores se não existir ou converter URL direta para proxy
         let imageUrl = liteProduct.image_url;
+        let apiColors: MupaImageResult['colors'] = null;
+        
         if (imageUrl && imageUrl.includes('srv-mupa.ddns.net')) {
-          // Convert direct Mupa URL to proxied URL
           imageUrl = getProxiedImageUrl(normalizedEan);
-        } else if (!imageUrl) {
-          imageUrl = await resolveProductImage(normalizedEan, supabase, device.company_id);
+        }
+        
+        // Always try to get colors from Mupa API
+        const mupaResult = await resolveProductImage(normalizedEan, supabase, device.company_id);
+        apiColors = mupaResult.colors;
+        if (!imageUrl) {
+          imageUrl = mupaResult.image_url;
         }
 
         const productData = {
@@ -460,7 +466,8 @@ Deno.serve(async (req: Request) => {
             savings_percent: savingsPercent,
             image_url: imageUrl,
             store_code: storeCode,
-            description: liteProduct.description
+            description: liteProduct.description,
+            api_colors: apiColors
         };
 
         // Cache for 15 min
