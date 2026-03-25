@@ -8,17 +8,28 @@ const MUPA_IMAGE_API = "http://srv-mupa.ddns.net:5050/produto-imagem";
 /**
  * Build a proxied image URL that goes through our edge function to avoid CORS.
  */
+interface MupaImageResult {
+  image_url: string | null;
+  colors: {
+    cor_assinatura_produto: string;
+    fundo_legibilidade: string;
+    cor_dominante_claro: string;
+    cor_dominante_escuro: string;
+  } | null;
+}
+
 function getProxiedImageUrl(ean: string): string {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   return `${supabaseUrl}/functions/v1/product-image-proxy?ean=${ean}`;
 }
 
 /**
- * Fetch product image URL from Mupa API and persist it to lite_products.
- * Returns proxied URL for browser compatibility.
+ * Fetch product image URL + colors from Mupa API and persist to lite_products.
+ * Returns proxied URL for browser compatibility + color palette.
  */
-async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<string | null> {
+async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<MupaImageResult> {
   try {
+    const nullResult: MupaImageResult = { image_url: null, colors: null };
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     
@@ -29,19 +40,18 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
     } catch (fetchErr) {
       clearTimeout(timeout);
       console.error(`[Image] Network error for ${ean}:`, fetchErr);
-      return null;
+      return nullResult;
     }
 
     if (!res.ok) {
       console.warn(`[Image] Mupa API returned ${res.status} for ${ean}`);
-      return null;
+      return nullResult;
     }
     
     const contentType = res.headers.get('content-type') || '';
     
-    // If it returned an image directly, the proxy URL will work
+    // If it returned an image directly, the proxy URL will work but no colors
     if (contentType.startsWith('image/')) {
-      // Consume the body to avoid stream leak
       try { await res.arrayBuffer(); } catch {}
       const proxiedUrl = getProxiedImageUrl(ean);
       console.log(`[Image] Direct image found for ${ean}, using proxy: ${proxiedUrl}`);
@@ -51,22 +61,35 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return proxiedUrl;
+      return { image_url: proxiedUrl, colors: null };
     }
     
-    // If JSON response, extract URL
+    // JSON response with image URL + colors
     let data: any;
     try {
       data = await res.json();
     } catch {
       console.error(`[Image] Failed to parse JSON for ${ean}`);
-      return null;
+      return nullResult;
     }
     
     const imageUrl = data.imagem_url || data.image_url || null;
     
+    // Extract color palette from Mupa API response
+    const colors = (data.cor_assinatura_produto || data.cor_dominante_claro || data.cor_dominante_escuro || data.fundo_legibilidade)
+      ? {
+          cor_assinatura_produto: data.cor_assinatura_produto || '#333333',
+          fundo_legibilidade: data.fundo_legibilidade || '#000000',
+          cor_dominante_claro: data.cor_dominante_claro || '#FFFFFF',
+          cor_dominante_escuro: data.cor_dominante_escuro || '#000000',
+        }
+      : null;
+
+    if (colors) {
+      console.log(`[Image] Colors extracted for ${ean}:`, colors);
+    }
+    
     if (imageUrl) {
-      // Always return proxied URL for CORS safety
       const proxiedUrl = getProxiedImageUrl(ean);
       console.log(`[Image] Resolved for ${ean}: ${imageUrl}, proxied: ${proxiedUrl}`);
       supabase
@@ -75,14 +98,14 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return proxiedUrl;
+      return { image_url: proxiedUrl, colors };
     }
     
     console.warn(`[Image] No image URL found in response for ${ean}`);
-    return null;
+    return nullResult;
   } catch (e) {
     console.error(`[Image] Unexpected error for ${ean}:`, e);
-    return null;
+    return { image_url: null, colors: null };
   }
 }
 
@@ -116,7 +139,13 @@ interface ProductResponse {
     savings_percent: number | null;
     image_url: string | null;
     store_code: string;
-    description?: string; // Legacy support
+    description?: string;
+    api_colors?: {
+      cor_assinatura_produto: string;
+      fundo_legibilidade: string;
+      cor_dominante_claro: string;
+      cor_dominante_escuro: string;
+    } | null;
   };
   error?: string;
 }
@@ -300,6 +329,13 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
         }
 
+        let resolvedImage = p.image ? { image_url: p.image, colors: null as any } : await resolveProductImage(normalizedEan, supabase, device.company_id);
+        // If we have the image but no colors yet, try fetching colors from Mupa
+        if (p.image && !resolvedImage.colors) {
+          const mupaResult = await resolveProductImage(normalizedEan, supabase, device.company_id);
+          if (mupaResult.colors) resolvedImage.colors = mupaResult.colors;
+        }
+
         const productData = {
           ean: p.barcode,
           name: p.description,
@@ -308,9 +344,10 @@ Deno.serve(async (req: Request) => {
           original_price: originalPrice,
           is_offer: isOffer,
           savings_percent: savingsPercent,
-          image_url: p.image || await resolveProductImage(normalizedEan, supabase, device.company_id),
+          image_url: resolvedImage.image_url || p.image,
           store_code: storeCode,
-          description: p.description // Legacy
+          description: p.description,
+          api_colors: resolvedImage.colors
         };
 
         // Salvar em cache (15 minutos)
@@ -404,13 +441,19 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((normalPrice - promoPrice) / normalPrice) * 100);
         }
 
-        // Buscar URL de imagem se não existir ou converter URL direta para proxy
+        // Buscar URL de imagem + cores se não existir ou converter URL direta para proxy
         let imageUrl = liteProduct.image_url;
+        let apiColors: MupaImageResult['colors'] = null;
+        
         if (imageUrl && imageUrl.includes('srv-mupa.ddns.net')) {
-          // Convert direct Mupa URL to proxied URL
           imageUrl = getProxiedImageUrl(normalizedEan);
-        } else if (!imageUrl) {
-          imageUrl = await resolveProductImage(normalizedEan, supabase, device.company_id);
+        }
+        
+        // Always try to get colors from Mupa API
+        const mupaResult = await resolveProductImage(normalizedEan, supabase, device.company_id);
+        apiColors = mupaResult.colors;
+        if (!imageUrl) {
+          imageUrl = mupaResult.image_url;
         }
 
         const productData = {
@@ -423,7 +466,8 @@ Deno.serve(async (req: Request) => {
             savings_percent: savingsPercent,
             image_url: imageUrl,
             store_code: storeCode,
-            description: liteProduct.description
+            description: liteProduct.description,
+            api_colors: apiColors
         };
 
         // Cache for 15 min
