@@ -2519,7 +2519,9 @@ const ScheduleTimeline = () => {
             <DialogTitle className="text-sm">{previewMedia?.name}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center min-h-[400px] bg-black rounded-lg overflow-hidden">
-            {previewMedia?.file_url && (previewMedia.type === "video" || previewMedia.file_url?.match(/\.(mp4|webm|mov)$/i)) ? (
+            {previewMedia?.type === "webview" ? (
+              <iframe src={previewMedia.file_url || ""} className="w-full h-[70vh] border-0 rounded" title={previewMedia.name} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
+            ) : previewMedia?.file_url && (previewMedia.type === "video" || previewMedia.file_url?.match(/\.(mp4|webm|mov)$/i)) ? (
               <video src={previewMedia.file_url} controls autoPlay className="max-w-full max-h-[70vh]" />
             ) : previewMedia?.file_url ? (
               <img src={previewMedia.file_url} alt={previewMedia.name} className="max-w-full max-h-[70vh] object-contain" />
