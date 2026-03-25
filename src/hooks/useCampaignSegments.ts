@@ -97,7 +97,7 @@ export function useCampaignSegments() {
         .select("id")
         .maybeSingle();
       if (error) throw error;
-      return data as { id: string } | null;
+      return data as unknown as { id: string } | null;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaign-segments"] });
