@@ -29,6 +29,7 @@ function getProxiedImageUrl(ean: string): string {
  */
 async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<MupaImageResult> {
   try {
+    const nullResult: MupaImageResult = { image_url: null, colors: null };
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     
@@ -39,19 +40,18 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
     } catch (fetchErr) {
       clearTimeout(timeout);
       console.error(`[Image] Network error for ${ean}:`, fetchErr);
-      return null;
+      return nullResult;
     }
 
     if (!res.ok) {
       console.warn(`[Image] Mupa API returned ${res.status} for ${ean}`);
-      return null;
+      return nullResult;
     }
     
     const contentType = res.headers.get('content-type') || '';
     
-    // If it returned an image directly, the proxy URL will work
+    // If it returned an image directly, the proxy URL will work but no colors
     if (contentType.startsWith('image/')) {
-      // Consume the body to avoid stream leak
       try { await res.arrayBuffer(); } catch {}
       const proxiedUrl = getProxiedImageUrl(ean);
       console.log(`[Image] Direct image found for ${ean}, using proxy: ${proxiedUrl}`);
@@ -61,22 +61,35 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return proxiedUrl;
+      return { image_url: proxiedUrl, colors: null };
     }
     
-    // If JSON response, extract URL
+    // JSON response with image URL + colors
     let data: any;
     try {
       data = await res.json();
     } catch {
       console.error(`[Image] Failed to parse JSON for ${ean}`);
-      return null;
+      return nullResult;
     }
     
     const imageUrl = data.imagem_url || data.image_url || null;
     
+    // Extract color palette from Mupa API response
+    const colors = (data.cor_assinatura_produto || data.cor_dominante_claro || data.cor_dominante_escuro || data.fundo_legibilidade)
+      ? {
+          cor_assinatura_produto: data.cor_assinatura_produto || '#333333',
+          fundo_legibilidade: data.fundo_legibilidade || '#000000',
+          cor_dominante_claro: data.cor_dominante_claro || '#FFFFFF',
+          cor_dominante_escuro: data.cor_dominante_escuro || '#000000',
+        }
+      : null;
+
+    if (colors) {
+      console.log(`[Image] Colors extracted for ${ean}:`, colors);
+    }
+    
     if (imageUrl) {
-      // Always return proxied URL for CORS safety
       const proxiedUrl = getProxiedImageUrl(ean);
       console.log(`[Image] Resolved for ${ean}: ${imageUrl}, proxied: ${proxiedUrl}`);
       supabase
@@ -85,14 +98,14 @@ async function resolveProductImage(ean: string, supabase: any, companyId: string
         .eq('ean', ean)
         .eq('company_id', companyId)
         .then(() => console.log(`[Image] Saved proxied URL to lite_products for ${ean}`));
-      return proxiedUrl;
+      return { image_url: proxiedUrl, colors };
     }
     
     console.warn(`[Image] No image URL found in response for ${ean}`);
-    return null;
+    return nullResult;
   } catch (e) {
     console.error(`[Image] Unexpected error for ${ean}:`, e);
-    return null;
+    return { image_url: null, colors: null };
   }
 }
 
