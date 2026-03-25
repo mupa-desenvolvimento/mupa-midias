@@ -1735,6 +1735,20 @@ const ScheduleTimeline = () => {
                       <Badge variant="secondary" className="text-[10px]">{contentsCount} mídia(s)</Badge>
                       {targetsCount > 0 && <Badge variant="outline" className="text-[10px]">{targetsCount} segm.</Badge>}
 
+                      {selectedSegmentId && (() => {
+                        const campaignTargets = c.campaign_targets || [];
+                        const isLinked = campaignTargets.some((t: any) => t.segment_id === selectedSegmentId);
+                        return isLinked ? (
+                          <Button variant="destructive" size="sm" className="gap-1 text-xs h-7" onClick={() => unlinkSegmentFromCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId })} disabled={unlinkSegmentFromCampaign.isPending}>
+                            <Minus className="h-3 w-3" /> Remover
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" size="sm" className="gap-1 text-xs h-7" onClick={() => linkSegmentToCampaign.mutate({ campaignId: c.id, segmentId: selectedSegmentId })} disabled={linkSegmentToCampaign.isPending}>
+                            <Plus className="h-3 w-3" /> Vincular
+                          </Button>
+                        );
+                      })()}
+
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => openEdit(c)}>
                           <Pencil className="h-3 w-3" />
