@@ -358,18 +358,204 @@ export type Database = {
           },
         ]
       }
+      campaign_segment_targets: {
+        Row: {
+          city_id: string | null
+          clause_id: string
+          company_id: string | null
+          created_at: string
+          device_group_id: string | null
+          device_id: string | null
+          device_type_id: string | null
+          id: string
+          include: boolean
+          region_id: string | null
+          sector_id: string | null
+          segment_id: string
+          state_id: string | null
+          store_id: string | null
+          tag_id: string | null
+          target_type: string
+          zone_id: string | null
+        }
+        Insert: {
+          city_id?: string | null
+          clause_id?: string
+          company_id?: string | null
+          created_at?: string
+          device_group_id?: string | null
+          device_id?: string | null
+          device_type_id?: string | null
+          id?: string
+          include?: boolean
+          region_id?: string | null
+          sector_id?: string | null
+          segment_id: string
+          state_id?: string | null
+          store_id?: string | null
+          tag_id?: string | null
+          target_type: string
+          zone_id?: string | null
+        }
+        Update: {
+          city_id?: string | null
+          clause_id?: string
+          company_id?: string | null
+          created_at?: string
+          device_group_id?: string | null
+          device_id?: string | null
+          device_type_id?: string | null
+          id?: string
+          include?: boolean
+          region_id?: string | null
+          sector_id?: string | null
+          segment_id?: string
+          state_id?: string | null
+          store_id?: string | null
+          tag_id?: string | null
+          target_type?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_segment_targets_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_device_group_id_fkey"
+            columns: ["device_group_id"]
+            isOneToOne: false
+            referencedRelation: "device_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_device_type_id_fkey"
+            columns: ["device_type_id"]
+            isOneToOne: false
+            referencedRelation: "device_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "states"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_segment_targets_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_segments: {
+        Row: {
+          created_at: string
+          description: string | null
+          filters_json: Json
+          id: string
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          filters_json?: Json
+          id?: string
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          filters_json?: Json
+          id?: string
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_segments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_targets: {
         Row: {
           campaign_id: string
           city_id: string | null
+          clause_id: string | null
           company_id: string | null
           created_at: string | null
+          device_group_id: string | null
           device_id: string | null
           device_type_id: string | null
           id: string
           include: boolean | null
           region_id: string | null
           sector_id: string | null
+          segment_id: string | null
           state_id: string | null
           store_id: string | null
           tag_id: string | null
@@ -379,14 +565,17 @@ export type Database = {
         Insert: {
           campaign_id: string
           city_id?: string | null
+          clause_id?: string | null
           company_id?: string | null
           created_at?: string | null
+          device_group_id?: string | null
           device_id?: string | null
           device_type_id?: string | null
           id?: string
           include?: boolean | null
           region_id?: string | null
           sector_id?: string | null
+          segment_id?: string | null
           state_id?: string | null
           store_id?: string | null
           tag_id?: string | null
@@ -396,14 +585,17 @@ export type Database = {
         Update: {
           campaign_id?: string
           city_id?: string | null
+          clause_id?: string | null
           company_id?: string | null
           created_at?: string | null
+          device_group_id?: string | null
           device_id?: string | null
           device_type_id?: string | null
           id?: string
           include?: boolean | null
           region_id?: string | null
           sector_id?: string | null
+          segment_id?: string | null
           state_id?: string | null
           store_id?: string | null
           tag_id?: string | null
@@ -433,6 +625,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "campaign_targets_device_group_id_fkey"
+            columns: ["device_group_id"]
+            isOneToOne: false
+            referencedRelation: "device_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "campaign_targets_device_id_fkey"
             columns: ["device_id"]
             isOneToOne: false
@@ -458,6 +657,13 @@ export type Database = {
             columns: ["sector_id"]
             isOneToOne: false
             referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_segments"
             referencedColumns: ["id"]
           },
           {
@@ -4343,6 +4549,27 @@ export type Database = {
       register_play_logs: {
         Args: { p_device_token: string; p_logs: Json }
         Returns: Json
+      }
+      resolve_segment_device_ids: {
+        Args: {
+          p_limit?: number
+          p_only_online?: boolean
+          p_segment_id: string
+        }
+        Returns: {
+          device_id: string
+        }[]
+      }
+      resolve_segment_device_stats: {
+        Args: {
+          p_limit?: number
+          p_only_online?: boolean
+          p_segment_id: string
+        }
+        Returns: {
+          device_count: number
+          store_count: number
+        }[]
       }
       seed_default_sectors_for_store: {
         Args: { p_store_id: string; p_tenant_id: string }
