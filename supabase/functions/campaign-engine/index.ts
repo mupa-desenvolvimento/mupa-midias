@@ -199,10 +199,15 @@ Deno.serve(async (req: Request) => {
 
       for (const campaign of targetedCampaigns) {
         const contents = (campaign.campaign_contents || [])
-          .filter((c: any) => c.is_active && c.media)
+          .filter((c: any) => {
+            const m = Array.isArray(c.media) ? c.media[0] : c.media
+            return c.is_active && m
+          })
           .sort((a: any, b: any) => a.position - b.position)
 
         for (const content of contents) {
+          const mediaItem = Array.isArray(content.media) ? content.media[0] : content.media
+          if (!mediaItem) continue
           playlistItems.push({
             id: content.id,
             campaign_id: campaign.id,
@@ -213,12 +218,12 @@ Deno.serve(async (req: Request) => {
             weight: content.weight || campaign.weight || 1,
             position: position++,
             media: {
-              id: content.media.id,
-              name: content.media.name,
-              type: content.media.type,
-              file_url: content.media.file_url,
-              duration: content.duration_override || content.media.duration || 10,
-              metadata: content.media.metadata || null,
+              id: mediaItem.id,
+              name: mediaItem.name,
+              type: mediaItem.type,
+              file_url: mediaItem.file_url,
+              duration: content.duration_override || mediaItem.duration || 10,
+              metadata: mediaItem.metadata || null,
             },
           })
         }

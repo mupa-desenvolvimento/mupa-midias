@@ -267,7 +267,7 @@ Deno.serve(async (req: Request) => {
     } else {
       let parsedUrl: URL
       try {
-        parsedUrl = new URL(sourceUrl)
+        parsedUrl = new URL(sourceUrl as string)
       } catch {
         return new Response(
           JSON.stringify({ error: 'Invalid sourceUrl' }),

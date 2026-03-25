@@ -422,7 +422,7 @@ Deno.serve(async (req: Request) => {
           p_device_token: savedToken,
           p_status: 'online',
           p_current_playlist_id: device.current_playlist_id || null,
-        }).catch(() => {})
+        }).then(() => {}).catch(() => {})
       }
 
       return new Response(
