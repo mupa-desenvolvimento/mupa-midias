@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
     }
 
     // Start background processing
-    EdgeRuntime.waitUntil(
+    (globalThis as any).EdgeRuntime?.waitUntil?.(
       processCuriosities(job.id, tenantId).catch(async (err) => {
         console.error(`Job ${job.id} failed:`, err);
         await supabaseAdmin

@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    EdgeRuntime.waitUntil(
+    (globalThis as any).EdgeRuntime?.waitUntil?.(
       processNutritionTips(job.id, tenantId).catch(async (err) => {
         console.error(`Job ${job.id} failed:`, err);
         await supabaseAdmin

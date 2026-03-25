@@ -78,7 +78,7 @@ export function useCampaignSegments() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as CampaignSegment[];
+      return (data || []) as unknown as CampaignSegment[];
     },
   });
 
@@ -97,7 +97,7 @@ export function useCampaignSegments() {
         .select("id")
         .maybeSingle();
       if (error) throw error;
-      return data as { id: string } | null;
+      return data as unknown as { id: string } | null;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaign-segments"] });
@@ -206,7 +206,7 @@ export function useCampaignSegmentTargets(segmentId?: string | null) {
         .eq("segment_id", segmentId)
         .order("created_at");
       if (error) throw error;
-      return (data || []) as CampaignSegmentTarget[];
+      return (data || []) as unknown as CampaignSegmentTarget[];
     },
   });
 }
