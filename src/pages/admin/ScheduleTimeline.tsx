@@ -1151,6 +1151,17 @@ const ScheduleTimeline = () => {
           </Select>
         </div>
 
+        {/* Segment selector */}
+        <div className="flex items-center gap-2">
+          <SegmentsSelector
+            segments={segments}
+            value={selectedSegmentId}
+            onValueChange={setSelectedSegmentId}
+            placeholder="Selecionar segmento"
+            stats={segmentStats}
+          />
+        </div>
+
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingGroup(null); setGroupForm({ name: "", description: "" }); setGroupDialogOpen(true); }}>
           <FolderPlus className="h-4 w-4" /> Novo Grupo
         </Button>
