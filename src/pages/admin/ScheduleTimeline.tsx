@@ -1609,12 +1609,10 @@ const ScheduleTimeline = () => {
                 {(devicePlaylistQuery.data as any).items.map((it: any, idx: number) => (
                   <div key={it.id ?? idx} className="border rounded-md p-2 bg-card shrink-0" style={{ width: (previewBaseWidth * previewZoom) / 100 }}>
                     <div className="text-[10px] text-muted-foreground mb-1 truncate">{it.campaign_name}</div>
-                    {it.media?.file_url ? (
-                      it.media.type === "video" || /\.(mp4|webm|mov)$/i.test(it.media.file_url) ? (
-                        <div className="w-full h-[64px] bg-muted flex items-center justify-center text-[10px]">vídeo</div>
-                      ) : (
-                        <img src={it.media.file_url} alt={it.media.name} className="w-full h-[64px] object-cover rounded" />
-                      )
+                    {it.media ? (
+                      <div className="w-full h-[64px] rounded overflow-hidden">
+                        <MediaThumbnail type={it.media.type} fileUrl={it.media.file_url} thumbnailUrl={it.media.thumbnail_url} name={it.media.name} />
+                      </div>
                     ) : (
                       <div className="w-full h-[64px] bg-muted rounded" />
                     )}
