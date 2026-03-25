@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
       const { data: deviceData, error: deviceError } = await supabase
         .from('devices')
         .select(`
-          id, device_code, name, store_id, company_id, 
+          id, device_code, name, store_id, company_id, group_id,
           sector_id, zone_id, device_type_id,
           stores!devices_store_id_fkey(id, city_id, tenant_id, cities!stores_city_id_fkey(id, state_id, states!cities_state_id_fkey(id, region_id)))
         `)
@@ -67,7 +67,9 @@ Deno.serve(async (req: Request) => {
         .select('tag_id')
         .eq('device_id', device.id)
 
-      const deviceTagIds = (deviceTags || []).map((t: any) => t.tag_id)
+      let deviceTagIds: string[] = (deviceTags || [])
+        .map((t: any) => t?.tag_id)
+        .filter((id: any): id is string => typeof id === 'string' && id.length > 0)
 
       // Get store tags too
       if (device.store_id) {
@@ -75,11 +77,26 @@ Deno.serve(async (req: Request) => {
           .from('store_tags')
           .select('tag_id')
           .eq('store_id', device.store_id)
-        const storeTagIds = (storeTags || []).map((t: any) => t.tag_id)
+        const storeTagIds: string[] = (storeTags || [])
+          .map((t: any) => t?.tag_id)
+          .filter((id: any): id is string => typeof id === 'string' && id.length > 0)
         deviceTagIds.push(...storeTagIds)
       }
 
-      const uniqueTagIds = [...new Set(deviceTagIds)]
+      const uniqueTagIds: string[] = [...new Set(deviceTagIds)]
+
+      // 2b. Get device group memberships (direct + via members table)
+      const deviceGroupIds = new Set<string>()
+      if (device.group_id) deviceGroupIds.add(device.group_id)
+
+      const { data: groupMemberships } = await supabase
+        .from('device_group_members')
+        .select('group_id')
+        .eq('device_id', device.id)
+
+      for (const m of groupMemberships || []) {
+        if (m?.group_id) deviceGroupIds.add(m.group_id)
+      }
 
       // 3. Get all active campaigns for this tenant
       const now = new Date()
@@ -98,8 +115,9 @@ Deno.serve(async (req: Request) => {
             media:media_items(id, name, type, file_url, duration, metadata)
           ),
           campaign_targets(
-            id, target_type, company_id, state_id, region_id, city_id,
-            store_id, sector_id, zone_id, device_type_id, device_id, tag_id, include
+            id, target_type, include, segment_id, clause_id,
+            company_id, state_id, region_id, city_id, store_id,
+            sector_id, zone_id, device_type_id, device_group_id, device_id, tag_id
           )
         `)
         .eq('is_active', true)
@@ -145,16 +163,28 @@ Deno.serve(async (req: Request) => {
 
         // Check excludes first
         for (const t of excludeTargets) {
-          if (matchesTarget(t, device, store, city, state, uniqueTagIds)) return false
+          if (matchesTarget(t, device, store, city, state, uniqueTagIds, deviceGroupIds)) return false
         }
 
         // If no include targets, pass
         if (includeTargets.length === 0) return true
 
-        // Must match at least one include target
-        return includeTargets.some((t: any) =>
-          matchesTarget(t, device, store, city, state, uniqueTagIds)
-        )
+        const byClause = new Map<string, any[]>()
+        for (const t of includeTargets) {
+          const clauseId = (t.clause_id as string | null) ?? '__legacy__'
+          const list = byClause.get(clauseId) ?? []
+          list.push(t)
+          byClause.set(clauseId, list)
+        }
+
+        for (const clauseTargets of byClause.values()) {
+          const clauseMatch = clauseTargets.some((t: any) =>
+            matchesTarget(t, device, store, city, state, uniqueTagIds, deviceGroupIds)
+          )
+          if (!clauseMatch) return false
+        }
+
+        return true
       })
 
       // 6. Sort by priority, then weight
@@ -230,7 +260,8 @@ function matchesTarget(
   store: any,
   city: any,
   state: any,
-  tagIds: string[]
+  tagIds: string[],
+  deviceGroupIds: Set<string>
 ): boolean {
   // Direct device match
   if (target.device_id && target.device_id === device.id) return true
@@ -243,6 +274,9 @@ function matchesTarget(
 
   // Sector match
   if (target.sector_id && target.sector_id === device.sector_id) return true
+
+  // Device group match
+  if (target.device_group_id && deviceGroupIds.has(target.device_group_id)) return true
 
   // Store match
   if (target.store_id && target.store_id === device.store_id) return true

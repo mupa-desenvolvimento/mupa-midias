@@ -251,10 +251,10 @@ export default function PriceCheckIntegrationForm() {
       let reqParsed: ParsedCurl | null = null;
 
       if (authCurl.trim()) {
-        try { authParsed = inferCommonVariables(parseCurl(authCurl)); } catch { }
+        try { authParsed = inferCommonVariables(parseCurl(authCurl)); } catch { authParsed = null; }
       }
       if (requestCurl.trim()) {
-        try { reqParsed = inferCommonVariables(parseCurl(requestCurl)); } catch { }
+        try { reqParsed = inferCommonVariables(parseCurl(requestCurl)); } catch { reqParsed = null; }
       }
 
       const payload: any = {

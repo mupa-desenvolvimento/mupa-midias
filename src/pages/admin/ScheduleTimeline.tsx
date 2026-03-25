@@ -16,7 +16,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SegmentsSelector } from "@/components/campaigns/SegmentsSelector";
+import { useCampaignSegments, useCampaignSegmentTargets, useSegmentDeviceStats } from "@/hooks/useCampaignSegments";
 import {
   DndContext,
   closestCenter,
@@ -35,12 +39,11 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { HierarchyTree, type TreeNode } from "@/components/enterprise/HierarchyTree";
-import FabricHierarchy from "@/components/enterprise/FabricHierarchy";
-import { useUserTenant } from "@/hooks/useUserTenant";
 import {
-  Plus, Minus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus, Download, Hand, Copy, Printer, RefreshCw, Play, GripVertical
+  Plus, Minus, Search, Pencil, Trash2, Monitor, Store, MapPin, Tag, Users, Info, Image, Target, Eye, Layers, Calendar, CheckCircle2, Settings2, FolderPlus, Download, Hand, Copy, Printer, RefreshCw, Play, GripVertical, Network, ChevronDown, ChevronRight, ListFilter, AlertCircle
 } from "lucide-react";
+import { db } from "@/services/firebase";
+import { ref, update } from "firebase/database";
 
 /* ── constants ── */
 const CAMPAIGN_COLORS = [
@@ -77,9 +80,21 @@ const DEFAULT_FORM = {
   days_of_week: [0, 1, 2, 3, 4, 5, 6] as number[],
 };
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const DEVICE_ALL_VALUE = "__all__";
+
 /* ── View modes ── */
-type ViewMode = "campaigns" | "contents" | "timeline" | "hierarchy" | "hierarchy-visual";
+type ViewMode = "campaigns" | "contents" | "timeline" | "hierarchy" | "segments";
 type SortMode = "campaign" | "name" | "type" | "position";
+
+type HierarchyNodeType = "state" | "region" | "city" | "store" | "sector" | "device_group" | "device";
+type HierarchyNode = {
+  key: string;
+  id: string;
+  type: HierarchyNodeType;
+  label: string;
+  children?: HierarchyNode[];
+};
 
 const ScheduleTimeline = () => {
   const { toast } = useToast();
@@ -88,8 +103,20 @@ const ScheduleTimeline = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("contents");
   const [sortMode, setSortMode] = useState<SortMode>("campaign");
 
+  const {
+    segments,
+    createSegment,
+    updateSegment,
+    deleteSegment,
+    addSegmentTarget: addSegmentFilter,
+    removeSegmentTarget: removeSegmentFilter,
+  } = useCampaignSegments();
+
   // Group selector
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+  const [hierarchySearch, setHierarchySearch] = useState("");
+  const [hierarchySelectedKeys, setHierarchySelectedKeys] = useState<string[]>([]);
+  const [hierarchyExpandedKeys, setHierarchyExpandedKeys] = useState<string[]>([]);
 
   // Campaign selection
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
@@ -104,6 +131,31 @@ const ScheduleTimeline = () => {
   const [detailTab, setDetailTab] = useState("contents");
   const [targetForm, setTargetForm] = useState({ target_type: "state", state_id: "", tag_id: "", sector_id: "", store_id: "", city_id: "", region_id: "", device_id: "" });
   const [addMediaId, setAddMediaId] = useState("");
+
+  const [selectedSegmentForCampaign, setSelectedSegmentForCampaign] = useState<string | null>(null);
+
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+  const [segmentSearch, setSegmentSearch] = useState("");
+  const [segmentDialogOpen, setSegmentDialogOpen] = useState(false);
+  const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
+  const [segmentForm, setSegmentForm] = useState({ name: "", description: "" });
+  const [segmentTargetForm, setSegmentTargetForm] = useState({
+    include: true,
+    clause_id: "__new__",
+    target_type: "state",
+    state_id: "",
+    region_id: "",
+    city_id: "",
+    store_id: "",
+    sector_id: "",
+    device_group_id: "",
+    device_id: "",
+    tag_id: "",
+  });
+
+  const { data: segmentTargets = [] } = useCampaignSegmentTargets(selectedSegmentId);
+  const { data: segmentStats } = useSegmentDeviceStats(selectedSegmentId, { limit: 1000, onlyOnline: false });
+  const { data: selectedSegmentForCampaignStats } = useSegmentDeviceStats(selectedSegmentForCampaign, { limit: 1000, onlyOnline: false });
 
   // Group CRUD dialog
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
@@ -130,73 +182,7 @@ const ScheduleTimeline = () => {
   const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
   const [orderedPreviewIds, setOrderedPreviewIds] = useState<string[]>([]);
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
-  const [hierarchySearch, setHierarchySearch] = useState("");
-  const [hierarchySelected, setHierarchySelected] = useState<TreeNode | null>(null);
-  const [createType, setCreateType] = useState<string>("city");
-  const [createName, setCreateName] = useState("");
-  const [createCode, setCreateCode] = useState("");
-  const [hierarchyRefreshKey, setHierarchyRefreshKey] = useState(0);
-  const { tenantId } = useUserTenant();
-  const [regionOptions, setRegionOptions] = useState<{ id: string; name: string }[]>([]);
-  const [parentRegionId, setParentRegionId] = useState<string | null>(null);
-  const [hierarchyMode, setHierarchyMode] = useState<"json" | "db">("json");
-  const [jsonImportOpen, setJsonImportOpen] = useState(false);
-  const [jsonImportText, setJsonImportText] = useState("");
-  type HLDevice = { id: string; name: string; device_code?: string };
-  type HLGroup = { id: string; name: string; devices: HLDevice[] };
-  type HLSector = { id: string; name: string; devices: HLDevice[] };
-  type HLStore = { id: string; name: string; code?: string; sectors: HLSector[]; groups: HLGroup[]; devices: HLDevice[] };
-  type HLCity = { id: string; name: string; stores: HLStore[] };
-  type HLRegion = { id: string; name: string; cities: HLCity[] };
-  type HLState = { id: string; name: string; code?: string; regions: HLRegion[] };
-  type HLModel = { states: HLState[] };
-  const [hlModel, setHlModel] = useState<HLModel>(() => {
-    try {
-      const raw = localStorage.getItem("hierarchy:model");
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return { states: [] };
-  });
-  const saveHlModel = (m: HLModel) => {
-    setHlModel(m);
-    try { localStorage.setItem("hierarchy:model", JSON.stringify(m)); } catch {}
-  };
-  const exportHlModel = () => {
-    const blob = new Blob([JSON.stringify(hlModel, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "hierarquia.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  const canCreateHere = useMemo(() => {
-    if (!createName) return false;
-    const t = createType;
-    const selType = hierarchySelected?.type || null;
-    if (t === "region") return selType === "company" || selType === null;
-    if (t === "state") return Boolean(parentRegionId || (selType === "region"));
-    if (t === "city") return selType === "state";
-    if (t === "store") return selType === "city";
-    if (t === "sector") return selType === "store";
-    if (t === "group") return selType === "store";
-    if (t === "zone") return selType === "sector";
-    return false;
-  }, [createType, createName, hierarchySelected]);
-
-  useEffect(() => {
-    if (createType === "state" && hierarchySelected?.type === "region") {
-      setParentRegionId(hierarchySelected.id);
-    }
-  }, [createType, hierarchySelected]);
-
-  useEffect(() => {
-    if (viewMode !== "hierarchy" || !tenantId) return;
-    (async () => {
-      const { data, error } = await supabase.from("regions").select("id, name").eq("tenant_id", tenantId);
-      if (!error) setRegionOptions(data || []);
-    })();
-  }, [viewMode, tenantId, hierarchyRefreshKey]);
+  const [selectedDeviceCodeForPreview, setSelectedDeviceCodeForPreview] = useState<string>("");
 
   /* ── Queries ── */
   const { data: campaigns = [] } = useQuery({
@@ -204,7 +190,7 @@ const ScheduleTimeline = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("campaigns")
-        .select("*, campaign_contents(id, media:media_items(id, name, type, file_url, duration), position, duration_override), campaign_targets(id, target_type, state_id, tag_id, sector_id, store_id, device_id, region_id)")
+        .select("*, campaign_contents(id, media:media_items(id, name, type, file_url, duration), position, duration_override), campaign_targets(id, target_type, include, segment_id, clause_id, company_id, region_id, state_id, city_id, store_id, sector_id, zone_id, device_type_id, device_group_id, device_id, tag_id)")
         .order("priority", { ascending: true });
       return data || [];
     },
@@ -311,6 +297,20 @@ const ScheduleTimeline = () => {
         const { count: sCount } = await supabase.from("stores").select("id", { count: "exact", head: true }).eq("is_active", true);
         return { devices: dCount || 0, stores: sCount || 0, states: 0 };
       }
+
+      const segmentIds = [...new Set(detailTargets.map((t: any) => t.segment_id).filter(Boolean))] as string[];
+      const onlySegmentTargets = segmentIds.length === 1 && detailTargets.every((t: any) => !!t.segment_id);
+      if (onlySegmentTargets) {
+        const { data, error } = await supabase.rpc("resolve_segment_device_stats" as any, {
+          p_segment_id: segmentIds[0],
+          p_limit: 1000,
+          p_only_online: false,
+        });
+        if (error) throw error;
+        const row = (data as any)?.[0] ?? data ?? { device_count: 0, store_count: 0 };
+        return { devices: Number(row.device_count ?? 0), stores: Number(row.store_count ?? 0), states: 0 };
+      }
+
       let deviceCount = 0, storeCount = 0;
       for (const t of detailTargets) {
         if (t.target_type === "store" && t.store_id) {
@@ -402,6 +402,71 @@ const ScheduleTimeline = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] }),
   });
 
+  const linkSegmentToCampaign = useMutation({
+    mutationFn: async ({ campaignId, segmentId }: { campaignId: string; segmentId: string }) => {
+      const { data: segTargets, error: segTargetsError } = await supabase
+        .from("campaign_segment_targets" as any)
+        .select(
+          "segment_id, clause_id, target_type, include, company_id, state_id, region_id, city_id, store_id, sector_id, zone_id, device_type_id, device_group_id, device_id, tag_id"
+        )
+        .eq("segment_id", segmentId);
+      if (segTargetsError) throw segTargetsError;
+
+      await supabase
+        .from("campaign_targets" as any)
+        .delete()
+        .eq("campaign_id", campaignId)
+        .eq("segment_id", segmentId);
+
+      const rows = (segTargets || []).map((t: any) => ({
+        campaign_id: campaignId,
+        segment_id: segmentId,
+        clause_id: t.clause_id ?? null,
+        target_type: t.target_type,
+        include: t.include !== false,
+        company_id: t.company_id ?? null,
+        state_id: t.state_id ?? null,
+        region_id: t.region_id ?? null,
+        city_id: t.city_id ?? null,
+        store_id: t.store_id ?? null,
+        sector_id: t.sector_id ?? null,
+        zone_id: t.zone_id ?? null,
+        device_type_id: t.device_type_id ?? null,
+        device_group_id: t.device_group_id ?? null,
+        device_id: t.device_id ?? null,
+        tag_id: t.tag_id ?? null,
+      }));
+
+      if (rows.length === 0) throw new Error("Segmento sem filtros (0 regras)");
+
+      const { error: insertError } = await supabase.from("campaign_targets" as any).insert(rows);
+      if (insertError) throw insertError;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] });
+      invalidate();
+      toast({ title: "Segmento vinculado à campanha" });
+    },
+    onError: (e: any) => toast({ title: "Erro ao vincular segmento", description: e.message, variant: "destructive" }),
+  });
+
+  const unlinkSegmentFromCampaign = useMutation({
+    mutationFn: async ({ campaignId, segmentId }: { campaignId: string; segmentId: string }) => {
+      const { error } = await supabase
+        .from("campaign_targets" as any)
+        .delete()
+        .eq("campaign_id", campaignId)
+        .eq("segment_id", segmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["detail-targets", detailCampaignId] });
+      invalidate();
+      toast({ title: "Segmento removido da campanha" });
+    },
+    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const addContent = useMutation({
     mutationFn: async ({ campaignId, mediaId }: { campaignId: string; mediaId: string }) => {
       const camp = campaigns.find((c: any) => c.id === campaignId);
@@ -419,11 +484,11 @@ const ScheduleTimeline = () => {
 
   const reorderContents = useMutation({
     mutationFn: async (updates: { id: string; position: number }[]) => {
-      await Promise.all(
-        updates.map(u =>
-          supabase.from("campaign_contents").update({ position: u.position }).eq("id", u.id)
-        )
+      const results = await Promise.all(
+        updates.map(u => supabase.from("campaign_contents").update({ position: u.position }).eq("id", u.id).select("id").maybeSingle())
       );
+      const err = results.find(r => r.error)?.error;
+      if (err) throw err;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["detail-contents", detailCampaignId] }); invalidate(); toast({ title: "Ordem atualizada" }); },
     onError: (e: any) => toast({ title: "Erro ao reordenar", description: e.message, variant: "destructive" }),
@@ -498,15 +563,200 @@ const ScheduleTimeline = () => {
   };
 
   const getTargetLabel = (t: any) => {
-    if (t.target_type === "state") { const s = statesData.find((s: any) => s.id === t.state_id); return `Estado: ${s?.code || "?"}`; }
-    if (t.target_type === "region") { const r = regions.find((r: any) => r.id === t.region_id); return `Região: ${r?.name || "?"}`; }
-    if (t.target_type === "city") { const c = cities.find((c: any) => c.id === t.city_id); return `Cidade: ${c?.name || "?"}`; }
-    if (t.target_type === "tag") { const tag = tags.find((tg: any) => tg.id === t.tag_id); return `Tag: ${tag?.name || "?"}`; }
-    if (t.target_type === "sector") { const sec = sectors.find((s: any) => s.id === t.sector_id); return `Setor: ${sec?.name || "?"}`; }
-    if (t.target_type === "store") { const st = stores.find((s: any) => s.id === t.store_id); return `Loja: ${st?.name || "?"}`; }
-    if (t.target_type === "device") { const d = devices.find((d: any) => d.id === t.device_id); return `Dispositivo: ${d?.name || "?"}`; }
-    return t.target_type;
+    const raw = (() => {
+      if (t.target_type === "state") { const s = statesData.find((s: any) => s.id === t.state_id); return `Estado: ${s?.code || "?"}`; }
+      if (t.target_type === "region") { const r = regions.find((r: any) => r.id === t.region_id); return `Região: ${r?.name || "?"}`; }
+      if (t.target_type === "city") { const c = cities.find((c: any) => c.id === t.city_id); return `Cidade: ${c?.name || "?"}`; }
+      if (t.target_type === "tag") { const tag = tags.find((tg: any) => tg.id === t.tag_id); return `Tag: ${tag?.name || "?"}`; }
+      if (t.target_type === "sector") { const sec = sectors.find((s: any) => s.id === t.sector_id); return `Setor: ${sec?.name || "?"}`; }
+      if (t.target_type === "store") { const st = stores.find((s: any) => s.id === t.store_id); return `Loja: ${st?.name || "?"}`; }
+      if (t.target_type === "device_group") { const g = deviceGroups.find((g: any) => g.id === t.device_group_id); return `Grupo: ${g?.name || "?"}`; }
+      if (t.target_type === "device") { const d = devices.find((d: any) => d.id === t.device_id); return `Dispositivo: ${d?.name || "?"}`; }
+      return t.target_type;
+    })();
+
+    if (t.segment_id) {
+      const seg = segments.find((s: any) => s.id === t.segment_id);
+      return `${seg?.name || "Segmento"} • ${raw}`;
+    }
+    return raw;
   };
+
+  const hierarchyModel = useMemo(() => {
+    const index = new Map<string, { type: HierarchyNodeType; id: string; label: string; deviceIds?: string[] }>();
+    const regionsById = new Map(regions.map((r: any) => [r.id, r]));
+    const statesById = new Map(statesData.map((s: any) => [s.id, s]));
+    const citiesByState = new Map<string, any[]>();
+    cities.forEach((c: any) => {
+      if (!citiesByState.has(c.state_id)) citiesByState.set(c.state_id, []);
+      citiesByState.get(c.state_id)!.push(c);
+    });
+
+    const storesByCity = new Map<string, any[]>();
+    storesWithHierarchy.forEach((s: any) => {
+      if (!s.city_id) return;
+      if (!storesByCity.has(s.city_id)) storesByCity.set(s.city_id, []);
+      storesByCity.get(s.city_id)!.push(s);
+    });
+
+    const sectorsById = new Map(sectors.map((s: any) => [s.id, s]));
+    const devicesByStore = new Map<string, any[]>();
+    devices.forEach((d: any) => {
+      if (!d.store_id) return;
+      if (!devicesByStore.has(d.store_id)) devicesByStore.set(d.store_id, []);
+      devicesByStore.get(d.store_id)!.push(d);
+    });
+
+    const groupById = new Map(deviceGroups.map((g: any) => [g.id, g]));
+    const deviceIdToGroupIds = new Map<string, string[]>();
+    groupMembers.forEach((m: any) => {
+      if (!deviceIdToGroupIds.has(m.device_id)) deviceIdToGroupIds.set(m.device_id, []);
+      deviceIdToGroupIds.get(m.device_id)!.push(m.group_id);
+    });
+
+    const roots: HierarchyNode[] = statesData
+      .slice()
+      .sort((a: any, b: any) => (a.code || a.name || "").localeCompare(b.code || b.name || ""))
+      .map((state: any) => {
+        const stateKey = `state:${state.id}`;
+        const stateLabel = state.code || state.name;
+        index.set(stateKey, { type: "state", id: state.id, label: stateLabel });
+        const region = state.region_id ? regionsById.get(state.region_id) : null;
+        const regionNodes: HierarchyNode[] = region
+          ? [{
+            key: `region:${state.id}:${region.id}`,
+            id: region.id,
+            type: "region" as const,
+            label: region.name,
+            children: [],
+          }]
+          : [];
+        if (region) index.set(`region:${state.id}:${region.id}`, { type: "region", id: region.id, label: region.name });
+
+        const targetParent = regionNodes.length > 0 ? regionNodes[0] : null;
+        const stateCities = (citiesByState.get(state.id) || []).slice().sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
+        const cityNodes = stateCities.map((city: any) => {
+          const cityKey = `city:${city.id}`;
+          index.set(cityKey, { type: "city", id: city.id, label: city.name });
+          const cityStores = (storesByCity.get(city.id) || []).slice().sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
+          const storeNodes = cityStores.map((store: any) => {
+            const storeKey = `store:${store.id}`;
+            index.set(storeKey, { type: "store", id: store.id, label: store.name });
+            const storeDevices = (devicesByStore.get(store.id) || []).slice().sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
+            const sectorIds = [...new Set(storeDevices.map((d: any) => d.sector_id).filter(Boolean))] as string[];
+            const sectorNodes = sectorIds
+              .map((sid) => sectorsById.get(sid) ? ({ id: sid, name: sectorsById.get(sid)!.name }) : ({ id: sid, name: `Setor ${sid.slice(0, 6)}` }))
+              .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+              .map((sec) => {
+                const sectorKey = `sector:${store.id}:${sec.id}`;
+                index.set(sectorKey, { type: "sector", id: sec.id, label: sec.name });
+                const devicesInSector = storeDevices.filter((d: any) => d.sector_id === sec.id);
+                const groupIds = [...new Set(devicesInSector.flatMap((d: any) => deviceIdToGroupIds.get(d.id) || []))] as string[];
+                const groupNodes: HierarchyNode[] = groupIds
+                  .map((gid) => groupById.get(gid) ? ({ id: gid, name: groupById.get(gid)!.name }) : ({ id: gid, name: `Grupo ${gid.slice(0, 6)}` }))
+                  .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                  .map((g) => {
+                    const groupKey = `device_group:${store.id}:${sec.id}:${g.id}`;
+                    const groupDeviceIds = devicesInSector.filter((d: any) => (deviceIdToGroupIds.get(d.id) || []).includes(g.id)).map((d: any) => d.id);
+                    index.set(groupKey, { type: "device_group", id: g.id, label: g.name, deviceIds: groupDeviceIds });
+                    const deviceNodes: HierarchyNode[] = groupDeviceIds
+                      .map((did) => storeDevices.find((d: any) => d.id === did))
+                      .filter(Boolean)
+                      .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""))
+                      .map((d: any) => {
+                        const deviceKey = `device:${d.id}`;
+                        index.set(deviceKey, { type: "device", id: d.id, label: d.name || d.device_code || d.id });
+                        return { key: deviceKey, id: d.id, type: "device" as const, label: d.name || d.device_code || d.id };
+                      });
+                    return { key: groupKey, id: g.id, type: "device_group" as const, label: g.name, children: deviceNodes };
+                  });
+
+                const ungrouped = devicesInSector.filter((d: any) => (deviceIdToGroupIds.get(d.id) || []).length === 0);
+                if (ungrouped.length > 0) {
+                  const unKey = `device_group:${store.id}:${sec.id}:__ungrouped__`;
+                  index.set(unKey, { type: "device_group", id: "__ungrouped__", label: "Sem grupo", deviceIds: ungrouped.map((d: any) => d.id) });
+                  const deviceNodes: HierarchyNode[] = ungrouped
+                    .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""))
+                    .map((d: any) => {
+                      const deviceKey = `device:${d.id}`;
+                      index.set(deviceKey, { type: "device", id: d.id, label: d.name || d.device_code || d.id });
+                      return { key: deviceKey, id: d.id, type: "device" as const, label: d.name || d.device_code || d.id };
+                    });
+                  groupNodes.push({ key: unKey, id: "__ungrouped__", type: "device_group" as const, label: "Sem grupo", children: deviceNodes });
+                }
+
+                return { key: sectorKey, id: sec.id, type: "sector" as const, label: sec.name, children: groupNodes };
+              });
+
+            return { key: storeKey, id: store.id, type: "store" as const, label: store.name, children: sectorNodes };
+          });
+          return { key: cityKey, id: city.id, type: "city" as const, label: city.name, children: storeNodes };
+        });
+
+        if (targetParent) targetParent.children = cityNodes;
+        const children = targetParent ? regionNodes : cityNodes;
+        return { key: stateKey, id: state.id, type: "state" as const, label: stateLabel, children };
+      });
+
+    return { roots, index, statesById };
+  }, [cities, deviceGroups, devices, groupMembers, regions, sectors, statesData, storesWithHierarchy]);
+
+  const hierarchyFilteredRoots = useMemo(() => {
+    const q = hierarchySearch.trim().toLowerCase();
+    if (!q) return hierarchyModel.roots;
+    const filterNode = (node: HierarchyNode): HierarchyNode | null => {
+      const selfMatch = node.label.toLowerCase().includes(q);
+      const children = (node.children || []).map(filterNode).filter(Boolean) as HierarchyNode[];
+      if (selfMatch || children.length > 0) return { ...node, children };
+      return null;
+    };
+    return hierarchyModel.roots.map(filterNode).filter(Boolean) as HierarchyNode[];
+  }, [hierarchyModel.roots, hierarchySearch]);
+
+  const hierarchySelection = useMemo(() => {
+    const stateIds = new Set<string>();
+    const regionIds = new Set<string>();
+    const cityIds = new Set<string>();
+    const storeIds = new Set<string>();
+    const sectorIds = new Set<string>();
+    const deviceIds = new Set<string>();
+    const deviceIdsFromGroups = new Set<string>();
+    const labels: { key: string; label: string; type: HierarchyNodeType }[] = [];
+    hierarchySelectedKeys.forEach((key) => {
+      const item = hierarchyModel.index.get(key);
+      if (!item) return;
+      labels.push({ key, label: item.label, type: item.type });
+      if (item.type === "state") stateIds.add(item.id);
+      if (item.type === "region") regionIds.add(item.id);
+      if (item.type === "city") cityIds.add(item.id);
+      if (item.type === "store") storeIds.add(item.id);
+      if (item.type === "sector") sectorIds.add(item.id);
+      if (item.type === "device") deviceIds.add(item.id);
+      if (item.type === "device_group") (item.deviceIds || []).forEach((id) => deviceIdsFromGroups.add(id));
+    });
+    return { stateIds, regionIds, cityIds, storeIds, sectorIds, deviceIds: new Set([...deviceIds, ...deviceIdsFromGroups]), labels };
+  }, [hierarchyModel.index, hierarchySelectedKeys]);
+
+  const hierarchyExpanded = useMemo(() => {
+    const expandedStateIds = new Set<string>(hierarchySelection.stateIds);
+    const expandedRegionIds = new Set<string>(hierarchySelection.regionIds);
+    statesData.forEach((s: any) => {
+      if (hierarchySelection.regionIds.has(s.region_id)) expandedStateIds.add(s.id);
+      if (hierarchySelection.stateIds.has(s.id) && s.region_id) expandedRegionIds.add(s.region_id);
+    });
+    const expandedCityIds = new Set<string>(hierarchySelection.cityIds);
+    cities.forEach((c: any) => { if (expandedStateIds.has(c.state_id)) expandedCityIds.add(c.id); });
+    const expandedStoreIds = new Set<string>(hierarchySelection.storeIds);
+    storesWithHierarchy.forEach((s: any) => { if (s.city_id && expandedCityIds.has(s.city_id)) expandedStoreIds.add(s.id); });
+    const expandedSectorIds = new Set<string>(hierarchySelection.sectorIds);
+    devices.forEach((d: any) => { if (d.sector_id && expandedStoreIds.has(d.store_id)) expandedSectorIds.add(d.sector_id); });
+    const expandedDeviceIds = new Set<string>(hierarchySelection.deviceIds);
+    devices.forEach((d: any) => {
+      if (!d.id) return;
+      if (expandedStoreIds.has(d.store_id) || (d.sector_id && expandedSectorIds.has(d.sector_id))) expandedDeviceIds.add(d.id);
+    });
+    return { expandedRegionIds, expandedStateIds, expandedCityIds, expandedStoreIds, expandedSectorIds, expandedDeviceIds };
+  }, [cities, devices, hierarchySelection, statesData, storesWithHierarchy]);
 
   // Filter campaigns
   const filteredCampaigns = useMemo(() => {
@@ -548,8 +798,42 @@ const ScheduleTimeline = () => {
         });
       });
     }
+    const hasHierarchyFilter =
+      hierarchySelection.stateIds.size > 0 ||
+      hierarchySelection.regionIds.size > 0 ||
+      hierarchySelection.cityIds.size > 0 ||
+      hierarchySelection.storeIds.size > 0 ||
+      hierarchySelection.sectorIds.size > 0 ||
+      hierarchySelection.deviceIds.size > 0;
+    if (hasHierarchyFilter) {
+      result = result.filter((c: any) => {
+        const targets = c.campaign_targets || [];
+        if (targets.length === 0) return true;
+        return targets.some((t: any) => {
+          if (t.target_type === "device" && t.device_id && hierarchyExpanded.expandedDeviceIds.has(t.device_id)) return true;
+          if (t.target_type === "store" && t.store_id && hierarchyExpanded.expandedStoreIds.has(t.store_id)) return true;
+          if (t.target_type === "sector" && t.sector_id && hierarchyExpanded.expandedSectorIds.has(t.sector_id)) return true;
+          if (t.target_type === "city" && t.city_id && hierarchyExpanded.expandedCityIds.has(t.city_id)) return true;
+          if (t.target_type === "state" && t.state_id && hierarchyExpanded.expandedStateIds.has(t.state_id)) return true;
+          if (t.target_type === "region" && t.region_id && hierarchyExpanded.expandedRegionIds.has(t.region_id)) return true;
+          return false;
+        });
+      });
+    }
     return result;
-  }, [campaigns, search, selectedGroupId, groupMembers, devices, storesWithHierarchy]);
+  }, [campaigns, devices, groupMembers, hierarchyExpanded, hierarchySelection, search, selectedGroupId, storesWithHierarchy]);
+
+  const filteredSegments = useMemo(() => {
+    const q = segmentSearch.trim().toLowerCase();
+    if (!q) return segments;
+    return segments.filter((s) => (s.name || "").toLowerCase().includes(q));
+  }, [segmentSearch, segments]);
+
+  const segmentClauseIds = useMemo(() => {
+    const ids = [...new Set(segmentTargets.map((t: any) => t.clause_id).filter(Boolean))] as string[];
+    ids.sort((a, b) => a.localeCompare(b));
+    return ids;
+  }, [segmentTargets]);
 
   const colorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -585,7 +869,61 @@ const ScheduleTimeline = () => {
 
   const detailCampaign = campaigns.find((c: any) => c.id === detailCampaignId);
   const selectedGroupName = selectedGroupId === "all" ? "TODOS" : deviceGroups.find((g: any) => g.id === selectedGroupId)?.name || "GRUPO";
-  const devicesInSelectedGroup = selectedGroupId === "all" ? [] : groupMembers.filter(m => m.group_id === selectedGroupId).map(m => m.device_id);
+  const devicesInSelectedGroup = useMemo(() => {
+    if (selectedGroupId === "all") return [] as string[];
+    return groupMembers.filter(m => m.group_id === selectedGroupId).map(m => m.device_id);
+  }, [selectedGroupId, groupMembers]);
+  const devicesInSelectedGroupDetails = useMemo(() => {
+    const setIds = new Set(devicesInSelectedGroup);
+    return devices.filter((d: any) => setIds.has(d.id));
+  }, [devices, devicesInSelectedGroup]);
+  const [updatingAllDevices, setUpdatingAllDevices] = useState(false);
+  const updateAllDevicesInGroup = async () => {
+    if (selectedGroupId === "all" || devicesInSelectedGroupDetails.length === 0) {
+      toast({ title: "Nenhum dispositivo no grupo", variant: "destructive" });
+      return;
+    }
+    setUpdatingAllDevices(true);
+    try {
+      const ids = devicesInSelectedGroupDetails.map((d: any) => d.id);
+      const nowIso = new Date().toISOString();
+      const { error: updErr } = await supabase
+        .from("devices")
+        .update({ last_sync_requested_at: nowIso, updated_at: nowIso })
+        .in("id", ids);
+      if (updErr) throw updErr;
+
+      await Promise.all(
+        devicesInSelectedGroupDetails.map(async (d: any) => {
+          if (!d.device_code) return;
+          const deviceRef = ref(db, `${d.device_code}`);
+          await update(deviceRef, {
+            "atualizacao_plataforma": "true",
+            "device_id": d.id,
+            "last-update": nowIso,
+          });
+        })
+      );
+
+      toast({ title: "Atualização enviada", description: `${ids.length} dispositivo(s) vão atualizar.` });
+    } catch (e: any) {
+      toast({ title: "Erro ao atualizar dispositivos", description: e.message || String(e), variant: "destructive" });
+    } finally {
+      setUpdatingAllDevices(false);
+    }
+  };
+
+  const devicePlaylistQuery = useQuery({
+    queryKey: ["device-playlist", selectedDeviceCodeForPreview],
+    queryFn: async () => {
+      if (!selectedDeviceCodeForPreview) return null;
+      const url = `${SUPABASE_URL}/functions/v1/campaign-engine/playlist?device_code=${encodeURIComponent(selectedDeviceCodeForPreview)}`;
+      const res = await fetch(url, { method: "GET" });
+      if (!res.ok) throw new Error(`Falha ao carregar playlist do dispositivo (${res.status})`);
+      return await res.json();
+    },
+    enabled: !!selectedDeviceCodeForPreview,
+  });
   const orderedDetailContents = useMemo(() => {
     if (orderedDetailIds.length === 0) return detailContents;
     const byId = new Map(detailContents.map((c: any) => [c.id, c]));
@@ -598,6 +936,15 @@ const ScheduleTimeline = () => {
   useEffect(() => {
     setOrderedPreviewIds(allContents.map((i) => i.content.id));
   }, [allContents]);
+
+  useEffect(() => {
+    if (!selectedSegmentId && segments.length > 0) setSelectedSegmentId(segments[0].id);
+  }, [segments, selectedSegmentId]);
+
+  useEffect(() => {
+    const segmentIds = [...new Set((detailTargets || []).map((t: any) => t.segment_id).filter(Boolean))] as string[];
+    setSelectedSegmentForCampaign(segmentIds.length > 0 ? segmentIds[0] : null);
+  }, [detailCampaignId, detailTargets]);
 
   const detailDndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -734,6 +1081,63 @@ const ScheduleTimeline = () => {
     reorderContents.mutate(orderedCampaignIds.map((id, position) => ({ id, position })));
   };
 
+  const toggleHierarchyExpanded = (key: string) => {
+    setHierarchyExpandedKeys((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
+  };
+  const toggleHierarchySelected = (key: string) => {
+    setHierarchySelectedKeys((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
+  };
+  const clearHierarchySelection = () => {
+    setHierarchySelectedKeys([]);
+  };
+
+  const HierarchyRowIcon = ({ type }: { type: HierarchyNodeType }) => {
+    if (type === "state" || type === "region" || type === "city") return <MapPin className="h-3.5 w-3.5 text-muted-foreground" />;
+    if (type === "store") return <Store className="h-3.5 w-3.5 text-muted-foreground" />;
+    if (type === "sector") return <Layers className="h-3.5 w-3.5 text-muted-foreground" />;
+    if (type === "device_group") return <Users className="h-3.5 w-3.5 text-muted-foreground" />;
+    return <Monitor className="h-3.5 w-3.5 text-muted-foreground" />;
+  };
+
+  const HierarchyTreeNode = ({ node, depth }: { node: HierarchyNode; depth: number }) => {
+    const expanded = hierarchyExpandedKeys.includes(node.key);
+    const selected = hierarchySelectedKeys.includes(node.key);
+    const hasChildren = (node.children || []).length > 0;
+    return (
+      <div>
+        <div
+          className="flex items-center gap-2 py-1.5 rounded hover:bg-accent/30"
+          style={{ paddingLeft: `${depth * 12}px` }}
+        >
+          <button
+            type="button"
+            className={`h-6 w-6 flex items-center justify-center rounded ${hasChildren ? "hover:bg-accent/40" : "opacity-0 pointer-events-none"}`}
+            onClick={() => hasChildren && toggleHierarchyExpanded(node.key)}
+            aria-label={expanded ? "Recolher" : "Expandir"}
+          >
+            {hasChildren ? (expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : null}
+          </button>
+          <Checkbox checked={selected} onCheckedChange={() => toggleHierarchySelected(node.key)} />
+          <HierarchyRowIcon type={node.type} />
+          <button
+            type="button"
+            className="flex-1 text-left text-sm truncate"
+            onClick={() => hasChildren ? toggleHierarchyExpanded(node.key) : toggleHierarchySelected(node.key)}
+          >
+            {node.label}
+          </button>
+        </div>
+        {hasChildren && expanded && (
+          <div>
+            {(node.children || []).map((ch) => (
+              <HierarchyTreeNode key={ch.key} node={ch} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <PageShell header={
       <div className="flex items-center justify-between w-full">
@@ -773,7 +1177,35 @@ const ScheduleTimeline = () => {
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setAddDeviceGroupId(selectedGroupId); setSelectedDeviceIds(devicesInSelectedGroup); }}>
               <Plus className="h-3.5 w-3.5" /> Dispositivos
             </Button>
-            <Badge variant="secondary" className="text-xs">{devicesInSelectedGroup.length} dispositivo(s)</Badge>
+            <Button variant="secondary" size="sm" className="gap-1.5" onClick={updateAllDevicesInGroup} disabled={updatingAllDevices || devicesInSelectedGroupDetails.length === 0}>
+              <RefreshCw className={`h-3.5 w-3.5 ${updatingAllDevices ? "animate-spin" : ""}`} /> Atualizar dispositivos
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Badge variant="secondary" className="text-xs cursor-pointer">{devicesInSelectedGroup.length} dispositivo(s)</Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-96">
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Dispositivos no grupo</p>
+                  {devicesInSelectedGroupDetails.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum dispositivo</p>
+                  ) : (
+                    <div className="max-h-64 overflow-auto border rounded-md divide-y">
+                      {devicesInSelectedGroupDetails.map((d: any) => (
+                        <div key={d.id} className="px-3 py-2 flex items-center gap-2">
+                          <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{d.name || d.device_code}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono truncate">{d.device_code}</p>
+                          </div>
+                          <Button size="sm" className="h-7 px-2 text-xs" variant="outline" onClick={() => setSelectedDeviceCodeForPreview(d.device_code)}>Preview</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </>
         )}
 
@@ -790,17 +1222,17 @@ const ScheduleTimeline = () => {
         <Button variant={viewMode === "contents" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("contents")}>
           <Layers className="h-4 w-4" /> Conteúdos
         </Button>
+        <Button variant={viewMode === "hierarchy" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("hierarchy")}>
+          <Network className="h-4 w-4" /> Hierarquia
+        </Button>
         <Button variant={viewMode === "campaigns" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("campaigns")}>
           <Target className="h-4 w-4" /> Campanhas
         </Button>
+        <Button variant={viewMode === "segments" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("segments")}>
+          <ListFilter className="h-4 w-4" /> Segmentos
+        </Button>
         <Button variant={viewMode === "timeline" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("timeline")}>
           <Calendar className="h-4 w-4" /> Timeline
-        </Button>
-        <Button variant={viewMode === "hierarchy" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("hierarchy")}>
-          <Layers className="h-4 w-4" /> Hierarquia
-        </Button>
-        <Button variant={viewMode === "hierarchy-visual" ? "default" : "ghost"} size="sm" className="gap-1.5" onClick={() => setViewMode("hierarchy-visual")}>
-          <Layers className="h-4 w-4" /> Hierarquia Visual
         </Button>
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setAddContentDialogOpen(true)}>
@@ -836,6 +1268,214 @@ const ScheduleTimeline = () => {
             <Button size="sm" className="gap-1.5" onClick={() => setAddContentDialogOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Adicionar conteúdo
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ VIEW: HIERARCHY ═══ */}
+      {viewMode === "hierarchy" && (
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4" style={{ height: "calc(100vh - 20rem)" }}>
+          <Card className="p-4 flex flex-col min-h-0">
+            <div className="flex items-center gap-2 mb-3">
+              <Network className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-semibold">Hierarquia de Reprodução</p>
+              <div className="ml-auto flex items-center gap-2">
+                {hierarchySelectedKeys.length > 0 && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={clearHierarchySelection}>
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
+            <Input placeholder="Filtrar hierarquia..." value={hierarchySearch} onChange={(e) => setHierarchySearch(e.target.value)} className="mb-3" />
+            {hierarchySelection.labels.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {hierarchySelection.labels.slice(0, 12).map((it) => (
+                  <Badge key={it.key} variant="secondary" className="gap-1 pr-1">
+                    {it.label}
+                    <button type="button" className="ml-1 text-muted-foreground hover:text-foreground" onClick={() => setHierarchySelectedKeys((p) => p.filter((k) => k !== it.key))}>
+                      ×
+                    </button>
+                  </Badge>
+                ))}
+                {hierarchySelection.labels.length > 12 && (
+                  <Badge variant="outline">+{hierarchySelection.labels.length - 12}</Badge>
+                )}
+              </div>
+            )}
+            <div className="flex-1 min-h-0 border border-border rounded-lg overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-2">
+                  {hierarchyFilteredRoots.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Nada encontrado</p>
+                  ) : (
+                    hierarchyFilteredRoots.map((n) => <HierarchyTreeNode key={n.key} node={n} depth={0} />)
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </Card>
+
+          <div className="flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-2 shrink-0">
+              <span className="text-sm text-muted-foreground">{allContents.length} conteúdo(s) de {filteredCampaigns.length} campanha(s)</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Ordenar:</span>
+                <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                  <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="campaign">Por campanha</SelectItem>
+                    <SelectItem value="name">Por nome</SelectItem>
+                    <SelectItem value="type">Por tipo</SelectItem>
+                    <SelectItem value="position">Por posição</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 border border-border rounded-lg bg-card overflow-hidden">
+              <ScrollArea className="h-full">
+                {filteredCampaigns.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Nenhuma campanha encontrada</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {filteredCampaigns.map((c: any) => {
+                      const status = getStatus(c);
+                      const color = colorMap[c.id] || "#888";
+                      const pri = PRIORITY_LABELS[c.priority] || { label: `P${c.priority}` };
+                      const typeLabel = CAMPAIGN_TYPES.find(t => t.value === c.campaign_type)?.label || c.campaign_type;
+                      return (
+                        <div key={c.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/30" style={{ borderLeft: `4px solid ${color}` }}>
+                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+                          <span className="flex-1 text-sm font-medium truncate">{c.name}</span>
+                          <Badge variant="outline" className="text-[10px] hidden lg:inline-flex">{typeLabel}</Badge>
+                          <Badge variant="secondary" className="text-[10px] hidden md:inline-flex">{pri.label}</Badge>
+                          <Button variant="outline" size="sm" className="gap-1 text-xs h-7 text-primary" onClick={() => { setDetailCampaignId(c.id); setDetailTab("contents"); }}>
+                            <Layers className="h-3 w-3" /> Detalhes
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+
+            <div className="shrink-0 mt-3">
+            <div className="flex items-center gap-3 mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {selectedDeviceCodeForPreview ? `Preview — dispositivo ${selectedDeviceCodeForPreview}` : "Preview — Sequência de exibição"}
+              </p>
+              <div className="ml-auto flex items-center gap-3">
+                {devicesInSelectedGroupDetails.length > 0 && (
+                  <>
+                    <span className="text-[10px] text-muted-foreground">Dispositivo:</span>
+                    <Select
+                      value={selectedDeviceCodeForPreview || DEVICE_ALL_VALUE}
+                      onValueChange={(v) => setSelectedDeviceCodeForPreview(v === DEVICE_ALL_VALUE ? "" : v)}
+                    >
+                      <SelectTrigger className="h-7 w-56 text-xs">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={DEVICE_ALL_VALUE}>Todos</SelectItem>
+                        {devicesInSelectedGroupDetails.map((d: any) => (
+                          <SelectItem key={d.id} value={d.device_code}>{d.name || d.device_code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="text-muted-foreground hover:text-foreground p-1 rounded"
+                      onClick={() => setPreviewZoom((z) => Math.max(previewZoomMin, z - 10))}
+                      title="Diminuir zoom"
+                      type="button"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <Slider
+                      value={[previewZoom]}
+                      onValueChange={(v) => setPreviewZoom(v[0])}
+                      min={previewZoomMin}
+                      max={previewZoomMax}
+                      step={10}
+                      className="w-28"
+                    />
+                    <button
+                      className="text-muted-foreground hover:text-foreground p-1 rounded"
+                      onClick={() => setPreviewZoom((z) => Math.min(previewZoomMax, z + 10))}
+                      title="Aumentar zoom"
+                      type="button"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{previewZoom}%</span>
+                </div>
+              </div>
+            {selectedDeviceCodeForPreview && devicePlaylistQuery.isError && (
+              <Alert variant="destructive" className="mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <div>
+                  <AlertTitle>Erro ao carregar preview do dispositivo</AlertTitle>
+                  <AlertDescription>{(devicePlaylistQuery.error as any)?.message || "Erro desconhecido"}</AlertDescription>
+                </div>
+              </Alert>
+            )}
+            {selectedDeviceCodeForPreview && (devicePlaylistQuery.data as any)?.items ? (
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                {(devicePlaylistQuery.data as any).items.map((it: any, idx: number) => (
+                  <div key={it.id ?? idx} className="border rounded-md p-2 bg-card shrink-0" style={{ width: (previewBaseWidth * previewZoom) / 100 }}>
+                    <div className="text-[10px] text-muted-foreground mb-1 truncate">{it.campaign_name}</div>
+                    {it.media?.file_url ? (
+                      it.media.type === "video" || /\\.(mp4|webm|mov)$/i.test(it.media.file_url) ? (
+                        <div className="w-full h-[64px] bg-muted flex items-center justify-center text-[10px]">vídeo</div>
+                      ) : (
+                        <img src={it.media.file_url} alt={it.media.name} className="w-full h-[64px] object-cover rounded" />
+                      )
+                    ) : (
+                      <div className="w-full h-[64px] bg-muted rounded" />
+                    )}
+                    <div className="mt-1 text-xs font-medium truncate">{it.media?.name || "Conteúdo"}</div>
+                    <div className="text-[10px] text-muted-foreground">duração: {it.media?.duration ?? "-" }s</div>
+                  </div>
+                ))}
+                {(devicePlaylistQuery.data as any).items.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nenhum conteúdo para este dispositivo</p>
+                )}
+              </div>
+            ) : allContents.length > 0 ? (
+                <DndContext
+                  sensors={previewDndSensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={(e) => setActivePreviewId(String(e.active.id))}
+                  onDragEnd={onPreviewDragEnd}
+                  onDragCancel={() => setActivePreviewId(null)}
+                >
+                  <SortableContext items={orderedPreviewIds} strategy={rectSortingStrategy}>
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                      {orderedPreviewIds.map((id) => {
+                        const item = previewById.get(id);
+                        if (!item) return null;
+                        return (
+                          <SortablePreviewItem
+                            key={id}
+                            id={id}
+                            item={item}
+                            width={(previewBaseWidth * previewZoom) / 100}
+                            onClick={() => setPreviewMedia(item.content.media)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">Nenhum conteúdo programado</p>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -916,8 +1556,29 @@ const ScheduleTimeline = () => {
           {/* PREVIEW strip — fixed at bottom */}
           <div className="shrink-0 mt-3">
             <div className="flex items-center gap-3 mb-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview — Sequência de exibição</p>
-              <div className="flex items-center gap-2 ml-auto">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {selectedDeviceCodeForPreview ? `Preview — dispositivo ${selectedDeviceCodeForPreview}` : "Preview — Sequência de exibição"}
+              </p>
+              <div className="ml-auto flex items-center gap-3">
+                {devicesInSelectedGroupDetails.length > 0 && (
+                  <>
+                    <span className="text-[10px] text-muted-foreground">Dispositivo:</span>
+                    <Select
+                      value={selectedDeviceCodeForPreview || DEVICE_ALL_VALUE}
+                      onValueChange={(v) => setSelectedDeviceCodeForPreview(v === DEVICE_ALL_VALUE ? "" : v)}
+                    >
+                      <SelectTrigger className="h-7 w-56 text-xs">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={DEVICE_ALL_VALUE}>Todos</SelectItem>
+                        {devicesInSelectedGroupDetails.map((d: any) => (
+                          <SelectItem key={d.id} value={d.device_code}>{d.name || d.device_code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
                 <div className="flex items-center gap-1">
                   <button
                     className="text-muted-foreground hover:text-foreground p-1 rounded"
@@ -945,7 +1606,38 @@ const ScheduleTimeline = () => {
                 <span className="text-[10px] text-muted-foreground">{previewZoom}%</span>
               </div>
             </div>
-            {allContents.length > 0 ? (
+            {selectedDeviceCodeForPreview && devicePlaylistQuery.isError && (
+              <Alert variant="destructive" className="mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <div>
+                  <AlertTitle>Erro ao carregar preview do dispositivo</AlertTitle>
+                  <AlertDescription>{(devicePlaylistQuery.error as any)?.message || "Erro desconhecido"}</AlertDescription>
+                </div>
+              </Alert>
+            )}
+            {selectedDeviceCodeForPreview && (devicePlaylistQuery.data as any)?.items ? (
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                {(devicePlaylistQuery.data as any).items.map((it: any, idx: number) => (
+                  <div key={it.id ?? idx} className="border rounded-md p-2 bg-card shrink-0" style={{ width: (previewBaseWidth * previewZoom) / 100 }}>
+                    <div className="text-[10px] text-muted-foreground mb-1 truncate">{it.campaign_name}</div>
+                    {it.media?.file_url ? (
+                      it.media.type === "video" || /\.(mp4|webm|mov)$/i.test(it.media.file_url) ? (
+                        <div className="w-full h-[64px] bg-muted flex items-center justify-center text-[10px]">vídeo</div>
+                      ) : (
+                        <img src={it.media.file_url} alt={it.media.name} className="w-full h-[64px] object-cover rounded" />
+                      )
+                    ) : (
+                      <div className="w-full h-[64px] bg-muted rounded" />
+                    )}
+                    <div className="mt-1 text-xs font-medium truncate">{it.media?.name || "Conteúdo"}</div>
+                    <div className="text-[10px] text-muted-foreground">duração: {it.media?.duration ?? "-" }s</div>
+                  </div>
+                ))}
+                {(devicePlaylistQuery.data as any).items.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nenhum conteúdo para este dispositivo</p>
+                )}
+              </div>
+            ) : allContents.length > 0 ? (
               <DndContext
                 sensors={previewDndSensors}
                 collisionDetection={closestCenter}
@@ -1034,368 +1726,338 @@ const ScheduleTimeline = () => {
         </div>
       )}
 
-      {/* ═══ VIEW: HIERARCHY ═══ */}
-      {viewMode === "hierarchy" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-3 flex items-center gap-2">
-            <Label className="text-xs">Fonte</Label>
-            <Select value={hierarchyMode} onValueChange={(v) => setHierarchyMode(v as any)}>
-              <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="json">JSON (local)</SelectItem>
-                <SelectItem value="db">Banco de dados</SelectItem>
-              </SelectContent>
-            </Select>
-            {hierarchyMode === "json" && (
-              <div className="ml-auto flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => exportHlModel()}>Exportar JSON</Button>
-                <Button variant="outline" size="sm" onClick={() => setJsonImportOpen(true)}>Importar JSON</Button>
-                <Button size="sm" onClick={() => saveHlModel(hlModel)}>Salvar</Button>
+      {/* ═══ VIEW: SEGMENTS ═══ */}
+      {viewMode === "segments" && (
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+          <Card className="p-4 flex flex-col min-h-0">
+            <div className="flex items-center gap-2 mb-3">
+              <ListFilter className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-semibold">Segmentos</p>
+              <div className="ml-auto">
+                <Button
+                  size="sm"
+                  className="h-7"
+                  onClick={() => {
+                    setEditingSegmentId(null);
+                    setSegmentForm({ name: "", description: "" });
+                    setSegmentDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Novo
+                </Button>
               </div>
-            )}
-          </div>
-          {hierarchyMode === "db" && (
-            <>
-              <div className="md:col-span-2 border border-border rounded-lg bg-card overflow-hidden min-h-[60vh] flex flex-col">
-                <div className="p-3 border-b border-border flex items-center gap-2">
-                  <Input value={hierarchySearch} onChange={(e) => setHierarchySearch(e.target.value)} placeholder="Buscar na hierarquia..." className="h-8 text-sm" />
-                </div>
-                <div className="flex-1 min-h-0">
-                  <HierarchyTree key={hierarchyRefreshKey} onSelect={(n) => setHierarchySelected(n)} search={hierarchySearch} />
-                </div>
-              </div>
-              <div className="border border-border rounded-lg bg-card p-4">
-                <p className="text-sm font-medium mb-2">Selecionado</p>
-                {hierarchySelected ? (
-                  <div className="mb-4">
-                    <p className="text-sm">{hierarchySelected.name}</p>
-                    <p className="text-xs text-muted-foreground">{hierarchySelected.type}</p>
-                  </div>
+            </div>
+
+            <Input placeholder="Buscar segmento..." value={segmentSearch} onChange={(e) => setSegmentSearch(e.target.value)} className="mb-3" />
+
+            <ScrollArea className="flex-1">
+              <div className="space-y-2 pr-3">
+                {filteredSegments.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum segmento</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground mb-4">Nenhum nó selecionado</p>
+                  filteredSegments.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelectedSegmentId(s.id)}
+                      className={`w-full text-left rounded-md border px-3 py-2 hover:bg-accent/30 transition-colors ${selectedSegmentId === s.id ? "border-primary/50 bg-primary/5" : "border-border"}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium truncate">{s.name}</span>
+                        {selectedSegmentId === s.id && <Badge variant="secondary" className="text-[10px]">Selecionado</Badge>}
+                      </div>
+                      {s.description && <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{s.description}</p>}
+                    </button>
+                  ))
                 )}
-                <div className="space-y-2">
-                  <Label className="text-xs">Tipo</Label>
-                  <Select value={createType} onValueChange={(v) => setCreateType(v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="state">Estado</SelectItem>
-                      <SelectItem value="region">Região</SelectItem>
-                      <SelectItem value="city">Cidade</SelectItem>
-                      <SelectItem value="store">Loja</SelectItem>
-                      <SelectItem value="sector">Setor</SelectItem>
-                      <SelectItem value="group">Grupo</SelectItem>
-                      <SelectItem value="zone">Zona</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Label className="text-xs">Nome</Label>
-                  <Input value={createName} onChange={(e) => setCreateName(e.target.value)} className="h-8 text-sm" />
-                  <Label className="text-xs">Código (opcional)</Label>
-                  <Input value={createCode} onChange={(e) => setCreateCode(e.target.value)} className="h-8 text-sm" />
-                  {createType === "state" && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Região</Label>
-                      <Select value={parentRegionId || ""} onValueChange={(v) => setParentRegionId(v)}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione a região" /></SelectTrigger>
-                        <SelectContent>{regionOptions.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                      {regionOptions.length === 0 && <p className="text-[11px] text-muted-foreground">Crie uma Região primeiro para habilitar Estados.</p>}
-                    </div>
-                  )}
-                  <Button className="w-full" disabled={!canCreateHere} onClick={async () => {
-                    try {
-                      if (createType === "state") {
-                        const payload: any = { name: createName, code: createCode || null, tenant_id: tenantId };
-                        payload.region_id = parentRegionId || hierarchySelected?.id;
-                        if (!payload.region_id) { toast({ title: "Selecione a Região", variant: "destructive" }); return; }
-                        const { error } = await supabase.from("states").insert(payload);
-                        if (error) throw error;
-                        toast({ title: "Estado criado" });
-                      } else if (createType === "region") {
-                        const { error } = await supabase.from("regions").insert({ name: createName, code: createCode || null, country_id: null, tenant_id: tenantId });
-                        if (error) throw error;
-                        toast({ title: "Região criada" });
-                      } else if (createType === "city") {
-                        const { error } = await supabase.from("cities").insert({ name: createName, state_id: hierarchySelected!.id, tenant_id: tenantId });
-                        if (error) throw error;
-                        toast({ title: "Cidade criada" });
-                      } else if (createType === "store") {
-                        const { error } = await supabase.from("stores").insert({ name: createName, code: createCode || null, city_id: hierarchySelected!.id, tenant_id: tenantId });
-                        if (error) throw error;
-                        toast({ title: "Loja criada" });
-                      } else if (createType === "sector") {
-                        const { error } = await supabase.from("sectors").insert({ name: createName, store_id: hierarchySelected!.id, tenant_id: tenantId });
-                        if (error) throw error;
-                        toast({ title: "Setor criado" });
-                      } else if (createType === "group") {
-                        const { error } = await supabase.from("device_groups").insert({ name: createName, store_id: hierarchySelected!.id, tenant_id: tenantId });
-                        if (error) throw error;
-                        toast({ title: "Grupo criado" });
-                      } else if (createType === "zone") {
-                        const { error } = await supabase.from("zones").insert({ name: createName, sector_id: hierarchySelected!.id, tenant_id: tenantId });
-                        if (error) throw error;
-                        toast({ title: "Zona criada" });
-                      }
-                      setCreateName(""); setCreateCode(""); setHierarchyRefreshKey((k) => k + 1);
-                    } catch (e: any) { toast({ title: "Erro ao criar", description: e.message, variant: "destructive" }); }
-                  }}>Criar</Button>
-                  <p className="text-xs text-muted-foreground mt-2">Use drag-and-drop para mover nós dentro de combinações permitidas.</p>
-                </div>
               </div>
-            </>
-          )}
-          {hierarchyMode === "json" && (
-            <>
-              <div className="md:col-span-2 border border-border rounded-lg bg-card p-3">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold mb-2">Estados</p>
-                    <DndContext onDragEnd={(e) => {
-                      const { active, over } = e;
-                      if (!over || active.id === over.id) return;
-                      const ids = hlModel.states.map(s => s.id);
-                      const from = ids.indexOf(String(active.id));
-                      const to = ids.indexOf(String(over.id));
-                      if (from < 0 || to < 0) return;
-                      const nextStates = arrayMove(hlModel.states, from, to);
-                      saveHlModel({ ...hlModel, states: nextStates });
-                    }}>
-                      <SortableContext items={hlModel.states.map(s => s.id)} strategy={rectSortingStrategy}>
+            </ScrollArea>
+          </Card>
+
+          <Card className="p-4">
+            {!selectedSegmentId ? (
+              <p className="text-sm text-muted-foreground">Selecione um segmento para editar regras.</p>
+            ) : (
+              (() => {
+                const seg = segments.find((s) => s.id === selectedSegmentId);
+                const includeTargets = segmentTargets.filter((t: any) => t.include);
+                const excludeTargets = segmentTargets.filter((t: any) => !t.include);
+                const includeByClause = includeTargets.reduce((acc: Record<string, any[]>, t: any) => {
+                  const key = t.clause_id || "sem-clausula";
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(t);
+                  return acc;
+                }, {});
+
+                const ensureSegmentTargetReady = () => {
+                  if (!selectedSegmentId) return false;
+                  const tt = segmentTargetForm.target_type;
+                  if (tt === "state" && !segmentTargetForm.state_id) return false;
+                  if (tt === "region" && !segmentTargetForm.region_id) return false;
+                  if (tt === "city" && !segmentTargetForm.city_id) return false;
+                  if (tt === "store" && !segmentTargetForm.store_id) return false;
+                  if (tt === "sector" && !segmentTargetForm.sector_id) return false;
+                  if (tt === "device_group" && !segmentTargetForm.device_group_id) return false;
+                  if (tt === "device" && !segmentTargetForm.device_id) return false;
+                  if (tt === "tag" && !segmentTargetForm.tag_id) return false;
+                  return true;
+                };
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold truncate">{seg?.name || "Segmento"}</h3>
+                        {seg?.description && <p className="text-xs text-muted-foreground mt-1">{seg.description}</p>}
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8"
+                          onClick={() => {
+                            if (!seg) return;
+                            setEditingSegmentId(seg.id);
+                            setSegmentForm({ name: seg.name, description: seg.description || "" });
+                            setSegmentDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-destructive"
+                          onClick={() => {
+                            if (!seg) return;
+                            if (confirm(`Excluir segmento "${seg.name}"?`)) {
+                              deleteSegment.mutate(seg.id, { onSuccess: () => setSelectedSegmentId(null) });
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">{segmentStats?.device_count ?? 0} dispositivos</Badge>
+                      <Badge variant="secondary">{segmentStats?.store_count ?? 0} lojas</Badge>
+                      <Badge variant="outline" className="text-[10px]">{segmentTargets.length} regra(s)</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-3">
                         <div className="space-y-1">
-                          {hlModel.states.map((s) => {
-                            const { attributes, listeners, setNodeRef } = useSortable({ id: s.id });
-                            return (
-                              <div key={s.id} ref={setNodeRef} className="flex items-center gap-2 bg-muted/30 rounded px-2 py-1" {...attributes} {...listeners}>
-                                <span className="flex-1 text-sm">{s.name}</span>
-                                <Button size="sm" variant="outline" onClick={() => {
-                                  const name = prompt("Nome da região");
-                                  if (!name) return;
-                                  const region: HLRegion = { id: crypto.randomUUID(), name, cities: [] };
-                                  const nextStates = hlModel.states.map(st => st.id === s.id ? { ...st, regions: [...st.regions, region] } : st);
-                                  saveHlModel({ ...hlModel, states: nextStates });
-                                }}>+ Região</Button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                    <div className="mt-2">
-                      <Button size="sm" onClick={() => {
-                        const name = prompt("Nome do estado");
-                        if (!name) return;
-                        const code = prompt("Código (opcional)") || undefined;
-                        const st: HLState = { id: crypto.randomUUID(), name, code, regions: [] };
-                        saveHlModel({ ...hlModel, states: [...hlModel.states, st] });
-                      }}>+ Estado</Button>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold mb-2">Regiões</p>
-                    <div className="space-y-3">
-                      {hlModel.states.map(st => (
-                        <div key={st.id} className="rounded border border-border p-2">
-                          <p className="text-xs font-medium mb-1">{st.name}</p>
-                          <DndContext onDragEnd={(e) => {
-                            const { active, over } = e;
-                            if (!over || active.id === over.id) return;
-                            const ids = st.regions.map(r => r.id);
-                            const from = ids.indexOf(String(active.id));
-                            const to = ids.indexOf(String(over.id));
-                            if (from < 0 || to < 0) return;
-                            const nextRegs = arrayMove(st.regions, from, to);
-                            const nextStates = hlModel.states.map(s2 => s2.id === st.id ? { ...s2, regions: nextRegs } : s2);
-                            saveHlModel({ ...hlModel, states: nextStates });
-                          }}>
-                            <SortableContext items={st.regions.map(r => r.id)} strategy={rectSortingStrategy}>
-                              <div className="space-y-1">
-                                {st.regions.map(r => {
-                                  const { attributes, listeners, setNodeRef } = useSortable({ id: r.id });
-                                  return (
-                                    <div key={r.id} ref={setNodeRef} className="flex items-center gap-2 bg-muted/20 rounded px-2 py-1" {...attributes} {...listeners}>
-                                      <span className="flex-1 text-sm">{r.name}</span>
-                                      <Button size="sm" variant="outline" onClick={() => {
-                                        const name = prompt("Nome da cidade");
-                                        if (!name) return;
-                                        const city: HLCity = { id: crypto.randomUUID(), name, stores: [] };
-                                        const nextStates = hlModel.states.map(s2 => s2.id === st.id ? { ...s2, regions: s2.regions.map(rr => rr.id === r.id ? { ...rr, cities: [...rr.cities, city] } : rr) } : s2);
-                                        saveHlModel({ ...hlModel, states: nextStates });
-                                      }}>+ Cidade</Button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </SortableContext>
-                          </DndContext>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold mb-2">Cidades e Lojas</p>
-                    <div className="space-y-3">
-                      {hlModel.states.map(st => st.regions.map(r => (
-                        <div key={r.id} className="rounded border border-border p-2">
-                          <p className="text-xs font-medium">{st.name} · {r.name}</p>
-                          <div className="mt-2 space-y-2">
-                            {r.cities.map(city => (
-                              <div key={city.id} className="rounded bg-muted/20 p-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium flex-1">{city.name}</span>
-                                  <Button size="sm" variant="outline" onClick={() => {
-                                    const name = prompt("Nome da loja");
-                                    if (!name) return;
-                                    const code = prompt("Código da loja (opcional)") || undefined;
-                                    const store: HLStore = { id: crypto.randomUUID(), name, code, sectors: [], groups: [], devices: [] };
-                                    const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
-                                      ...s2,
-                                      regions: s2.regions.map(rr => rr.id === r.id ? {
-                                        ...rr,
-                                        cities: rr.cities.map(cc => cc.id === city.id ? { ...cc, stores: [...cc.stores, store] } : cc)
-                                      } : rr)
-                                    } : s2);
-                                    saveHlModel({ ...hlModel, states: nextStates });
-                                  }}>+ Loja</Button>
-                                </div>
-                                <div className="mt-2 space-y-1">
-                                  {city.stores.map(store => (
-                                    <div key={store.id} className="rounded border border-border p-2">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium flex-1">{store.name}</span>
-                                        <Button size="sm" variant="outline" onClick={() => {
-                                          const name = prompt("Nome do setor");
-                                          if (!name) return;
-                                          const sector: HLSector = { id: crypto.randomUUID(), name, devices: [] };
-                                          const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
-                                            ...s2,
-                                            regions: s2.regions.map(rr => rr.id === r.id ? {
-                                              ...rr,
-                                              cities: rr.cities.map(cc => cc.id === city.id ? {
-                                                ...cc,
-                                                stores: cc.stores.map(ss => ss.id === store.id ? { ...ss, sectors: [...ss.sectors, sector] } : ss)
-                                              } : cc)
-                                            } : rr)
-                                          } : s2);
-                                          saveHlModel({ ...hlModel, states: nextStates });
-                                        }}>+ Setor</Button>
-                                        <Button size="sm" variant="outline" onClick={() => {
-                                          const name = prompt("Nome do grupo");
-                                          if (!name) return;
-                                          const group: HLGroup = { id: crypto.randomUUID(), name, devices: [] };
-                                          const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
-                                            ...s2,
-                                            regions: s2.regions.map(rr => rr.id === r.id ? {
-                                              ...rr,
-                                              cities: rr.cities.map(cc => cc.id === city.id ? {
-                                                ...cc,
-                                                stores: cc.stores.map(ss => ss.id === store.id ? { ...ss, groups: [...ss.groups, group] } : ss)
-                                              } : cc)
-                                            } : rr)
-                                          } : s2);
-                                          saveHlModel({ ...hlModel, states: nextStates });
-                                        }}>+ Grupo</Button>
-                                      </div>
-                                      <div className="mt-2 space-y-1">
-                                        {store.sectors.map(sec => (
-                                          <div key={sec.id} className="rounded bg-muted/30 p-2">
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-sm flex-1">{sec.name}</span>
-                                              <Button size="sm" variant="outline" onClick={() => {
-                                                const name = prompt("Nome do dispositivo");
-                                                if (!name) return;
-                                                const dev: HLDevice = { id: crypto.randomUUID(), name };
-                                                const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
-                                                  ...s2,
-                                                  regions: s2.regions.map(rr => rr.id === r.id ? {
-                                                    ...rr,
-                                                    cities: rr.cities.map(cc => cc.id === city.id ? {
-                                                      ...cc,
-                                                      stores: cc.stores.map(ss => ss.id === store.id ? {
-                                                        ...ss,
-                                                        sectors: ss.sectors.map(se => se.id === sec.id ? { ...se, devices: [...se.devices, dev] } : se)
-                                                      } : ss)
-                                                    } : cc)
-                                                  } : rr)
-                                                } : s2);
-                                                saveHlModel({ ...hlModel, states: nextStates });
-                                              }}>+ Dispositivo</Button>
-                                            </div>
-                                          </div>
-                                        ))}
-                                        {store.groups.map(gr => (
-                                          <div key={gr.id} className="rounded bg-muted/30 p-2">
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-sm flex-1">{gr.name}</span>
-                                              <Button size="sm" variant="outline" onClick={() => {
-                                                const name = prompt("Nome do dispositivo");
-                                                if (!name) return;
-                                                const dev: HLDevice = { id: crypto.randomUUID(), name };
-                                                const nextStates = hlModel.states.map(s2 => s2.id === st.id ? {
-                                                  ...s2,
-                                                  regions: s2.regions.map(rr => rr.id === r.id ? {
-                                                    ...rr,
-                                                    cities: rr.cities.map(cc => cc.id === city.id ? {
-                                                      ...cc,
-                                                      stores: cc.stores.map(ss => ss.id === store.id ? {
-                                                        ...ss,
-                                                        groups: ss.groups.map(g2 => g2.id === gr.id ? { ...g2, devices: [...g2.devices, dev] } : g2)
-                                                      } : ss)
-                                                    } : cc)
-                                                  } : rr)
-                                                } : s2);
-                                                saveHlModel({ ...hlModel, states: nextStates });
-                                              }}>+ Dispositivo</Button>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
+                          <Label>Novo filtro</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select
+                              value={segmentTargetForm.include ? "include" : "exclude"}
+                              onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, include: v === "include" }))}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="include">Incluir</SelectItem>
+                                <SelectItem value="exclude">Excluir</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <Select value={segmentTargetForm.clause_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, clause_id: v }))}>
+                              <SelectTrigger className="h-9"><SelectValue placeholder="Cláusula" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__new__">Nova cláusula</SelectItem>
+                                {segmentClauseIds.map((id) => (
+                                  <SelectItem key={id} value={id}>{id}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
-                      )))}
+
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select value={segmentTargetForm.target_type} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, target_type: v }))}>
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="state">Estado</SelectItem>
+                                <SelectItem value="region">Região</SelectItem>
+                                <SelectItem value="city">Cidade</SelectItem>
+                                <SelectItem value="store">Loja</SelectItem>
+                                <SelectItem value="sector">Setor</SelectItem>
+                                <SelectItem value="device_group">Grupo</SelectItem>
+                                <SelectItem value="device">Dispositivo</SelectItem>
+                                <SelectItem value="tag">Tag</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {segmentTargetForm.target_type === "state" && (
+                              <Select value={segmentTargetForm.state_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, state_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
+                                <SelectContent>
+                                  {statesData.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code || s.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {segmentTargetForm.target_type === "region" && (
+                              <Select value={segmentTargetForm.region_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, region_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Região" /></SelectTrigger>
+                                <SelectContent>
+                                  {regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {segmentTargetForm.target_type === "city" && (
+                              <Select value={segmentTargetForm.city_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, city_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Cidade" /></SelectTrigger>
+                                <SelectContent>
+                                  {cities.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {segmentTargetForm.target_type === "store" && (
+                              <Select value={segmentTargetForm.store_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, store_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Loja" /></SelectTrigger>
+                                <SelectContent>
+                                  {stores.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {segmentTargetForm.target_type === "sector" && (
+                              <Select value={segmentTargetForm.sector_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, sector_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
+                                <SelectContent>
+                                  {sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {segmentTargetForm.target_type === "device_group" && (
+                              <Select value={segmentTargetForm.device_group_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, device_group_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Grupo" /></SelectTrigger>
+                                <SelectContent>
+                                  {deviceGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {segmentTargetForm.target_type === "device" && (
+                              <Select value={segmentTargetForm.device_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, device_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Dispositivo" /></SelectTrigger>
+                                <SelectContent>
+                                  {devices.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {segmentTargetForm.target_type === "tag" && (
+                              <Select value={segmentTargetForm.tag_id} onValueChange={(v) => setSegmentTargetForm((p) => ({ ...p, tag_id: v }))}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Tag" /></SelectTrigger>
+                                <SelectContent>
+                                  {tags.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          className="h-9"
+                          disabled={!ensureSegmentTargetReady() || addSegmentFilter.isPending}
+                          onClick={() => {
+                            if (!selectedSegmentId) return;
+                            if (!ensureSegmentTargetReady()) return;
+                            const clauseId =
+                              segmentTargetForm.clause_id && segmentTargetForm.clause_id !== "__new__"
+                                ? segmentTargetForm.clause_id
+                                : undefined;
+
+                            const payload: any = {
+                              segment_id: selectedSegmentId,
+                              include: segmentTargetForm.include,
+                              target_type: segmentTargetForm.target_type,
+                            };
+                            if (clauseId) payload.clause_id = clauseId;
+                            if (segmentTargetForm.target_type === "state") payload.state_id = segmentTargetForm.state_id;
+                            if (segmentTargetForm.target_type === "region") payload.region_id = segmentTargetForm.region_id;
+                            if (segmentTargetForm.target_type === "city") payload.city_id = segmentTargetForm.city_id;
+                            if (segmentTargetForm.target_type === "store") payload.store_id = segmentTargetForm.store_id;
+                            if (segmentTargetForm.target_type === "sector") payload.sector_id = segmentTargetForm.sector_id;
+                            if (segmentTargetForm.target_type === "device_group") payload.device_group_id = segmentTargetForm.device_group_id;
+                            if (segmentTargetForm.target_type === "device") payload.device_id = segmentTargetForm.device_id;
+                            if (segmentTargetForm.target_type === "tag") payload.tag_id = segmentTargetForm.tag_id;
+
+                            addSegmentFilter.mutate(payload, {
+                              onSuccess: () => {
+                                setSegmentTargetForm((p) => ({ ...p, state_id: "", region_id: "", city_id: "", store_id: "", sector_id: "", device_group_id: "", device_id: "", tag_id: "" }));
+                              },
+                            });
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar regra
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <Label>Regras (inclui)</Label>
+                          {includeTargets.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">Nenhuma regra de inclusão.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {Object.entries(includeByClause).map(([clauseId, items], idx) => (
+                                <div key={clauseId} className="rounded-md border border-border p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-semibold">Cláusula {idx + 1}</p>
+                                    <Badge variant="outline" className="text-[10px]">{clauseId}</Badge>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {items.map((t: any) => (
+                                      <Badge key={t.id} variant="secondary" className="gap-1 pr-1">
+                                        <span className="truncate max-w-[240px]">{getTargetLabel(t)}</span>
+                                        <button
+                                          type="button"
+                                          className="ml-1 text-muted-foreground hover:text-foreground"
+                                          onClick={() => removeSegmentFilter.mutate({ id: t.id, segmentId: selectedSegmentId })}
+                                          title="Remover"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label>Regras (exclui)</Label>
+                          {excludeTargets.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">Nenhuma regra de exclusão.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {excludeTargets.map((t: any) => (
+                                <Badge key={t.id} variant="outline" className="gap-1 pr-1">
+                                  <span className="truncate max-w-[240px]">{getTargetLabel(t)}</span>
+                                  <button
+                                    type="button"
+                                    className="ml-1 text-muted-foreground hover:text-foreground"
+                                    onClick={() => removeSegmentFilter.mutate({ id: t.id, segmentId: selectedSegmentId })}
+                                    title="Remover"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              <Dialog open={jsonImportOpen} onOpenChange={setJsonImportOpen}>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader><DialogTitle>Importar JSON</DialogTitle></DialogHeader>
-                  <Textarea value={jsonImportText} onChange={(e) => setJsonImportText(e.target.value)} rows={10} />
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setJsonImportOpen(false)}>Cancelar</Button>
-                    <Button onClick={() => {
-                      try {
-                        const parsed = JSON.parse(jsonImportText);
-                        saveHlModel(parsed);
-                        setJsonImportText("");
-                        setJsonImportOpen(false);
-                      } catch (e: any) {
-                        toast({ title: "JSON inválido", description: e.message, variant: "destructive" });
-                      }
-                    }}>Importar</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ═══ VIEW: HIERARCHY VISUAL ═══ */}
-      {viewMode === "hierarchy-visual" && (
-        <div className="border border-border rounded-lg bg-card p-3">
-          <FabricHierarchy
-            initialTree={[]}
-            onExportJson={() => {}}
-            onImportJson={() => {}}
-            onSaveToDb={async () => {}}
-            height={650}
-            width={1100}
-          />
+                );
+              })()
+            )}
+          </Card>
         </div>
       )}
 
@@ -1439,6 +2101,51 @@ const ScheduleTimeline = () => {
       {viewMode === "timeline" && filteredCampaigns.length === 0 && (
         <p className="text-center text-muted-foreground py-12">Nenhuma campanha para exibir na timeline</p>
       )}
+
+      {/* ═══ Segment Create/Edit Dialog ═══ */}
+      <Dialog open={segmentDialogOpen} onOpenChange={setSegmentDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{editingSegmentId ? "Editar Segmento" : "Novo Segmento"}</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>Nome</Label>
+              <Input value={segmentForm.name} onChange={(e) => setSegmentForm((p) => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Textarea value={segmentForm.description} onChange={(e) => setSegmentForm((p) => ({ ...p, description: e.target.value }))} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSegmentDialogOpen(false); setEditingSegmentId(null); }}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                const name = segmentForm.name.trim();
+                if (!name) return;
+                if (editingSegmentId) {
+                  updateSegment.mutate(
+                    { id: editingSegmentId, name, description: segmentForm.description },
+                    { onSuccess: () => { setSegmentDialogOpen(false); setEditingSegmentId(null); } }
+                  );
+                } else {
+                  createSegment.mutate(
+                    { name, description: segmentForm.description },
+                    {
+                      onSuccess: (res: any) => {
+                        if (res?.id) setSelectedSegmentId(res.id);
+                        setSegmentDialogOpen(false);
+                      },
+                    }
+                  );
+                }
+              }}
+              disabled={!segmentForm.name.trim()}
+            >
+              {editingSegmentId ? "Salvar" : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ═══ Create/Edit Campaign Dialog ═══ */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -1567,16 +2274,104 @@ const ScheduleTimeline = () => {
             </TabsContent>
 
             <TabsContent value="target" className="space-y-4 mt-4">
+              <Card className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">Segmento</p>
+                    <p className="text-xs text-muted-foreground">Vincule um segmento para aplicar automaticamente as regras.</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <SegmentsSelector
+                    segments={segments}
+                    value={selectedSegmentForCampaign}
+                    onValueChange={setSelectedSegmentForCampaign}
+                    stats={selectedSegmentForCampaignStats ?? null}
+                    disabled={!detailCampaignId}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-9"
+                    disabled={!detailCampaignId || !selectedSegmentForCampaign || linkSegmentToCampaign.isPending}
+                    onClick={() => {
+                      if (!detailCampaignId || !selectedSegmentForCampaign) return;
+                      linkSegmentToCampaign.mutate({ campaignId: detailCampaignId, segmentId: selectedSegmentForCampaign });
+                    }}
+                  >
+                    Vincular
+                  </Button>
+                  {(() => {
+                    const segmentIds = [...new Set(detailTargets.map((t: any) => t.segment_id).filter(Boolean))] as string[];
+                    const linkedSegmentId = segmentIds.length > 0 ? segmentIds[0] : null;
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9"
+                        disabled={!detailCampaignId || !linkedSegmentId || unlinkSegmentFromCampaign.isPending}
+                        onClick={() => {
+                          if (!detailCampaignId || !linkedSegmentId) return;
+                          unlinkSegmentFromCampaign.mutate({ campaignId: detailCampaignId, segmentId: linkedSegmentId });
+                        }}
+                      >
+                        Remover
+                      </Button>
+                    );
+                  })()}
+                </div>
+                {(() => {
+                  const segmentIds = [...new Set(detailTargets.map((t: any) => t.segment_id).filter(Boolean))] as string[];
+                  const linkedSegmentId = segmentIds.length > 0 ? segmentIds[0] : null;
+                  const linkedSeg = linkedSegmentId ? segments.find((s) => s.id === linkedSegmentId) : null;
+                  const hasLegacy = detailTargets.some((t: any) => !t.segment_id);
+                  return (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {linkedSeg ? (
+                        <Badge variant="secondary" className="text-[10px]">Vinculado: {linkedSeg.name}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]">Nenhum segmento vinculado</Badge>
+                      )}
+                      {hasLegacy && <Badge variant="outline" className="text-[10px]">Também há regras manuais</Badge>}
+                    </div>
+                  );
+                })()}
+              </Card>
+
               {detailTargets.length > 0 ? (
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Segmentações ativas</Label>
                   <div className="flex flex-wrap gap-2">
-                    {detailTargets.map((t: any) => (
-                      <Badge key={t.id} variant="secondary" className="gap-1 pr-1">
-                        {getTargetLabel(t)}
-                        <Button variant="ghost" size="icon" className="h-4 w-4 ml-1" onClick={() => removeTarget.mutate(t.id)}><Trash2 className="h-3 w-3" /></Button>
-                      </Badge>
-                    ))}
+                    {(() => {
+                      const segmentIds = [...new Set(detailTargets.map((t: any) => t.segment_id).filter(Boolean))] as string[];
+                      const onlySegmentTargets = segmentIds.length === 1 && detailTargets.every((t: any) => !!t.segment_id);
+                      if (onlySegmentTargets) {
+                        const seg = segments.find((s) => s.id === segmentIds[0]);
+                        return (
+                          <Badge variant="secondary" className="gap-1 pr-1">
+                            Segmento: {seg?.name || "?"} • {detailTargets.length} regra(s)
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 ml-1"
+                              onClick={() => detailCampaignId && unlinkSegmentFromCampaign.mutate({ campaignId: detailCampaignId, segmentId: segmentIds[0] })}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        );
+                      }
+
+                      return detailTargets.map((t: any) => (
+                        <Badge key={t.id} variant="secondary" className="gap-1 pr-1">
+                          {getTargetLabel(t)}
+                          {!t.segment_id && (
+                            <Button variant="ghost" size="icon" className="h-4 w-4 ml-1" onClick={() => removeTarget.mutate(t.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </Badge>
+                      ));
+                    })()}
                   </div>
                 </div>
               ) : (

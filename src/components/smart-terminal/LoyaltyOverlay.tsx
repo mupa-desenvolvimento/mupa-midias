@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { X, Heart, User, Gift, QrCode, Search } from "lucide-react";
-// @ts-ignore - JSX component type mismatch
 import QRCode from "react-qr-code";
 import { ActiveFace } from "@/hooks/useFaceDetection";
 

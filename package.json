@@ -63,7 +63,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.3.0",
-    "fabric": "6",
+    "fabric": "^7.2.0",
     "face-api.js": "^0.20.0",
     "firebase": "^12.8.0",
     "framer-motion": "^12.31.0",
@@ -88,7 +88,7 @@
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.3",
-    "vite": "5.4.19",
+    "vite": "^8.0.2",
     "workbox-window": "^7.4.0",
     "zod": "^3.23.8"
   },
@@ -112,7 +112,7 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite-plugin-pwa": "^1.2.0",
-    "workbox-build": "^7.4.0"
+    "vite-plugin-pwa": "^0.19.8",
+    "workbox-build": "^7.0.0"
   }
 }

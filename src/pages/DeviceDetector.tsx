@@ -44,7 +44,7 @@ const DeviceDetector = () => {
         try {
           const dc = document.createElement('canvas'); dc.width = 20; dc.height = 20;
           await faceapi.detectAllFaces(dc, new faceapi.TinyFaceDetectorOptions());
-        } catch {}
+        } catch { void 0; }
 
         setIsModelsLoaded(true);
         console.log("Modelos carregados com sucesso");

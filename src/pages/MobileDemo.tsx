@@ -173,7 +173,7 @@ const MobileDemo = () => {
         try {
           const dc = document.createElement('canvas'); dc.width = 20; dc.height = 20;
           await faceapi.detectAllFaces(dc, new faceapi.SsdMobilenetv1Options());
-        } catch {}
+        } catch { void 0; }
         console.log("[MobileDemo] Models loaded successfully (SSD MobileNet)");
       } catch (e) {
         console.error("[MobileDemo] Error loading models:", e);

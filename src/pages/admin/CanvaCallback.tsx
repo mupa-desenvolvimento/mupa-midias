@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-// @ts-ignore - platform version mismatch
 import type { Session } from '@supabase/supabase-js';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';

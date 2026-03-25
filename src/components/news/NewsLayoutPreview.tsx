@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Newspaper } from "lucide-react";
 import { cn } from "@/lib/utils";
-// @ts-ignore - JSX component type mismatch
 import QRCode from "react-qr-code";
 
 function decodeHtmlEntities(input: string) {

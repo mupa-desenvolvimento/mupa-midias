@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useDeviceSession } from "@/hooks/useDeviceSession";
 import { useParams, useSearchParams } from "react-router-dom";
 import { db } from "@/services/firebase";
-// @ts-ignore - firebase modular API
 import { ref, onValue } from "firebase/database";
 import { usePlayerFaceDetection } from "@/hooks/usePlayerFaceDetection";
 import { setupKioskMode } from "@/utils/nativeBridge";

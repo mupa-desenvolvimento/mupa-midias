@@ -368,7 +368,7 @@ export const EanInput = ({
           caretColor: 'transparent',
           color: 'transparent',
           background: 'transparent',
-          // @ts-ignore - propriedade experimental para suprimir teclado virtual
+          // @ts-expect-error - propriedade experimental para suprimir teclado virtual
           virtualKeyboardPolicy: 'manual',
         }}
         aria-label="Scanner de código de barras"

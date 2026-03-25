@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDeviceSession } from "@/hooks/useDeviceSession";
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
@@ -164,6 +164,37 @@ const OfflinePlayer = () => {
   const activePlaylist = getActivePlaylist();
   const activeChannel = activePlaylist?.has_channels ? getActiveChannel(activePlaylist) : null;
   const items = getActiveItems();
+  const contentGroups = useMemo(() => {
+    const playlists = deviceState?.playlists ?? [];
+    if (playlists.length === 0) return [];
+
+    const sorted = [...playlists].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    const groups: Array<{ title: string; items: string[] }> = [];
+
+    for (const playlist of sorted) {
+      if (playlist.has_channels) {
+        for (const channel of playlist.channels || []) {
+          const channelItems = (channel.items || []).slice().sort((a, b) => a.position - b.position);
+          if (channelItems.length === 0) continue;
+          const title = `Playlist: ${playlist.name} • Canal: ${channel.name}${channel.is_fallback ? " (fallback)" : ""}`;
+          groups.push({
+            title,
+            items: channelItems.map((item, idx) => `${(item.position ?? idx) + 1}. ${item.media.name} (${item.media.type})`),
+          });
+        }
+      } else {
+        const playlistItems = (playlist.items || []).slice().sort((a, b) => a.position - b.position);
+        if (playlistItems.length === 0) continue;
+        const title = `Playlist: ${playlist.name}`;
+        groups.push({
+          title,
+          items: playlistItems.map((item, idx) => `${(item.position ?? idx) + 1}. ${item.media.name} (${item.media.type})`),
+        });
+      }
+    }
+
+    return groups;
+  }, [deviceState?.playlists]);
 
   // Override media check
   const hasActiveOverrideMedia = (() => {
@@ -672,6 +703,7 @@ const OfflinePlayer = () => {
           onSync={syncWithServer}
           isSyncing={isSyncing}
           debugInfo={debugInfo}
+          contentGroups={contentGroups}
         />
       </div>
     );

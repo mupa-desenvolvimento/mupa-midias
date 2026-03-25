@@ -1,5 +1,4 @@
 import { db } from "@/services/firebase";
-// @ts-ignore - firebase modular API
 import { ref, onValue, set, Unsubscribe } from "firebase/database";
 
 export type PushCommand = 'reload' | 'reboot' | 'clear_cache' | 'screenshot' | 'identify';

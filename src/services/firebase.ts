@@ -1,7 +1,4 @@
-
-// @ts-ignore - firebase modular API
 import { initializeApp } from "firebase/app";
-// @ts-ignore - firebase modular API
 import { getDatabase } from "firebase/database";
 
 // Your web app's Firebase configuration

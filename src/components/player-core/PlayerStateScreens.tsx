@@ -98,6 +98,10 @@ interface EmptyContentScreenProps {
   onSync?: () => void;
   isSyncing?: boolean;
   debugInfo?: string;
+  contentGroups?: Array<{
+    title: string;
+    items: string[];
+  }>;
 }
 
 export const EmptyContentScreen = ({
@@ -107,6 +111,7 @@ export const EmptyContentScreen = ({
   onSync,
   isSyncing,
   debugInfo,
+  contentGroups,
 }: EmptyContentScreenProps) => (
   <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-8">
     <Monitor className="w-20 h-20 mb-6 text-white/30" />
@@ -131,6 +136,27 @@ export const EmptyContentScreen = ({
         <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
         {isSyncing ? "Sincronizando..." : "Sincronizar"}
       </button>
+    )}
+    {contentGroups && contentGroups.length > 0 && (
+      <div className="w-full max-w-xl mt-6">
+        <p className="text-white/50 text-sm mb-2">Conteúdos para reproduzir</p>
+        <div className="max-h-80 overflow-auto rounded-lg border border-white/10 bg-white/5 p-3 text-left">
+          <div className="space-y-3">
+            {contentGroups.map((group, groupIndex) => (
+              <div key={`${groupIndex}-${group.title}`}>
+                <p className="text-white/80 text-xs font-medium">{group.title}</p>
+                <ul className="mt-1 space-y-1">
+                  {group.items.map((item, itemIndex) => (
+                    <li key={`${groupIndex}-${itemIndex}`} className="text-white/60 text-xs">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     )}
     {debugInfo && (
       <p className="text-white/30 text-xs mt-6">{debugInfo}</p>

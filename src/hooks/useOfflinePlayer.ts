@@ -375,7 +375,72 @@ export const useOfflinePlayer = (deviceCode: string) => {
         }
       }
 
-      // 2. Busca playlists associadas ao dispositivo
+      // 2. Tenta buscar playlist dinâmica do Campaign Engine primeiro
+      const mediaToDownload: { id: string; url: string; name: string }[] = [];
+      const cachedPlaylists: CachedPlaylist[] = [];
+      try {
+        const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID as string | undefined;
+        const publishableKey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+        if (projectId) {
+          const url = `https://${projectId}.supabase.co/functions/v1/campaign-engine/playlist?device_code=${(device as any).device_code || deviceCode}`;
+          const res = await fetch(url, { headers: { ...(publishableKey ? { apikey: publishableKey } : {}) } });
+          if (res.ok) {
+            const playlist = await res.json();
+            if (playlist?.items && Array.isArray(playlist.items) && playlist.items.length > 0) {
+              const items: CachedPlaylistItem[] = playlist.items
+                .filter((it: any) => it?.media && (it.media.type === "video" || it.media.type === "image" || it.media.file_url))
+                .map((it: any, idx: number) => {
+                  const m = it.media;
+                  if (m?.file_url) {
+                    mediaToDownload.push({ id: m.id, url: m.file_url, name: m.name });
+                  }
+                  return {
+                    id: it.id ?? `${m.id}-${idx}`,
+                    media_id: m.id,
+                    position: it.position ?? idx,
+                    duration_override: it.duration_override ?? null,
+                    start_date: it.start_date ?? null,
+                    end_date: it.end_date ?? null,
+                    start_time: it.start_time ?? null,
+                    end_time: it.end_time ?? null,
+                    days_of_week: it.days_of_week ?? null,
+                    media: {
+                      id: m.id,
+                      name: m.name,
+                      type: m.type,
+                      file_url: m.file_url,
+                      duration: m.duration || 10,
+                      metadata: m.metadata,
+                      cached_at: Date.now(),
+                    },
+                  } as CachedPlaylistItem;
+                });
+              if (items.length > 0) {
+                cachedPlaylists.push({
+                  id: "campaign-dynamic",
+                  name: "Campanha Dinâmica",
+                  description: null,
+                  is_active: true,
+                  has_channels: false,
+                  start_date: null,
+                  end_date: null,
+                  days_of_week: null,
+                  start_time: null,
+                  end_time: null,
+                  priority: 100,
+                  items: items.sort((a, b) => a.position - b.position),
+                  channels: [],
+                  synced_at: Date.now(),
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // silencioso: se falhar, continua com playlists tradicionais
+      }
+
+      // 3. Busca playlists associadas ao dispositivo (se não veio nada do engine)
       const relevantPlaylistIds: string[] = [];
       let relevantChannelIds: string[] = [];
 
@@ -401,10 +466,10 @@ export const useOfflinePlayer = (deviceCode: string) => {
         }
       }
 
-      // 3. Busca playlists via RPC (contorna RLS)
+      // 4. Busca playlists via RPC (contorna RLS)
       let playlistsData: any[] = [];
 
-      if (relevantPlaylistIds.length > 0 || relevantChannelIds.length > 0) {
+      if (cachedPlaylists.length === 0 && (relevantPlaylistIds.length > 0 || relevantChannelIds.length > 0)) {
         const { data: playlistsResult, error: playlistsError } = await supabase.rpc('get_public_playlists_data', {
           p_playlist_ids: relevantPlaylistIds.length > 0 ? relevantPlaylistIds : null,
           p_channel_ids: relevantChannelIds.length > 0 ? relevantChannelIds : null,
@@ -414,9 +479,7 @@ export const useOfflinePlayer = (deviceCode: string) => {
         playlistsData = (Array.isArray(playlistsResult) ? playlistsResult : []) as any[];
       }
 
-      const mediaToDownload: { id: string; url: string; name: string }[] = [];
-      const cachedPlaylists: CachedPlaylist[] = [];
-
+      // 5. Monta playlists locais (somente se não veio do engine)
       for (const playlist of playlistsData) {
         const items: CachedPlaylistItem[] = [];
         const channels: CachedChannel[] = [];
@@ -424,16 +487,13 @@ export const useOfflinePlayer = (deviceCode: string) => {
         if (playlist.has_channels && playlist.playlist_channels) {
           for (const channel of playlist.playlist_channels) {
             const channelItems: CachedPlaylistItem[] = [];
-            
             for (const item of channel.playlist_channel_items || []) {
               if (item.media) {
                 const isNonFileSlide = item.media.type === "news" || item.media.type === "weather";
                 if (!isNonFileSlide && item.media.file_url) {
                   mediaToDownload.push({ id: item.media.id, url: item.media.file_url, name: item.media.name });
                 }
-                if (!isNonFileSlide && !item.media.file_url) {
-                  continue;
-                }
+                if (!isNonFileSlide && !item.media.file_url) continue;
                 channelItems.push({
                   id: item.id,
                   media_id: item.media_id,
@@ -456,7 +516,6 @@ export const useOfflinePlayer = (deviceCode: string) => {
                 });
               }
             }
-
             if (channelItems.length > 0 || channel.is_fallback) {
               channels.push({
                 id: channel.id,
@@ -480,9 +539,7 @@ export const useOfflinePlayer = (deviceCode: string) => {
               if (!isNonFileSlide && item.media.file_url) {
                 mediaToDownload.push({ id: item.media.id, url: item.media.file_url, name: item.media.name });
               }
-              if (!isNonFileSlide && !item.media.file_url) {
-                continue;
-              }
+              if (!isNonFileSlide && !item.media.file_url) continue;
               items.push({
                 id: item.id,
                 media_id: item.media_id,
@@ -507,7 +564,7 @@ export const useOfflinePlayer = (deviceCode: string) => {
           }
         }
 
-        const hasContent = items.length > 0 || channels.some(c => c.items.length > 0);
+        const hasContent = items.length > 0 || channels.some((c: any) => c.items.length > 0);
         if (hasContent) {
           cachedPlaylists.push({
             id: playlist.id,

@@ -283,7 +283,11 @@ const CampaignsManager = () => {
     setForm({ name: c.name, description: c.description || "", campaign_type: c.campaign_type || "institutional", priority: c.priority || 5, weight: c.weight || 1, is_active: c.is_active ?? true, start_date: c.start_date || "", end_date: c.end_date || "", start_time: c.start_time || "", end_time: c.end_time || "", days_of_week: c.days_of_week || [0, 1, 2, 3, 4, 5, 6] });
     setDialogOpen(true);
   };
-  const handleSave = () => { if (!form.name) return; editingCampaign ? updateCampaign.mutate({ id: editingCampaign.id, ...form }) : createCampaign.mutate(form); };
+  const handleSave = () => {
+    if (!form.name) return;
+    if (editingCampaign) updateCampaign.mutate({ id: editingCampaign.id, ...form });
+    else createCampaign.mutate(form);
+  };
   const toggleDay = (day: number) => setForm(p => ({ ...p, days_of_week: p.days_of_week.includes(day) ? p.days_of_week.filter(d => d !== day) : [...p.days_of_week, day] }));
 
   const filtered = campaigns.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));

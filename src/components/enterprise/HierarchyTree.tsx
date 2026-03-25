@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserTenant } from "@/hooks/useUserTenant";
-import { ChevronRight, ChevronDown, Building2, MapPin, Landmark, Store, Layers, Box, Monitor, Wifi, WifiOff, AlertCircle, Map as MapIcon } from "lucide-react";
+import { ChevronRight, ChevronDown, Building2, MapPin, Map as MapIcon, Landmark, Store, Layers, Box, Monitor, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
