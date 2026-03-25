@@ -22,15 +22,15 @@ export function SegmentsSelector({
   return (
     <div className="flex items-center gap-2">
       <Select
-        value={value ?? ""}
-        onValueChange={(v) => onValueChange(v ? v : null)}
+        value={value ?? "__none__"}
+        onValueChange={(v) => onValueChange(v === "__none__" ? null : v)}
         disabled={disabled}
       >
         <SelectTrigger className="w-72">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Sem segmento</SelectItem>
+          <SelectItem value="__none__">Sem segmento</SelectItem>
           {segments.map((s) => (
             <SelectItem key={s.id} value={s.id}>
               {s.name}
