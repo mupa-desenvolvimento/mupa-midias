@@ -283,7 +283,7 @@ const ScheduleTimeline = () => {
     queryKey: ["detail-contents", detailCampaignId],
     queryFn: async () => {
       if (!detailCampaignId) return [];
-      const { data } = await supabase.from("campaign_contents").select("*, media:media_items(id, name, type, file_url, duration)").eq("campaign_id", detailCampaignId).order("position", { ascending: true });
+      const { data } = await supabase.from("campaign_contents").select("*, media:media_items(id, name, type, file_url, thumbnail_url, duration)").eq("campaign_id", detailCampaignId).order("position", { ascending: true });
       return (data || []) as any[];
     },
     enabled: !!detailCampaignId,
