@@ -8,16 +8,26 @@ const MUPA_IMAGE_API = "http://srv-mupa.ddns.net:5050/produto-imagem";
 /**
  * Build a proxied image URL that goes through our edge function to avoid CORS.
  */
+interface MupaImageResult {
+  image_url: string | null;
+  colors: {
+    cor_assinatura_produto: string;
+    fundo_legibilidade: string;
+    cor_dominante_claro: string;
+    cor_dominante_escuro: string;
+  } | null;
+}
+
 function getProxiedImageUrl(ean: string): string {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   return `${supabaseUrl}/functions/v1/product-image-proxy?ean=${ean}`;
 }
 
 /**
- * Fetch product image URL from Mupa API and persist it to lite_products.
- * Returns proxied URL for browser compatibility.
+ * Fetch product image URL + colors from Mupa API and persist to lite_products.
+ * Returns proxied URL for browser compatibility + color palette.
  */
-async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<string | null> {
+async function resolveProductImage(ean: string, supabase: any, companyId: string): Promise<MupaImageResult> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
