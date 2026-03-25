@@ -210,9 +210,10 @@ export const MediaRenderer = ({
         key={media.id}
         src={src}
         className={cn("w-full h-full border-0", transitionClass)}
-        allow="autoplay; encrypted-media; fullscreen"
+        allow="autoplay; encrypted-media; fullscreen; clipboard-read; clipboard-write"
         allowFullScreen
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-popups-to-escape-sandbox allow-downloads allow-presentation"
+        referrerPolicy="no-referrer-when-downgrade"
         title={media.name}
       />
     );
