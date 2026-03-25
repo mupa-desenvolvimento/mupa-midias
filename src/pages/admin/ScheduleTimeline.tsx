@@ -970,7 +970,6 @@ const ScheduleTimeline = () => {
 
   const SortableContentCard = ({ item }: { item: any }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-    const isImg = item.media?.type === "image" || item.media?.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
     const style: React.CSSProperties = {
       transform: CSS.Transform.toString(transform),
       transition,
@@ -991,11 +990,7 @@ const ScheduleTimeline = () => {
           </button>
         </div>
         <div className={`aspect-video rounded-lg overflow-hidden bg-muted border ${isDragging ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
-          {isImg && item.media?.file_url ? (
-            <img src={item.media.file_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center"><Image className="h-6 w-6 text-muted-foreground" /></div>
-          )}
+          <MediaThumbnail type={item.media?.type} fileUrl={item.media?.file_url} thumbnailUrl={item.media?.thumbnail_url} name={item.media?.name} />
         </div>
         <p className="text-xs font-medium truncate mt-1">{item.media?.name || "Mídia"}</p>
         <p className="text-[10px] text-muted-foreground">{item.media?.type} · {item.duration_override || item.media?.duration || 10}s</p>
