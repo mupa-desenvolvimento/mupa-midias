@@ -2488,11 +2488,9 @@ const ScheduleTimeline = () => {
                   {mediaList.map((m: any) => (
                     <SelectItem key={m.id} value={m.id}>
                       <div className="flex items-center gap-2">
-                        {m.file_url && (m.type === "image" || m.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
-                          <img src={m.file_url} alt="" className="w-8 h-5 object-cover rounded" />
-                        ) : (
-                          <div className="w-8 h-5 bg-muted rounded flex items-center justify-center"><Image className="h-3 w-3" /></div>
-                        )}
+                        <div className="w-8 h-5 rounded overflow-hidden">
+                          <MediaThumbnail type={m.type} fileUrl={m.file_url} thumbnailUrl={m.thumbnail_url} name={m.name} />
+                        </div>
                         {m.name}
                       </div>
                     </SelectItem>
