@@ -191,7 +191,7 @@ const ScheduleTimeline = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("campaigns")
-        .select("*, campaign_contents(id, media:media_items(id, name, type, file_url, duration), position, duration_override), campaign_targets(id, target_type, include, segment_id, clause_id, company_id, region_id, state_id, city_id, store_id, sector_id, zone_id, device_type_id, device_group_id, device_id, tag_id)")
+        .select("*, campaign_contents(id, media:media_items(id, name, type, file_url, thumbnail_url, duration), position, duration_override), campaign_targets(id, target_type, include, segment_id, clause_id, company_id, region_id, state_id, city_id, store_id, sector_id, zone_id, device_type_id, device_group_id, device_id, tag_id)")
         .order("priority", { ascending: true });
       return data || [];
     },
