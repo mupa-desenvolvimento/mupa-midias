@@ -12,6 +12,16 @@ interface ProductData {
   savings_percent: number | null;
   image_url: string | null;
   store_code: string;
+  offer_quantity?: number | null;
+  offer_type?: string | null;
+  packs?: Array<{
+    id_product: number;
+    id_store: number;
+    unit_pack: number;
+    price_pack: number;
+    price_prom_pack: number;
+    stock_avaliable: number;
+  }>;
   api_colors?: {
     cor_assinatura_produto: string;
     fundo_legibilidade: string;
@@ -37,6 +47,8 @@ interface Demographics {
 interface UseProductLookupOptions {
   deviceCode: string;
   deviceId?: string;
+  companySlug?: string | null;
+  storeCode?: string | null;
   onLookupStart?: () => void;
   onLookupEnd?: () => void;
 }
@@ -45,7 +57,7 @@ interface UseProductLookupOptions {
 const localCache = new Map<string, { product: ProductData; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
-export const useProductLookup = ({ deviceCode, deviceId, onLookupStart, onLookupEnd }: UseProductLookupOptions) => {
+export const useProductLookup = ({ deviceCode, deviceId, companySlug, storeCode, onLookupStart, onLookupEnd }: UseProductLookupOptions) => {
   const [state, setState] = useState<ProductLookupState>({
     product: null,
     isLoading: false,
@@ -77,7 +89,8 @@ export const useProductLookup = ({ deviceCode, deviceId, onLookupStart, onLookup
     }
 
     // Verifica cache local primeiro (resposta instantânea)
-    const cacheKey = `${deviceCode}:${trimmedEan}`;
+    // Inclui storeCode para evitar colisões quando a loja muda (ex: Grupo Assaí / id_store)
+    const cacheKey = `${deviceCode}:${storeCode ?? ""}:${trimmedEan}`;
     const cached = localCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       console.log("[useProductLookup] Cache hit:", trimmedEan);
@@ -112,11 +125,108 @@ export const useProductLookup = ({ deviceCode, deviceId, onLookupStart, onLookup
     const startTime = performance.now();
 
     try {
+      const isGrupoAssai = String(companySlug || "").toLowerCase().includes("grupo-assai");
+      let groupAssaiPayload: { integration: string; id_product: number; product_description: string; id_store: number } | null = null;
+
+      if (isGrupoAssai) {
+        const storeCodeNumber = storeCode != null ? Number(storeCode) : NaN;
+        if (!Number.isFinite(storeCodeNumber) || storeCodeNumber <= 0) {
+          const elapsed = Math.round(performance.now() - startTime);
+
+          if (deviceId) {
+            analyticsService.logPriceCheck({
+              device_id: deviceId,
+              barcode: trimmedEan,
+              status_code: 400,
+              response_time_ms: elapsed,
+              error_message: "Código da loja (id_store) obrigatório para Grupo Assaí",
+              request_payload: {
+                source: "grupo_assai_config",
+                store_code: storeCode ?? null,
+              },
+              created_at: new Date().toISOString(),
+            });
+          }
+
+          pendingLookupRef.current = null;
+          setState({
+            product: null,
+            isLoading: false,
+            error: "Código da loja obrigatório",
+          });
+          onLookupEnd?.();
+          return;
+        }
+
+        const { default: index } = await import("@/components/player/grupo-assai_ean_index.json");
+        const hit = (index as Record<string, { seq_produto: number; descricao: string }>)[trimmedEan];
+
+        if (!hit?.seq_produto) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          let resolved: { id_product?: number; descricao?: string } | null = null;
+          try {
+            const url = new URL("http://srv-mupa.ddns.net:5050/api/ean/seqproduto");
+            url.searchParams.set("codbar", trimmedEan);
+            const res = await fetch(url.toString(), { method: "GET", signal: controller.signal });
+            const json = await res.json().catch(() => null);
+            if (json && typeof json === "object" && Number(json.id_product) > 0) {
+              resolved = { id_product: Number(json.id_product), descricao: String(json.descricao || "") };
+            }
+          } catch (e) {
+            // ignore network errors; handled below
+          } finally {
+            clearTimeout(timeoutId);
+          }
+
+          if (!resolved?.id_product) {
+            const elapsed = Math.round(performance.now() - startTime);
+            if (deviceId) {
+              analyticsService.logPriceCheck({
+                device_id: deviceId,
+                barcode: trimmedEan,
+                status_code: 404,
+                response_time_ms: elapsed,
+                error_message: "EAN não encontrado (índice local e serviço seqproduto)",
+                request_payload: {
+                  source: "grupo_assai_resolution",
+                  store_code: storeCode ?? null,
+                },
+                created_at: new Date().toISOString(),
+              });
+            }
+            pendingLookupRef.current = null;
+            setState({
+              product: null,
+              isLoading: false,
+              error: "EAN não encontrado",
+            });
+            onLookupEnd?.();
+            return;
+          }
+
+          groupAssaiPayload = {
+            integration: "grupo-assai",
+            id_product: resolved.id_product!,
+            product_description: resolved.descricao || "",
+            id_store: storeCodeNumber,
+          };
+        } else {
+          groupAssaiPayload = {
+            integration: "grupo-assai",
+            id_product: hit.seq_produto,
+            product_description: hit.descricao,
+            id_store: storeCodeNumber,
+          };
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("product-lookup", {
         body: { 
           device_code: deviceCode, 
           ean: trimmedEan,
-          demographics: demographics || null
+          demographics: demographics || null,
+          ...(groupAssaiPayload || {})
         }
       });
 
@@ -216,7 +326,7 @@ export const useProductLookup = ({ deviceCode, deviceId, onLookupStart, onLookup
       });
       onLookupEnd?.();
     }
-  }, [deviceCode, onLookupStart, onLookupEnd]);
+  }, [deviceCode, deviceId, companySlug, storeCode, onLookupStart, onLookupEnd]);
 
   const clearProduct = useCallback(() => {
     pendingLookupRef.current = null;

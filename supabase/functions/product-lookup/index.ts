@@ -117,6 +117,10 @@ const corsHeaders = {
 interface ProductLookupRequest {
   device_code: string;
   ean: string;
+  integration?: string;
+  id_product?: number;
+  id_store?: number;
+  product_description?: string;
   // Dados demográficos opcionais (via detecção facial)
   demographics?: {
     gender?: string;
@@ -139,7 +143,17 @@ interface ProductResponse {
     savings_percent: number | null;
     image_url: string | null;
     store_code: string;
+    offer_quantity?: number | null;
+    offer_type?: string | null;
     description?: string;
+    packs?: Array<{
+      id_product: number;
+      id_store: number;
+      unit_pack: number;
+      price_pack: number;
+      price_prom_pack: number;
+      stock_avaliable: number;
+    }>;
     api_colors?: {
       cor_assinatura_produto: string;
       fundo_legibilidade: string;
@@ -151,8 +165,108 @@ interface ProductResponse {
 }
 
 // Função para validar e normalizar EAN
+const AMERICANAS_COMPANY_ID = "510a683a-db10-466f-8890-dc8629a36390";
+const AMERICANAS_INTEGRATION_NAME = "API Americanas";
+const AMERICANAS_IMAGE_URL_BASE = "https://produtos-imgs.onrender.com/produto-imagem";
+const GRUPO_ASSAI_TENANT_ID = "687b2692-dab7-4934-8ed1-eee6eb02dbb8";
+
+function pickGrupoAssaiPrimaryPack(
+  packs: Array<{ unit_pack: number; price_pack: number; price_prom_pack: number; stock_avaliable: number }>,
+) {
+  const unit = packs.find((p) => Number(p.unit_pack) === 1);
+  if (unit) return unit;
+  const sorted = [...packs].sort((a, b) => Number(a.unit_pack) - Number(b.unit_pack));
+  return sorted[0] ?? null;
+}
+
+async function ensureAmericanasIntegration(supabase: any, companyId: string): Promise<string> {
+  const { data: company } = await supabase
+    .from("companies")
+    .select("tenant_id")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  const desiredMapping = {
+    fields: {
+      barcode: "items[0].product.ean",
+      internal_code: "items[0].product.sapId",
+      description: "items[0].product.description",
+      image: "",
+      unit: "items[0].product.commercialUnit",
+      price_current: "items[0].regularPrice",
+      price_original: "",
+      prices: [
+        { label: "regularPrice", path: "items[0].regularPrice" },
+        { label: "promotionalPrice", path: "items[0].promotional.price" },
+        { label: "promotionalDiscountPercent", path: "items[0].promotional.discountPercent" },
+        { label: "takeWinUnitPriceWithDiscount", path: "items[0].takeWin.unitPriceWithDiscount" },
+        { label: "takeWinTotalPriceWithDiscount", path: "items[0].takeWin.totalPriceWithDiscount" },
+        { label: "takeWinQuantity", path: "items[0].takeWin.quantity" },
+        { label: "takeWinDiscountValue", path: "items[0].takeWin.discountValue" },
+      ],
+    },
+  };
+
+  const desiredUpdate = {
+    status: "active",
+    environment: "production",
+    auth_type: "none",
+    auth_config: {},
+    request_url: "https://pricing-query.azr.internal.americanas.io/price?storeId={store}&ean={ean}",
+    request_method: "GET",
+    request_headers_json: { Accept: "application/json" },
+    request_query_params_json: {},
+    request_body_json: {},
+    request_variables_json: [
+      { name: "store", description: "Código da filial (storeId)" },
+      { name: "ean", description: "EAN/GTIN do produto" },
+    ],
+    endpoint_url: "",
+    method: "GET",
+    barcode_param_type: "query_param",
+    headers: {},
+    mapping_config: desiredMapping,
+    tenant_id: company?.tenant_id ?? null,
+  };
+
+  const { data: existing, error: findError } = await supabase
+    .from("price_check_integrations")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("name", AMERICANAS_INTEGRATION_NAME)
+    .limit(1)
+    .maybeSingle();
+
+  if (findError) {
+    console.error("[Americanas] Falha ao buscar integração:", findError);
+  }
+
+  if (existing?.id) {
+    await supabase.from("price_check_integrations").update(desiredUpdate).eq("id", existing.id);
+    return existing.id;
+  }
+
+  const { data: created, error: createError } = await supabase
+    .from("price_check_integrations")
+    .insert({
+      name: AMERICANAS_INTEGRATION_NAME,
+      company_id: companyId,
+      ...desiredUpdate,
+    })
+    .select("id")
+    .single();
+
+  if (createError || !created?.id) {
+    console.error("[Americanas] Falha ao criar integração:", createError);
+    throw new Error("Não foi possível criar a integração da Americanas");
+  }
+
+  return created.id;
+}
+
 function validateEan(ean: string): { valid: boolean; normalized: string; error?: string } {
   const trimmed = ean.trim();
+  
   
   if (!trimmed) {
     return { valid: false, normalized: '', error: 'EAN não pode estar vazio' };
@@ -184,7 +298,7 @@ Deno.serve(async (req: Request) => {
     );
     
     const body = await req.json() as ProductLookupRequest;
-    const { device_code, ean, demographics } = body;
+    const { device_code, ean, demographics, integration, id_product, product_description } = body;
     
     console.log('[Request] device_code:', device_code, 'ean:', ean, 'demographics:', demographics);
     
@@ -209,7 +323,7 @@ Deno.serve(async (req: Request) => {
     // Buscar dispositivo e sua empresa
     const { data: device, error: deviceError } = await supabase
       .from('devices')
-      .select('id, company_id, store_id, store_code, price_integration_id, price_integration_enabled')
+      .select('id, company_id, store_id, store_code, price_integration_id, api_integration_id, price_integration_enabled')
       .eq('device_code', device_code)
       .single();
     
@@ -231,8 +345,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const storeCode = device.store_code || '1';
+    const integrationSlug = String(integration || '').toLowerCase();
+    const storeCode = (integrationSlug === 'grupo-assai' && body.id_store != null)
+      ? String(body.id_store)
+      : (device.store_code || '1');
     const priceIntegrationEnabled = (device as any)?.price_integration_enabled !== false;
+    const isAmericanasCompany = device.company_id === AMERICANAS_COMPANY_ID;
+    const americanasIntegrationId = isAmericanasCompany ? await ensureAmericanasIntegration(supabase, device.company_id) : null;
 
     // 1. Verificar cache local primeiro (Product Cache)
     const { data: cached } = await supabase
@@ -272,18 +391,342 @@ Deno.serve(async (req: Request) => {
             savings_percent: productData.savings_percent,
             image_url: cached.image_url,
             store_code: storeCode,
-            description: productData.name // Legacy
+            offer_quantity: productData.offer_quantity ?? null,
+            offer_type: productData.offer_type ?? null,
+            description: productData.description || productData.name,
+            packs: Array.isArray(productData.packs) ? productData.packs : undefined,
+            api_colors: productData.api_colors ?? null,
           }
         } as ProductResponse),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const { data: company } = await supabase
+      .from("companies")
+      .select("tenant_id")
+      .eq("id", device.company_id)
+      .maybeSingle();
+
+    const isGrupoAssaiTenant = company?.tenant_id === GRUPO_ASSAI_TENANT_ID;
+    const isGrupoAssai = String(integration || "").toLowerCase() === "grupo-assai" || isGrupoAssaiTenant;
+
+    if (isGrupoAssai && priceIntegrationEnabled) {
+      if (!id_product || !Number.isFinite(Number(id_product))) {
+        try {
+          const url = new URL('http://srv-mupa.ddns.net:5050/api/ean/seqproduto');
+          url.searchParams.set('codbar', normalizedEan);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const res = await fetch(url.toString(), { method: 'GET', signal: controller.signal });
+          clearTimeout(timeout);
+          const json = await res.json().catch(() => null);
+          const resolvedId = Number(json?.id_product) || 0;
+          if (resolvedId > 0) {
+            id_product = resolvedId;
+            if (json?.descricao && (!product_description || String(product_description).trim().length === 0)) {
+              (body as any).product_description = String(json.descricao);
+            }
+          } else {
+            await supabase.from('product_lookup_logs').insert({
+              device_id: device.id,
+              company_id: device.company_id,
+              ean: normalizedEan,
+              store_code: storeCode,
+              status: 'error',
+              latency_ms: Date.now() - startTime,
+              error_message: 'Grupo Assai: id_product ausente/ inválido e falha ao resolver via seqproduto'
+            });
+    
+            return new Response(
+              JSON.stringify({ success: false, error: 'Grupo Assai: id_product é obrigatório' } as ProductResponse),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } catch (e) {
+          await supabase.from('product_lookup_logs').insert({
+            device_id: device.id,
+            company_id: device.company_id,
+            ean: normalizedEan,
+            store_code: storeCode,
+            status: 'error',
+            latency_ms: Date.now() - startTime,
+            error_message: 'Grupo Assai: falha ao resolver id_product via seqproduto'
+          });
+  
+          return new Response(
+            JSON.stringify({ success: false, error: 'Grupo Assai: id_product é obrigatório' } as ProductResponse),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      const idStore = Number(storeCode);
+      if (!Number.isFinite(idStore)) {
+        await supabase.from('product_lookup_logs').insert({
+          device_id: device.id,
+          company_id: device.company_id,
+          ean: normalizedEan,
+          store_code: storeCode,
+          status: 'error',
+          latency_ms: Date.now() - startTime,
+          error_message: 'Grupo Assai: store_code inválido para id_store'
+        });
+
+        return new Response(
+          JSON.stringify({ success: false, error: 'Grupo Assai: store_code deve ser numérico (id_store)' } as ProductResponse),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
+        const stockUrl = new URL('https://marketplace.assai.com.br/stock');
+        stockUrl.searchParams.set('id_product', String(id_product));
+        stockUrl.searchParams.set('id_store', String(idStore));
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        const res = await fetch(stockUrl.toString(), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        const rawText = await res.text();
+        const json = (() => {
+          try { return JSON.parse(rawText); } catch { return null; }
+        })();
+
+        if (!res.ok || !Array.isArray(json)) {
+          await supabase.from('product_lookup_logs').insert({
+            device_id: device.id,
+            company_id: device.company_id,
+            ean: normalizedEan,
+            store_code: storeCode,
+            status: 'error',
+            latency_ms: Date.now() - startTime,
+            error_message: `Grupo Assai: resposta inválida (${res.status})`
+          });
+
+          return new Response(
+            JSON.stringify({ success: false, error: 'Grupo Assai: erro ao consultar estoque/preço' } as ProductResponse),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const packs = (json as any[]).map((r) => ({
+          id_product: Number(r?.id_product) || Number(id_product),
+          id_store: Number(r?.id_store) || idStore,
+          unit_pack: Number(r?.unit_pack) || 0,
+          price_pack: Number(r?.price_pack) || 0,
+          price_prom_pack: Number(r?.price_prom_pack) || 0,
+          stock_avaliable: Number(r?.stock_avaliable) || 0,
+        })).filter((p) => p.unit_pack > 0);
+
+        if (packs.length === 0) {
+          await supabase.from('product_lookup_logs').insert({
+            device_id: device.id,
+            company_id: device.company_id,
+            ean: normalizedEan,
+            store_code: storeCode,
+            status: 'not_found',
+            latency_ms: Date.now() - startTime,
+            error_message: 'Grupo Assai: nenhum pack retornado'
+          });
+
+          return new Response(
+            JSON.stringify({ success: false, error: 'Produto não encontrado' } as ProductResponse),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const primaryPack = pickGrupoAssaiPrimaryPack(packs);
+        const originalPrice = Number(primaryPack?.price_pack) || 0;
+        const promoPrice = Number(primaryPack?.price_prom_pack) || 0;
+        const currentPrice = promoPrice > 0 ? promoPrice : originalPrice;
+
+        let savingsPercent: number | null = null;
+        let isOffer = false;
+        if (promoPrice > 0 && originalPrice > promoPrice) {
+          isOffer = true;
+          savingsPercent = Math.round(((originalPrice - promoPrice) / originalPrice) * 100);
+        }
+
+        const productName = (product_description && String(product_description).trim()) ? String(product_description).trim() : `Produto ${id_product}`;
+        const resolvedImage = await resolveProductImage(normalizedEan, supabase, device.company_id);
+
+        const productData = {
+          ean: normalizedEan,
+          name: productName,
+          unit: 'UN',
+          current_price: currentPrice,
+          original_price: isOffer ? originalPrice : null,
+          is_offer: isOffer,
+          savings_percent: savingsPercent,
+          image_url: resolvedImage.image_url,
+          store_code: storeCode,
+          description: productName,
+          packs: packs,
+          api_colors: resolvedImage.colors,
+        };
+
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        await supabase
+          .from('product_cache')
+          .upsert(
+            {
+              company_id: device.company_id,
+              ean: normalizedEan,
+              store_code: storeCode,
+              product_data: productData,
+              image_url: productData.image_url,
+              expires_at: expiresAt.toISOString(),
+            },
+            { onConflict: 'company_id,ean,store_code' },
+          );
+
+        await supabase.from('product_lookup_logs').insert({
+          device_id: device.id,
+          company_id: device.company_id,
+          ean: normalizedEan,
+          store_code: storeCode,
+          status: 'success',
+          latency_ms: Date.now() - startTime,
+        });
+
+        return new Response(JSON.stringify({ success: true, product: productData } as ProductResponse), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (e) {
+        console.error('[GrupoAssai] Erro na chamada:', e);
+
+        await supabase.from('product_lookup_logs').insert({
+          device_id: device.id,
+          company_id: device.company_id,
+          ean: normalizedEan,
+          store_code: storeCode,
+          status: 'error',
+          latency_ms: Date.now() - startTime,
+          error_message: 'Grupo Assai: erro inesperado na chamada'
+        });
+
+        return new Response(
+          JSON.stringify({ success: false, error: 'Erro ao consultar produto. Tente novamente.' } as ProductResponse),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // 2. Consulta via Integração API (api_integrations)
+    const apiIntegrationId = !isAmericanasCompany && priceIntegrationEnabled ? (device as any)?.api_integration_id : null;
+    if (apiIntegrationId) {
+      console.log('[Lookup] Executando API integration:', apiIntegrationId);
+
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const deviceApiUrl = new URL(`${supabaseUrl}/functions/v1/device-api/price`);
+        deviceApiUrl.searchParams.set('integration_id', String(apiIntegrationId));
+        deviceApiUrl.searchParams.set('barcode', normalizedEan);
+        deviceApiUrl.searchParams.set('store', storeCode);
+
+        const res = await fetch(deviceApiUrl.toString(), { method: 'GET' });
+        const apiJson = await res.json().catch(() => null);
+
+        if (apiJson && (apiJson as any).error) {
+          console.warn('[API] Resposta de erro:', (apiJson as any)?.message);
+        } else if (apiJson && typeof apiJson === 'object') {
+          const p = apiJson as any;
+
+          const originalPrice = Number(p.price || 0) || 0;
+          const promoPrice = Number(p.promo_price || 0) || 0;
+          const currentPrice = promoPrice > 0 ? promoPrice : originalPrice;
+
+          let savingsPercent = null;
+          let isOffer = false;
+          if (promoPrice > 0 && originalPrice > promoPrice) {
+            isOffer = true;
+            savingsPercent = Math.round(((originalPrice - promoPrice) / originalPrice) * 100);
+          }
+
+          const resolvedImage = p.image
+            ? { image_url: p.image, colors: null as any }
+            : await resolveProductImage(normalizedEan, supabase, device.company_id);
+
+          const productData = {
+            ean: normalizedEan,
+            name: p.name || '',
+            unit: 'UN',
+            current_price: currentPrice,
+            original_price: isOffer ? originalPrice : null,
+            is_offer: isOffer,
+            savings_percent: savingsPercent,
+            image_url: resolvedImage.image_url || p.image || null,
+            store_code: storeCode,
+            description: p.name || '',
+            api_colors: resolvedImage.colors,
+          };
+
+          const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+          await supabase
+            .from('product_cache')
+            .upsert(
+              {
+                company_id: device.company_id,
+                ean: normalizedEan,
+                store_code: storeCode,
+                product_data: productData,
+                image_url: productData.image_url,
+                expires_at: expiresAt.toISOString(),
+              },
+              { onConflict: 'company_id,ean,store_code' },
+            );
+
+          await supabase.from('product_lookup_logs').insert({
+            device_id: device.id,
+            company_id: device.company_id,
+            ean: normalizedEan,
+            store_code: storeCode,
+            status: 'success',
+            latency_ms: Date.now() - startTime,
+          });
+
+          supabase.functions
+            .invoke('analytics-ingest', {
+              body: {
+                type: 'price_check',
+                data: {
+                  device_id: device.id,
+                  company_id: device.company_id,
+                  store_code: storeCode,
+                  ean: normalizedEan,
+                  product_name: productData.name,
+                  product_data: productData,
+                  demographics: demographics,
+                },
+              },
+            })
+            .then();
+
+          return new Response(JSON.stringify({ success: true, product: productData } as ProductResponse), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (e) {
+        console.error('[API] Erro na chamada:', e);
+      }
+    }
+
     // 2. Resolver Integração
     let integrationId = priceIntegrationEnabled ? device.price_integration_id : null;
+    if (isAmericanasCompany && priceIntegrationEnabled) {
+      integrationId = americanasIntegrationId;
+    }
 
     // Se não houver no dispositivo, busca na empresa (integração ativa padrão)
-    if (!integrationId && priceIntegrationEnabled) {
+    if (!integrationId && priceIntegrationEnabled && !isAmericanasCompany) {
       // Prioridade: Integração marcada como "active" para a empresa
       const { data: companyInt } = await supabase
         .from('price_check_integrations')
@@ -318,20 +761,63 @@ Deno.serve(async (req: Request) => {
       } else if (proxyData && proxyData.success) {
         const p = proxyData.product;
         
-        // Calculate savings
-        const currentPrice = p.price_current || (p.prices && p.prices.length > 0 ? p.prices[0].value : 0);
-        const originalPrice = p.price_original || null;
-        let savingsPercent = null;
-        let isOffer = false;
+        const pricesArr = Array.isArray(p?.prices) ? p.prices : [];
+        const priceByLabel = (label: string) => {
+          const hit = pricesArr.find((x: any) => x?.label === label);
+          return Number(hit?.value) || 0;
+        };
 
-        if (originalPrice && originalPrice > currentPrice) {
-          isOffer = true;
-          savingsPercent = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+        const regularPrice = priceByLabel("regularPrice") || Number(p.price_current || 0) || 0;
+        const promotionalPrice = priceByLabel("promotionalPrice");
+        const promotionalDiscountPercent = priceByLabel("promotionalDiscountPercent");
+        const takeWinUnitPriceWithDiscount = priceByLabel("takeWinUnitPriceWithDiscount");
+        const takeWinQuantity = priceByLabel("takeWinQuantity");
+
+        let currentPrice = p.price_current || (pricesArr.length > 0 ? Number(pricesArr[0]?.value) || 0 : 0);
+        let originalPrice = p.price_original || null;
+        let offerQuantity: number | null = null;
+        let offerType: string | null = null;
+
+        if (isAmericanasCompany) {
+          const qty = takeWinQuantity ? Math.max(0, Math.round(takeWinQuantity)) : 0;
+          if (takeWinUnitPriceWithDiscount > 0 && qty > 1 && regularPrice > 0 && takeWinUnitPriceWithDiscount < regularPrice) {
+            currentPrice = takeWinUnitPriceWithDiscount;
+            originalPrice = regularPrice;
+            offerQuantity = qty;
+            offerType = "take_win";
+          } else if (promotionalPrice > 0 && regularPrice > 0 && promotionalPrice < regularPrice) {
+            currentPrice = promotionalPrice;
+            originalPrice = regularPrice;
+            offerType = "promotional";
+          } else {
+            currentPrice = regularPrice || promotionalPrice || takeWinUnitPriceWithDiscount || Number(p.price_current || 0) || 0;
+            originalPrice = null;
+            offerType = null;
+          }
+        } else {
+          currentPrice = p.price_current || (pricesArr.length > 0 ? Number(pricesArr[0]?.value) || 0 : 0);
+          originalPrice = p.price_original || null;
         }
 
-        let resolvedImage = p.image ? { image_url: p.image, colors: null as any } : await resolveProductImage(normalizedEan, supabase, device.company_id);
+        let savingsPercent: number | null = null;
+        let isOffer = false;
+        if (originalPrice && originalPrice > currentPrice && currentPrice > 0) {
+          isOffer = true;
+          savingsPercent = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+        } else if (isAmericanasCompany && offerType === "promotional" && promotionalDiscountPercent > 0) {
+          savingsPercent = Math.round(promotionalDiscountPercent);
+          isOffer = !!originalPrice && originalPrice > currentPrice;
+        }
+
+        const imageCandidate = (p.image && String(p.image).trim())
+          ? String(p.image)
+          : (isAmericanasCompany ? `${AMERICANAS_IMAGE_URL_BASE}/${normalizedEan}` : "");
+
+        let resolvedImage = imageCandidate
+          ? { image_url: imageCandidate, colors: null as any }
+          : await resolveProductImage(normalizedEan, supabase, device.company_id);
         // If we have the image but no colors yet, try fetching colors from Mupa
-        if (p.image && !resolvedImage.colors) {
+        if (imageCandidate && !resolvedImage.colors) {
           const mupaResult = await resolveProductImage(normalizedEan, supabase, device.company_id);
           if (mupaResult.colors) resolvedImage.colors = mupaResult.colors;
         }
@@ -344,10 +830,12 @@ Deno.serve(async (req: Request) => {
           original_price: originalPrice,
           is_offer: isOffer,
           savings_percent: savingsPercent,
-          image_url: resolvedImage.image_url || p.image,
+          image_url: resolvedImage.image_url || imageCandidate || p.image,
           store_code: storeCode,
           description: p.description,
-          api_colors: resolvedImage.colors
+          api_colors: resolvedImage.colors,
+          offer_quantity: offerQuantity,
+          offer_type: offerType,
         };
 
         // Salvar em cache (15 minutos)
@@ -361,7 +849,7 @@ Deno.serve(async (req: Request) => {
             ean: normalizedEan,
             store_code: storeCode,
             product_data: productData,
-            image_url: p.image,
+            image_url: productData.image_url,
             expires_at: expiresAt.toISOString()
           }, {
             onConflict: 'company_id,ean,store_code'

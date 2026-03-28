@@ -14,6 +14,16 @@ interface ProductData {
   savings_percent: number | null;
   image_url: string | null;
   store_code: string;
+  offer_quantity?: number | null;
+  offer_type?: string | null;
+  packs?: Array<{
+    id_product: number;
+    id_store: number;
+    unit_pack: number;
+    price_pack: number;
+    price_prom_pack: number;
+    stock_avaliable: number;
+  }>;
   api_colors?: {
     cor_assinatura_produto: string;
     fundo_legibilidade: string;
@@ -193,6 +203,7 @@ export const ProductLookupContainer = ({
         imageLoaded={imageLoaded}
         settings={displaySettings}
         preloadedSrc={preloadedSrc}
+        playerIsPortrait={isPortrait}
       />
     );
   }
