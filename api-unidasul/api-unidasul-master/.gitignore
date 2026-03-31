@@ -17,3 +17,10 @@ API_Unidasul_Service*.exe
 service_launcher.py
 service_launcher.spec
 file_version_info.txt
+
+*.zip
+*.exe
+*.rar
+*.7z
+*.tar
+*.gz
