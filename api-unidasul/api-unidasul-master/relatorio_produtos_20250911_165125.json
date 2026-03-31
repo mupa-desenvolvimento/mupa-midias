@@ -1,0 +1,246 @@
+{
+    "data_consulta": "2025-09-11T16:51:25.235099",
+    "filial": "086",
+    "total_produtos": 5,
+    "produtos": [
+        {
+            "ean": "7896029092347",
+            "descricao": "ALIM P/GATOS WHISKAS AD PEIXE 900G",
+            "codigo": "********** Preço válido até 17/09/2025 **********",
+            "tipo_preco": "Preço Clube",
+            "preco": "20,50",
+            "preco_clube": "Cliente CLUBE RISSUL paga R$ 18,99",
+            "promocao": null,
+            "detalhes_promocao": {
+                "tipo": "preco_clube",
+                "preco_normal": 20.5,
+                "preco_clube": 18.99,
+                "economia": 1.5100000000000016,
+                "percentual_desconto": 7.365853658536594
+            },
+            "calculos_quantidades": null,
+            "dados_adicionais": {
+                "divCabecalho": "F086SRV01UnidaSul - Distribuidora Alimentícia S/A11/09/2025",
+                "ean": "7896029092347",
+                "lblCodProduto": "Código: 2355672 - 7896029092347",
+                "lblData": "11/09/2025",
+                "lblEmpresa": "UnidaSul - Distribuidora Alimentícia S/A",
+                "lblEstacao": "F086SRV01",
+                "uplConsulta": "ALIM P/GATOS WHISKAS AD PEIXE 900GR$ 20,50Cliente CLUBE RISSUL paga R$ 18,99********** Preço válido até 17/09/2025 **********Código: 2355672 - 7896029092347"
+            }
+        },
+        {
+            "ean": "7896434920778",
+            "descricao": "MIST COND TRIANGULO LACTEA TP 395G",
+            "codigo": "N/A",
+            "tipo_preco": "Preço Clube",
+            "preco": "3,49",
+            "preco_clube": "Pague R$ 2,99 com o cartão Rissul",
+            "promocao": null,
+            "detalhes_promocao": {
+                "tipo": "preco_clube",
+                "preco_normal": 3.49,
+                "preco_clube": 2.99,
+                "economia": 0.5,
+                "percentual_desconto": 14.326647564469914
+            },
+            "calculos_quantidades": null,
+            "dados_adicionais": {
+                "divCabecalho": "F086SRV01UnidaSul - Distribuidora Alimentícia S/A11/09/2025",
+                "ean": "7896434920778",
+                "lblCodProduto": "Código: 9640221 - 7896434920778",
+                "lblData": "11/09/2025",
+                "lblEmpresa": "UnidaSul - Distribuidora Alimentícia S/A",
+                "lblEstacao": "F086SRV01",
+                "uplConsulta": "MIST COND TRIANGULO LACTEA TP 395GR$ 3,49Pague R$ 2,99 com o cartão RissulCódigo: 9640221 - 7896434920778"
+            }
+        },
+        {
+            "ean": "7896045101665",
+            "descricao": "CAFE 3 COR GOURM SUL MINAS 250G",
+            "codigo": "Na compra de  2 ou mais unidades, você economiza: R$ 1,00 por unidade",
+            "tipo_preco": "Preço Clube",
+            "preco": "27,99",
+            "preco_clube": "A partir de  2 Un:",
+            "promocao": null,
+            "detalhes_promocao": {
+                "tipo": "preco_clube",
+                "preco_normal": 27.99,
+                "preco_clube": 0,
+                "economia": 27.99,
+                "percentual_desconto": 100.0
+            },
+            "calculos_quantidades": null,
+            "dados_adicionais": {
+                "divCabecalho": "F086SRV01UnidaSul - Distribuidora Alimentícia S/A11/09/2025",
+                "ean": "7896045101665",
+                "lblCodProduto": "Código: 2221816 - 7896045101665",
+                "lblData": "11/09/2025",
+                "lblEmpresa": "UnidaSul - Distribuidora Alimentícia S/A",
+                "lblEstacao": "F086SRV01",
+                "lblPrecoDC2": "R$ 26,99 cada",
+                "uplConsulta": "CAFE 3 COR GOURM SUL MINAS 250GR$ 27,99A partir de  2 Un:R$ 26,99 cadaNa compra de  2 ou mais unidades, você economiza: R$ 1,00 por unidadeCódigo: 2221816 - 7896045101665"
+            }
+        },
+        {
+            "ean": "8711000712580",
+            "descricao": "CAFE CAPS LOR ESPR HAZELNUT C/10 UN",
+            "codigo": "..::: ATENÇÃO: Promoção especial para este Produto :::..",
+            "tipo_preco": "Preço Normal",
+            "preco": "19,95",
+            "preco_clube": "",
+            "promocao": "NA COMPRA DE 03 UN CAFE CAPS LOR 52G PAGUE 02 UN",
+            "detalhes_promocao": {
+                "tipo": "compre_pague",
+                "qtd_compra": 3,
+                "qtd_pague": 2,
+                "qtd_gratis": 1,
+                "economia_unitaria": 6.6499999999999995,
+                "economia_total": 19.95,
+                "percentual_desconto": 33.33333333333333,
+                "preco_medio_unitario": 13.299999999999999
+            },
+            "calculos_quantidades": [
+                {
+                    "quantidade": 1,
+                    "unidades_pagas": 1,
+                    "unidades_gratis": 0,
+                    "valor_total_normal": 19.95,
+                    "valor_total_promocao": 19.95,
+                    "economia": 0.0,
+                    "percentual_economia": 0.0,
+                    "preco_medio_unitario": 19.95
+                },
+                {
+                    "quantidade": 2,
+                    "unidades_pagas": 1,
+                    "unidades_gratis": 1,
+                    "valor_total_normal": 39.9,
+                    "valor_total_promocao": 19.95,
+                    "economia": 19.95,
+                    "percentual_economia": 50.0,
+                    "preco_medio_unitario": 9.975
+                },
+                {
+                    "quantidade": 3,
+                    "unidades_pagas": 2,
+                    "unidades_gratis": 1,
+                    "valor_total_normal": 59.849999999999994,
+                    "valor_total_promocao": 39.9,
+                    "economia": 19.949999999999996,
+                    "percentual_economia": 33.33333333333333,
+                    "preco_medio_unitario": 13.299999999999999
+                },
+                {
+                    "quantidade": 6,
+                    "unidades_pagas": 4,
+                    "unidades_gratis": 2,
+                    "valor_total_normal": 119.69999999999999,
+                    "valor_total_promocao": 79.8,
+                    "economia": 39.89999999999999,
+                    "percentual_economia": 33.33333333333333,
+                    "preco_medio_unitario": 13.299999999999999
+                },
+                {
+                    "quantidade": 12,
+                    "unidades_pagas": 8,
+                    "unidades_gratis": 4,
+                    "valor_total_normal": 239.39999999999998,
+                    "valor_total_promocao": 159.6,
+                    "economia": 79.79999999999998,
+                    "percentual_economia": 33.33333333333333,
+                    "preco_medio_unitario": 13.299999999999999
+                }
+            ],
+            "dados_adicionais": {
+                "divCabecalho": "F086SRV01UnidaSul - Distribuidora Alimentícia S/A11/09/2025",
+                "ean": "8711000712580",
+                "lblCodProduto": "Código: 2572659 - 8711000712580",
+                "lblData": "11/09/2025",
+                "lblEmpresa": "UnidaSul - Distribuidora Alimentícia S/A",
+                "lblEstacao": "F086SRV01",
+                "uplConsulta": "CAFE CAPS LOR ESPR HAZELNUT C/10 UNR$ 19,95..::: ATENÇÃO: Promoção especial para este Produto :::..NA COMPRA DE 03 UN CAFE CAPS LOR 52G PAGUE 02 UNCódigo: 2572659 - 8711000712580"
+            }
+        },
+        {
+            "ean": "7891097104886",
+            "descricao": "IOG BATAVO PROBIO GF LIQ AMEIXA 170G",
+            "codigo": "..::: ATENÇÃO: Promoção especial para este Produto :::..",
+            "tipo_preco": "Preço Normal",
+            "preco": "3,79",
+            "preco_clube": "",
+            "promocao": "LEVE 4 IOG BATAVO PROBIO GF LIQ 170G E PAGUE 3.",
+            "detalhes_promocao": {
+                "tipo": "compre_pague",
+                "qtd_compra": 4,
+                "qtd_pague": 3,
+                "qtd_gratis": 1,
+                "economia_unitaria": 0.9475,
+                "economia_total": 3.79,
+                "percentual_desconto": 25.0,
+                "preco_medio_unitario": 2.8425000000000002
+            },
+            "calculos_quantidades": [
+                {
+                    "quantidade": 1,
+                    "unidades_pagas": 1,
+                    "unidades_gratis": 0,
+                    "valor_total_normal": 3.79,
+                    "valor_total_promocao": 3.79,
+                    "economia": 0.0,
+                    "percentual_economia": 0.0,
+                    "preco_medio_unitario": 3.79
+                },
+                {
+                    "quantidade": 2,
+                    "unidades_pagas": 2,
+                    "unidades_gratis": 0,
+                    "valor_total_normal": 7.58,
+                    "valor_total_promocao": 7.58,
+                    "economia": 0.0,
+                    "percentual_economia": 0.0,
+                    "preco_medio_unitario": 3.79
+                },
+                {
+                    "quantidade": 3,
+                    "unidades_pagas": 2,
+                    "unidades_gratis": 1,
+                    "valor_total_normal": 11.370000000000001,
+                    "valor_total_promocao": 7.58,
+                    "economia": 3.790000000000001,
+                    "percentual_economia": 33.333333333333336,
+                    "preco_medio_unitario": 2.526666666666667
+                },
+                {
+                    "quantidade": 6,
+                    "unidades_pagas": 4,
+                    "unidades_gratis": 2,
+                    "valor_total_normal": 22.740000000000002,
+                    "valor_total_promocao": 15.16,
+                    "economia": 7.580000000000002,
+                    "percentual_economia": 33.333333333333336,
+                    "preco_medio_unitario": 2.526666666666667
+                },
+                {
+                    "quantidade": 12,
+                    "unidades_pagas": 9,
+                    "unidades_gratis": 3,
+                    "valor_total_normal": 45.480000000000004,
+                    "valor_total_promocao": 34.11,
+                    "economia": 11.370000000000005,
+                    "percentual_economia": 25.000000000000007,
+                    "preco_medio_unitario": 2.8425
+                }
+            ],
+            "dados_adicionais": {
+                "divCabecalho": "F086SRV01UnidaSul - Distribuidora Alimentícia S/A11/09/2025",
+                "ean": "7891097104886",
+                "lblCodProduto": "Código: 2501154 - 7891097104886",
+                "lblData": "11/09/2025",
+                "lblEmpresa": "UnidaSul - Distribuidora Alimentícia S/A",
+                "lblEstacao": "F086SRV01",
+                "uplConsulta": "IOG BATAVO PROBIO GF LIQ AMEIXA 170GR$ 3,79..::: ATENÇÃO: Promoção especial para este Produto :::..LEVE 4 IOG BATAVO PROBIO GF LIQ 170G E PAGUE 3.Código: 2501154 - 7891097104886"
+            }
+        }
+    ]
+}
