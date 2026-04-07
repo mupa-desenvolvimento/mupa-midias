@@ -24,23 +24,60 @@ import sqlite3
 import time
 import sys
 import webbrowser
-import pystray
-from pystray import MenuItem as item
-from PIL import Image
 import threading
 import os
+
+import logging
+from logging.handlers import RotatingFileHandler
+
+RUNNING_AS_SERVICE = os.environ.get('RUNNING_AS_SERVICE', '0') == '1'
+
+def get_runtime_dir():
+    if getattr(sys, "frozen", False):
+        if RUNNING_AS_SERVICE:
+            program_data = os.environ.get("ProgramData") or os.environ.get("PROGRAMDATA")
+            if program_data:
+                return os.path.join(program_data, "APIUnidasulV15")
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+RUNTIME_DIR = get_runtime_dir()
+LOG_DIR = os.path.join(RUNTIME_DIR, "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+DB_PATH = os.path.join(RUNTIME_DIR, "mupa.db")
+
+root_logger = logging.getLogger()
+root_logger.handlers = []
+root_logger.setLevel(logging.INFO if RUNNING_AS_SERVICE else logging.DEBUG)
+file_handler = RotatingFileHandler(
+    os.path.join(LOG_DIR, "apiunidasul.log"),
+    maxBytes=10 * 1024 * 1024,
+    backupCount=5,
+    encoding="utf-8",
+)
+file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+root_logger.addHandler(file_handler)
+logging.getLogger("werkzeug").handlers = [file_handler]
+logging.getLogger("werkzeug").setLevel(logging.INFO)
 
 # Função para acessar recursos (imagens, etc.) tanto no .exe quanto no modo desenvolvimento
 def resource_path(relative_path):
     """Obtém o caminho absoluto para o recurso, considerando se está rodando como .exe ou não."""
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=resource_path("templates"),
+    static_folder=resource_path("static"),
+    static_url_path="/static",
+)
 app.config["JWT_SECRET_KEY"] = settings.jwt_secret_key
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(seconds=settings.jwt_access_token_expires)
 jwt = JWTManager(app)
+app.logger.handlers = [file_handler]
+app.logger.setLevel(logging.INFO if RUNNING_AS_SERVICE else logging.DEBUG)
 
 # Configuração do cache
 """
@@ -134,7 +171,7 @@ MAX_LOGS = 1000  # Número máximo de logs a serem armazenados
 
 # Configuração do SQLite
 def init_db():
-    conn = sqlite3.connect('mupa.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
     # Tabela de consultas
@@ -178,10 +215,10 @@ def process_background_queue():
                 save_log(task['data'])
             background_queue.task_done()
         except Exception as e:
-            print(f"Erro no processamento em background: {str(e)}")
+            logging.getLogger(__name__).exception("Erro no processamento em background")
 
 def save_consulta(data):
-    conn = sqlite3.connect('mupa.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
         INSERT INTO consultas (data_hora, ean, descricao, filial, tipo, preco, preco_clube, device_info)
@@ -200,7 +237,7 @@ def save_consulta(data):
     conn.close()
 
 def save_log(data):
-    conn = sqlite3.connect('mupa.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
         INSERT INTO logs (data_hora, nivel, mensagem)
@@ -1687,7 +1724,7 @@ def exportar_relatorio():
 # --- Rotas de upload ---
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+UPLOAD_FOLDER = os.path.join(RUNTIME_DIR, 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'avi'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -1865,6 +1902,9 @@ PORT = 5000
 
 
 def run_tray_icon():
+    import webbrowser
+    import pystray
+    from pystray import MenuItem as item
     def on_open():
         webbrowser.open(f'http://{LOCAL_IP}:{PORT}')
     def on_restart():
@@ -1873,7 +1913,7 @@ def run_tray_icon():
     def on_exit(icon, item):
         icon.stop()
         os._exit(0)
-    icon_path = os.path.join(os.path.dirname(__file__), 'icon_sistema.ico')
+    icon_path = resource_path('icon_sistema.ico')
     image = Image.open(icon_path)
     menu = (
         item('Abrir', lambda: on_open()),
@@ -1884,7 +1924,7 @@ def run_tray_icon():
     tray_icon.run()
 
 def is_running_as_service():
-    return os.environ.get('RUNNING_AS_SERVICE', '0') == '1'
+    return RUNNING_AS_SERVICE
 
 @app.route('/registro', methods=['POST'])
 @jwt_required()
@@ -1895,7 +1935,7 @@ def registrar_entrada_saida():
     timestamp = data.get('timestamp') or datetime.now().isoformat()
     # Aqui você pode salvar no banco de dados, por exemplo
     # Exemplo simples: salvar em arquivo
-    log_path = os.path.join(os.path.dirname(__file__), 'registro_entradas_saidas.log')
+    log_path = os.path.join(RUNTIME_DIR, 'registro_entradas_saidas.log')
     with open(log_path, 'a', encoding='utf-8') as f:
         f.write(f"{usuario},{tipo},{timestamp}\n")
     # Limpar o cache do dashboard após registro de entrada/saída
@@ -1909,7 +1949,7 @@ def webhook_atualizacao():
     payload = request.get_json()
     # Aqui você pode processar o payload e notificar outros sistemas, se necessário
     # Exemplo: salvar notificação em arquivo
-    webhook_log = os.path.join(os.path.dirname(__file__), 'webhook_updates.log')
+    webhook_log = os.path.join(RUNTIME_DIR, 'webhook_updates.log')
     with open(webhook_log, 'a', encoding='utf-8') as f:
         f.write(json.dumps(payload, ensure_ascii=False) + '\n')
     # Limpar o cache da rota de atualizações após receber um novo webhook
@@ -1920,7 +1960,7 @@ def webhook_atualizacao():
 @app.route('/atualizacoes', methods=['GET'])
 @cache.cached(timeout=60)  # Cache por 60 segundos
 def get_atualizacoes():
-    webhook_log = os.path.join(os.path.dirname(__file__), 'webhook_updates.log')
+    webhook_log = os.path.join(RUNTIME_DIR, 'webhook_updates.log')
     updates = []
     if os.path.exists(webhook_log):
         with open(webhook_log, 'r', encoding='utf-8') as f:
@@ -1960,10 +2000,15 @@ def limpar_cache_api():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("MAIN.PY EXECUTADO DE:", __file__)
-    print(app.url_map)
-    print(f"Acesse o sistema em: http://{LOCAL_IP}:{PORT}")
+    app.logger.info("MAIN.PY EXECUTADO DE: %s", __file__)
+    app.logger.info("Acesse o sistema em: http://%s:%s", LOCAL_IP, PORT)
     if not is_running_as_service():
         tray_thread = threading.Thread(target=run_tray_icon, daemon=True)
         tray_thread.start()
-    app.run(host='0.0.0.0', port=PORT, debug=not is_running_as_service())
+        app.run(host='0.0.0.0', port=PORT, debug=True)
+    else:
+        try:
+            from waitress import serve
+            serve(app, host='0.0.0.0', port=PORT)
+        except Exception:
+            app.run(host='0.0.0.0', port=PORT, debug=False)
