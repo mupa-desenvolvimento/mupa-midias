@@ -1,109 +1,111 @@
-# Instalação da API Unidasul como Serviço do Windows
+# Manual do Usuário (Servidor) — APIUnidasulV15 como Serviço do Windows
 
-Este guia explica como instalar a API Unidasul como um serviço do Windows Server, permitindo que ela seja executada automaticamente na inicialização do sistema, sem necessidade de intervenção manual.
+Este manual explica como colocar a APIUnidasulV15 para rodar como um Serviço do Windows, iniciando automaticamente com o servidor e continuando em execução mesmo após logoff do RDP (serviço roda como LocalSystem na Sessão 0).
 
-## Requisitos
+## O que você precisa ter em mãos
 
-- Windows Server 2012 R2 ou superior
-- Python 3.9 ou superior instalado e configurado no PATH
-- Privilégios de administrador
+- `setup_APIUnidasulV15_servico.ps1` (script de instalação/atualização do serviço)
+- `APIUnidasulV15.exe` (executável da API)
 
-## Arquivos de Instalação
+## Onde instalar no servidor
 
-- `instalar_servico.bat`: Script para instalar a API como serviço do Windows
-- `desinstalar_servico.bat`: Script para remover o serviço
+Recomendação:
 
-## Processo de Instalação
+- `C:\Services\APIUnidasulV15\` (pasta do serviço e arquivos do NSSM)
+- `C:\ProgramData\APIUnidasulV15\` (logs e banco `mupa.db` quando rodando como serviço)
 
-1. **Preparação**:
-   - Certifique-se de que o Python esteja instalado e configurado no PATH do sistema
-   - Verifique se todos os arquivos da API estão na pasta `api-unidasul-master_version_15`
+## Instalação / Atualização do serviço (passo único)
 
-2. **Instalação do Serviço**:
-   - Clique com o botão direito no arquivo `instalar_servico.bat`
-   - Selecione "Executar como administrador"
-   - Aguarde a conclusão do processo de instalação
-   - O script irá:
-     - Verificar os requisitos necessários
-     - Instalar as dependências do Python listadas no arquivo requirements.txt
-     - Baixar e configurar o NSSM (Non-Sucking Service Manager)
-     - Registrar a API como um serviço do Windows
-     - Configurar o serviço para iniciar automaticamente com o Windows
-     - Iniciar o serviço
+1. Copie para o servidor, na mesma pasta:
+   - `setup_APIUnidasulV15_servico.ps1`
+   - `APIUnidasulV15.exe`
 
-3. **Verificação**:
-   - Após a instalação, o serviço "API Unidasul" deve estar em execução
-   - Você pode verificar no Gerenciador de Serviços do Windows (services.msc)
-   - A API estará disponível em http://localhost:5000
-
-## Logs do Serviço
-
-Os logs do serviço são armazenados nos seguintes arquivos:
-
-- `api-unidasul-master_version_15\servico_output.log`: Saída padrão do serviço
-- `api-unidasul-master_version_15\servico_error.log`: Erros do serviço
-
-Estes arquivos são rotacionados automaticamente quando atingem 10MB ou após 24 horas de execução.
-
-## Gerenciamento do Serviço
-
-### Usando o Gerenciador de Serviços do Windows
-
-1. Pressione `Win + R`, digite `services.msc` e pressione Enter
-2. Localize o serviço "API Unidasul" na lista
-3. Clique com o botão direito para iniciar, parar, reiniciar ou configurar o serviço
-
-### Usando Comandos do PowerShell (como Administrador)
+2. Clique com o botão direito no `setup_APIUnidasulV15_servico.ps1` e execute com PowerShell como administrador (ou abra PowerShell como administrador e rode):
 
 ```powershell
-# Iniciar o serviço
-Start-Service -Name APIUnidasul
-
-# Parar o serviço
-Stop-Service -Name APIUnidasul
-
-# Reiniciar o serviço
-Restart-Service -Name APIUnidasul
-
-# Verificar o status do serviço
-Get-Service -Name APIUnidasul
+Set-ExecutionPolicy Bypass -Scope Process -Force
+.\setup_APIUnidasulV15_servico.ps1
 ```
 
-### Usando Comandos do CMD (como Administrador)
+O script:
 
-```cmd
-:: Iniciar o serviço
-sc start APIUnidasul
+- instala/atualiza o serviço `APIUnidasulV15`
+- configura para iniciar automaticamente com o Windows
+- configura para rodar como `LocalSystem`
+- define `RUNNING_AS_SERVICE=1`
+- configura reinício automático após falha (10s)
+- cria regra de firewall de entrada para TCP 5000
+- inicia o serviço
 
-:: Parar o serviço
-sc stop APIUnidasul
+## Como acessar a API
 
-:: Verificar o status do serviço
-sc query APIUnidasul
+- Local: `http://localhost:5000`
+- Pela rede: `http://<IP_DO_SERVIDOR>:5000`
+
+## Como confirmar que está rodando como serviço (e não cai no logoff)
+
+No PowerShell (como Administrador):
+
+```powershell
+sc query APIUnidasulV15
+sc qc APIUnidasulV15
 ```
 
-## Desinstalação
+O `SERVICE_START_NAME` deve ser `LocalSystem`.
 
-Para remover o serviço:
+## Comandos úteis
 
-1. Clique com o botão direito no arquivo `desinstalar_servico.bat`
-2. Selecione "Executar como administrador"
-3. Aguarde a conclusão do processo de desinstalação
+PowerShell (como Administrador):
 
-## Solução de Problemas
+```powershell
+sc start APIUnidasulV15
+sc stop APIUnidasulV15
+sc query APIUnidasulV15
+```
 
-### O serviço não inicia
+Abrir serviços do Windows:
 
-1. Verifique os logs em `api-unidasul-master_version_15\servico_error.log`
-2. Certifique-se de que o Python está instalado e configurado corretamente
-3. Verifique se todas as dependências foram instaladas corretamente
-4. Tente executar o script `main.py` manualmente para identificar possíveis erros
+- `Win + R` → `services.msc`
 
-### Erro de permissão
+## Logs e banco (onde olhar quando não tem janela)
 
-1. Certifique-se de executar os scripts como administrador
-2. Verifique se o usuário que executa o serviço tem permissões adequadas para acessar os arquivos da aplicação
+- Log principal da aplicação:
+  - `C:\ProgramData\APIUnidasulV15\logs\apiunidasul.log`
+- Logs do wrapper do serviço (stdout/stderr):
+  - `C:\Services\APIUnidasulV15\service_stdout.log`
+  - `C:\Services\APIUnidasulV15\service_stderr.log`
+- Banco:
+  - `C:\ProgramData\APIUnidasulV15\mupa.db`
 
-### Conflito de porta
+## Solução de problemas
 
-Se a porta 5000 já estiver em uso por outro serviço, você precisará modificar a configuração da API para usar uma porta diferente. Isso pode ser feito editando o arquivo `main.py` e alterando a linha que define a porta do servidor.
+### O serviço inicia e para na sequência
+
+1. Veja `C:\Services\APIUnidasulV15\service_stderr.log`
+2. Veja `C:\ProgramData\APIUnidasulV15\logs\apiunidasul.log`
+3. Confirme se a porta 5000 está livre:
+
+```powershell
+netstat -ano | findstr :5000
+```
+
+### Porta 5000 bloqueada na rede
+
+O script cria uma regra de firewall local. Se ainda não acessar de outra máquina:
+
+- Confirme a regra no Firewall do Windows (Inbound Rules)
+- Confirme se não existe firewall de rede/borda bloqueando
+
+### Atualizar o executável sem parar o servidor por muito tempo
+
+1. Substitua o arquivo `APIUnidasulV15.exe` que o script usa
+2. Rode novamente `setup_APIUnidasulV15_servico.ps1` como Administrador
+
+### Desinstalar/remover serviço
+
+PowerShell (como Administrador):
+
+```powershell
+sc stop APIUnidasulV15
+sc delete APIUnidasulV15
+```
