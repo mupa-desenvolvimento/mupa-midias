@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,23 @@ const Tenants = () => {
   const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant, getTenantLicense } = useTenants();
   const { isSuperAdmin, isLoading: isCheckingAdmin } = useSuperAdmin();
   
+  const [companyCodes, setCompanyCodes] = useState<Record<string, string>>({});
+  
+  useEffect(() => {
+    const fetchCodes = async () => {
+      const { data } = await supabase
+        .from('companies')
+        .select('tenant_id, code')
+        .not('code', 'is', null);
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((c) => { if (c.tenant_id && c.code) map[c.tenant_id] = c.code; });
+        setCompanyCodes(map);
+      }
+    };
+    fetchCodes();
+  }, [tenants]);
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -430,6 +448,11 @@ const Tenants = () => {
                 <p className="text-sm text-muted-foreground font-mono">
                   {tenant.slug}
                 </p>
+                {companyCodes[tenant.id] && (
+                  <Badge variant="outline" className="font-mono text-xs w-fit">
+                    {companyCodes[tenant.id]}
+                  </Badge>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-2 text-center">
