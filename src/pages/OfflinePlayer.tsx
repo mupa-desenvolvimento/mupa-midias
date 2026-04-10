@@ -21,7 +21,6 @@ import {
   LoadingScreen,
   BlockedScreen,
   EmptyContentScreen,
-  ActiveSessionScreen,
   VignetteOverlay,
 } from "@/components/player-core";
 import {
