@@ -33,6 +33,23 @@ const Tenants = () => {
   const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant, getTenantLicense } = useTenants();
   const { isSuperAdmin, isLoading: isCheckingAdmin } = useSuperAdmin();
   
+  const [companyCodes, setCompanyCodes] = useState<Record<string, string>>({});
+  
+  useEffect(() => {
+    const fetchCodes = async () => {
+      const { data } = await supabase
+        .from('companies')
+        .select('tenant_id, code')
+        .not('code', 'is', null);
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((c) => { if (c.tenant_id && c.code) map[c.tenant_id] = c.code; });
+        setCompanyCodes(map);
+      }
+    };
+    fetchCodes();
+  }, [tenants]);
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
