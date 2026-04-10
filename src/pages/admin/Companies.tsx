@@ -235,6 +235,27 @@ export default function Companies() {
               </div>
             )}
 
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <ListMusic className="h-3.5 w-3.5" />
+                <span>Playlist Padrão:</span>
+              </div>
+              <Select
+                value={company.default_playlist_id || "none"}
+                onValueChange={(val) => handleSetDefaultPlaylist(company.id, val === "none" ? null : val)}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {playlists.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex justify-end gap-1 pt-2 border-t">
               <Button variant="outline" size="sm" onClick={() => navigate(`/admin/companies/${company.id}/display-config`)}>
                 <Monitor className="h-4 w-4 mr-1" />
