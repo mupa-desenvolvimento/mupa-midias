@@ -448,6 +448,11 @@ const Tenants = () => {
                 <p className="text-sm text-muted-foreground font-mono">
                   {tenant.slug}
                 </p>
+                {companyCodes[tenant.id] && (
+                  <Badge variant="outline" className="font-mono text-xs w-fit">
+                    {companyCodes[tenant.id]}
+                  </Badge>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-2 text-center">
