@@ -412,7 +412,8 @@ Deno.serve(async (req: Request) => {
     const isGrupoAssai = String(integration || "").toLowerCase() === "grupo-assai" || isGrupoAssaiTenant;
 
     if (isGrupoAssai && priceIntegrationEnabled) {
-      if (!id_product || !Number.isFinite(Number(id_product))) {
+      let mutableIdProduct = id_product;
+      if (!mutableIdProduct || !Number.isFinite(Number(mutableIdProduct))) {
         try {
           const url = new URL('http://srv-mupa.ddns.net:5050/api/ean/seqproduto');
           url.searchParams.set('codbar', normalizedEan);
@@ -423,7 +424,7 @@ Deno.serve(async (req: Request) => {
           const json = await res.json().catch(() => null);
           const resolvedId = Number(json?.id_product) || 0;
           if (resolvedId > 0) {
-            id_product = resolvedId;
+            mutableIdProduct = resolvedId;
             if (json?.descricao && (!product_description || String(product_description).trim().length === 0)) {
               (body as any).product_description = String(json.descricao);
             }
