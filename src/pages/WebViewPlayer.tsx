@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useDeviceSession } from "@/hooks/useDeviceSession";
 import { useParams, useSearchParams } from "react-router-dom";
 import { db } from "@/services/firebase";
 import { ref, onValue } from "firebase/database";
@@ -29,7 +28,6 @@ const WebViewPlayer = () => {
   const { deviceCode: paramDeviceCode } = useParams<{ deviceCode: string }>();
   const [searchParams] = useSearchParams();
   const deviceCode = paramDeviceCode || searchParams.get("device_id") || searchParams.get("id");
-  const deviceSession = useDeviceSession(deviceCode);
 
   const {
     deviceState,

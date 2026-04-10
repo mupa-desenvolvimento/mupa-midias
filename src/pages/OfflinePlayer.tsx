@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useDeviceSession } from "@/hooks/useDeviceSession";
+
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
 import { useProductLookup } from "@/hooks/useProductLookup";
 import { useProductTTS } from "@/hooks/useProductTTS";
@@ -53,7 +53,7 @@ import { Capacitor } from "@capacitor/core";
 const OfflinePlayer = () => {
   const { deviceCode } = useParams<{ deviceCode: string }>();
   const navigate = useNavigate();
-  const deviceSession = useDeviceSession(deviceCode);
+  
 
   // Core hooks
   const {
