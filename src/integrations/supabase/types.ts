@@ -900,6 +900,7 @@ export type Database = {
           cnpj: string | null
           code: string | null
           created_at: string
+          default_playlist_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -912,6 +913,7 @@ export type Database = {
           cnpj?: string | null
           code?: string | null
           created_at?: string
+          default_playlist_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -924,6 +926,7 @@ export type Database = {
           cnpj?: string | null
           code?: string | null
           created_at?: string
+          default_playlist_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -933,6 +936,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "companies_default_playlist_id_fkey"
+            columns: ["default_playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "companies_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -4539,12 +4549,12 @@ export type Database = {
       }
       register_device: {
         Args: {
-          p_company_id: string
+          p_company_id?: string
           p_device_code: string
-          p_group_id: string
+          p_group_id?: string
           p_name: string
           p_store_code?: string
-          p_store_id: string
+          p_store_id?: string
         }
         Returns: Json
       }

@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useCompanies, Company, CompanyWithIntegrations, ApiIntegration } from "@/hooks/useCompanies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Building2, Plug2, Trash2, Edit, Settings, Eye, EyeOff, Loader2, Link2, Unlink2, Monitor } from "lucide-react";
+import { Plus, Building2, Plug2, Trash2, Edit, Settings, Eye, EyeOff, Loader2, Link2, Unlink2, Monitor, ListMusic } from "lucide-react";
 import { toast } from "sonner";
 import type { Json } from "@/integrations/supabase/types";
 import { PageShell } from "@/components/layout/PageShell";
@@ -38,6 +40,20 @@ export default function Companies() {
     updateCompanyIntegration,
     removeCompanyIntegration
   } = useCompanies();
+
+  // Fetch playlists for default playlist selector
+  const { data: playlists = [] } = useQuery({
+    queryKey: ["playlists-for-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("playlists")
+        .select("id, name, tenant_id")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isIntegrationDialogOpen, setIsIntegrationDialogOpen] = useState(false);
@@ -160,6 +176,13 @@ export default function Companies() {
     await removeCompanyIntegration.mutateAsync(integrationId);
   };
 
+  const handleSetDefaultPlaylist = async (companyId: string, playlistId: string | null) => {
+    await updateCompany.mutateAsync({ 
+      id: companyId, 
+      default_playlist_id: playlistId 
+    });
+  };
+
   const handleDeleteCompany = async (company: Company) => {
     if (!confirm(`Tem certeza que deseja excluir a empresa "${company.name}"?`)) return;
     await deleteCompany.mutateAsync(company.id);
@@ -211,6 +234,27 @@ export default function Companies() {
                 })}
               </div>
             )}
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <ListMusic className="h-3.5 w-3.5" />
+                <span>Playlist Padrão:</span>
+              </div>
+              <Select
+                value={company.default_playlist_id || "none"}
+                onValueChange={(val) => handleSetDefaultPlaylist(company.id, val === "none" ? null : val)}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {playlists.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="flex justify-end gap-1 pt-2 border-t">
               <Button variant="outline" size="sm" onClick={() => navigate(`/admin/companies/${company.id}/display-config`)}>
