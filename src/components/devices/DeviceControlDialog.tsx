@@ -78,8 +78,116 @@ export function DeviceControlDialog({
       setIsBlocked((device as any).is_blocked || false);
       setBlockedMessage((device as any).blocked_message || "Dispositivo bloqueado pelo administrador");
       setOverrideMediaId((device as any).override_media_id || null);
+      setSelectedGroupId((device as any).group_id || null);
     }
   }, [device]);
+
+  const handleChangeGroup = async (groupId: string | null) => {
+    if (!device) return;
+    
+    setIsChangingGroup(true);
+    try {
+      // 1. Get the channel/playlist associated with the group
+      let playlistId: string | null = null;
+      
+      if (groupId) {
+        // Check if the group has a direct channel_id
+        const group = deviceGroups.find(g => g.id === groupId);
+        if ((group as any)?.channel_id) {
+          // Find a playlist linked to this channel
+          const { data: playlist } = await supabase
+            .from("playlists")
+            .select("id")
+            .eq("channel_id", (group as any).channel_id)
+            .eq("is_active", true)
+            .order("priority", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (playlist) playlistId = playlist.id;
+        }
+        
+        // If no playlist found via channel, check device_group_channels
+        if (!playlistId) {
+          const { data: groupChannels } = await supabase
+            .from("device_group_channels")
+            .select("distribution_channel_id")
+            .eq("group_id", groupId)
+            .order("position", { ascending: true })
+            .limit(1);
+          
+          if (groupChannels && groupChannels.length > 0) {
+            const channelId = groupChannels[0].distribution_channel_id;
+            const { data: playlist } = await supabase
+              .from("playlists")
+              .select("id")
+              .eq("channel_id", channelId)
+              .eq("is_active", true)
+              .order("priority", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (playlist) playlistId = playlist.id;
+          }
+        }
+      }
+
+      // 2. Update device group_id and playlist
+      const updatePayload: Record<string, any> = {
+        group_id: groupId,
+        updated_at: new Date().toISOString(),
+      };
+      
+      if (playlistId) {
+        updatePayload.current_playlist_id = playlistId;
+      }
+
+      const { error } = await supabase
+        .from("devices")
+        .update(updatePayload)
+        .eq("id", device.id);
+
+      if (error) throw error;
+
+      // 3. Update group membership
+      if (groupId) {
+        await supabase
+          .from("device_group_members")
+          .upsert({ device_id: device.id, group_id: groupId }, { onConflict: "device_id,group_id" });
+      }
+
+      setSelectedGroupId(groupId);
+
+      // 4. Auto-send update to device
+      const deviceRef = ref(db, `${device.device_code}`);
+      const companyInfo = device.company ? `${device.company.id}_${device.company.name}` : "";
+      const groupName = groupId ? deviceGroups.find(g => g.id === groupId)?.name || "" : "";
+
+      await update(deviceRef, {
+        "atualizacao_plataforma": "true",
+        "empresa_id": companyInfo,
+        "device_id": device.id,
+        "last-update": new Date().toISOString(),
+        "grupo_device": groupName || "Sem grupo"
+      });
+
+      toast({
+        title: "Grupo alterado",
+        description: playlistId 
+          ? "Grupo e playlist atualizados. Atualização enviada ao dispositivo."
+          : "Grupo atualizado. Atualização enviada ao dispositivo.",
+      });
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar grupo",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingGroup(false);
+    }
+  };
 
   // Carregar itens da playlist (suportando canais e itens diretos)
   useEffect(() => {
