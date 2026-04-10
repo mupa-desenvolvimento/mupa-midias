@@ -1171,7 +1171,7 @@ const ScheduleTimeline = () => {
           <>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
               const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
-              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
+              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "", is_default: g.is_default ?? false }); setGroupDialogOpen(true); }
             }}>
               <Pencil className="h-3.5 w-3.5" /> Atualizar grupo
             </Button>
@@ -1259,7 +1259,7 @@ const ScheduleTimeline = () => {
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => {
               const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
-              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
+              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "", is_default: g.is_default ?? false }); setGroupDialogOpen(true); }
             }}>
               <Pencil className="h-3.5 w-3.5" /> Editar grupo
             </Button>
