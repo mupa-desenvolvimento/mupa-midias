@@ -160,7 +160,7 @@ const ScheduleTimeline = () => {
 
   // Group CRUD dialog
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
-  const [groupForm, setGroupForm] = useState({ name: "", description: "" });
+  const [groupForm, setGroupForm] = useState({ name: "", description: "", is_default: false });
   const [editingGroup, setEditingGroup] = useState<any>(null);
 
   // Add devices to group dialog
@@ -200,7 +200,7 @@ const ScheduleTimeline = () => {
   const { data: deviceGroups = [] } = useQuery({
     queryKey: ["device-groups-schedule"],
     queryFn: async () => {
-      const { data } = await supabase.from("device_groups").select("id, name, description, store_id, tenant_id").order("name");
+      const { data } = await supabase.from("device_groups").select("id, name, description, store_id, tenant_id, is_default").order("name");
       return data || [];
     },
   });
@@ -497,17 +497,17 @@ const ScheduleTimeline = () => {
 
   // Group mutations
   const createGroup = useMutation({
-    mutationFn: async (g: { name: string; description: string }) => {
-      const { error } = await supabase.from("device_groups").insert([{ name: g.name, description: g.description || null }]);
+    mutationFn: async (g: { name: string; description: string; is_default: boolean }) => {
+      const { error } = await supabase.from("device_groups").insert([{ name: g.name, description: g.description || null, is_default: g.is_default }]);
       if (error) throw error;
     },
-    onSuccess: () => { invalidateGroups(); toast({ title: "Grupo criado" }); setGroupDialogOpen(false); setGroupForm({ name: "", description: "" }); },
+    onSuccess: () => { invalidateGroups(); toast({ title: "Grupo criado" }); setGroupDialogOpen(false); setGroupForm({ name: "", description: "", is_default: false }); },
     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
   const updateGroup = useMutation({
-    mutationFn: async ({ id, ...g }: { id: string; name: string; description: string }) => {
-      const { error } = await supabase.from("device_groups").update({ name: g.name, description: g.description || null }).eq("id", id);
+    mutationFn: async ({ id, ...g }: { id: string; name: string; description: string; is_default: boolean }) => {
+      const { error } = await supabase.from("device_groups").update({ name: g.name, description: g.description || null, is_default: g.is_default }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { invalidateGroups(); toast({ title: "Grupo atualizado" }); setGroupDialogOpen(false); setEditingGroup(null); },
@@ -1163,7 +1163,7 @@ const ScheduleTimeline = () => {
           />
         </div>
 
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingGroup(null); setGroupForm({ name: "", description: "" }); setGroupDialogOpen(true); }}>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingGroup(null); setGroupForm({ name: "", description: "", is_default: false }); setGroupDialogOpen(true); }}>
           <FolderPlus className="h-4 w-4" /> Novo Grupo
         </Button>
 
