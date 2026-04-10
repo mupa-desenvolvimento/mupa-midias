@@ -44,6 +44,7 @@ interface PlaylistSettingsProps {
     description: string | null;
     channel_id: string | null;
     is_active: boolean;
+    is_default: boolean;
     start_date: string | null;
     end_date: string | null;
     days_of_week: number[];
