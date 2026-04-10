@@ -187,37 +187,7 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      // 2. Buscar loja pelo num_filial (opcional)
-      let store: { id: string; name: string; code: string; metadata: Record<string, unknown> | null } | null = null
-      if (numFilial) {
-        const { data: storeCandidates, error: storeError } = await supabase
-          .from('stores')
-          .select('id, name, code, metadata')
-          .eq('tenant_id', company.tenant_id)
-          .eq('is_active', true)
-          .order('name')
-
-        if (storeError) {
-          return new Response(
-            JSON.stringify({ error: 'Erro ao buscar a filial informada' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-          )
-        }
-
-        const normalizedNumFilial = normalizeComparableValue(numFilial)
-        store = (storeCandidates || []).find((candidate) => {
-          return getStoreLookupCandidates(candidate).includes(normalizedNumFilial)
-        }) || null
-
-        if (!store) {
-          return new Response(
-            JSON.stringify({ error: `Filial "${numFilial}" não encontrada para a empresa "${company.name}"` }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-          )
-        }
-      }
-
-      // 3. Buscar grupo padrão do tenant
+      // 2. Buscar grupo padrão do tenant
       const { data: defaultGroup } = await supabase
         .from('device_groups')
         .select('id')
@@ -225,12 +195,12 @@ Deno.serve(async (req: Request) => {
         .eq('is_default', true)
         .maybeSingle()
 
-      // 4. Registrar dispositivo via RPC
+      // 3. Registrar dispositivo via RPC
       const deviceCode = serialNumber || androidId
       const { data: registerResult, error: registerError } = await supabase.rpc('register_device', {
         p_device_code: deviceCode,
         p_name: apelidoDispositivo,
-        p_store_id: store?.id || null,
+        p_store_id: null,
         p_company_id: company.id,
         p_group_id: defaultGroup?.id || null,
         p_store_code: numFilial || null,
@@ -245,12 +215,12 @@ Deno.serve(async (req: Request) => {
 
       const result = registerResult as any
 
-      // 5. Salvar android_id e device_name no metadata
+      // 4. Salvar android_id, device_name e num_filial no metadata
       if (result?.device_id) {
         await supabase
           .from('devices')
           .update({
-            metadata: { android_id: androidId, device_name: deviceName } as any,
+            metadata: { android_id: androidId, device_name: deviceName, num_filial: numFilial || null } as any,
           })
           .eq('id', result.device_id)
       }
@@ -262,7 +232,7 @@ Deno.serve(async (req: Request) => {
           device_code: deviceCode,
           group_id: result.group_id || null,
           company_name: company.name,
-          store_name: store?.name || null,
+          num_filial: numFilial || null,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
