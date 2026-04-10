@@ -1,35 +1,45 @@
 
 
-## Corrigir carregamento de dados ao editar dispositivo
+## Plan: Criar rota `CADASTRO_DISPOSITIVO` (POST) na Edge Function `device-api`
 
-### Problema
-O `DeviceFormDialog` usa `defaultValues` do `react-hook-form`, que so sao aplicados na primeira montagem do componente. Quando o dialog e reaberto para editar outro dispositivo (ou o mesmo), os campos continuam com os valores antigos ou vazios.
+### Objetivo
+Adicionar uma nova rota POST `/device-api/cadastro` que aceita os campos especificados e registra/atualiza o dispositivo no sistema.
 
-### Solucao
-Adicionar um `useEffect` que chama `form.reset()` com os dados do dispositivo sempre que a prop `device` mudar ou o dialog abrir. Isso garante que os campos sejam preenchidos corretamente com as informacoes ja salvas.
+### Campos de entrada
+| Campo | Descrição |
+|-------|-----------|
+| `codigo_empresa` | Código da empresa (6 chars, ex: 001KNC) |
+| `apelido_dispositivo` | Nome amigável do dispositivo |
+| `num_filial` | Código da loja/filial |
+| `device_name` | Nome técnico do dispositivo |
+| `android_id` | ID Android do dispositivo |
+| `serial_number` | Número de série (usado como `device_code`) |
 
-### Detalhes tecnicos
+### Fluxo da rota
+1. Validar campos obrigatórios
+2. Buscar empresa pelo `codigo_empresa` na tabela `companies`
+3. Buscar loja pelo `num_filial` + `tenant_id` da empresa na tabela `stores`
+4. Buscar grupo padrão (`is_default = true`) do tenant
+5. Chamar a RPC `register_device` existente com os dados resolvidos, passando `serial_number` como `device_code` e `apelido_dispositivo` como nome
+6. Salvar `android_id` no campo `metadata` do dispositivo
+7. Retornar `device_token`, `device_id`, `group_id` e dados da empresa/loja
 
-**Arquivo**: `src/components/devices/DeviceFormDialog.tsx`
+### Arquivo editado
+- `supabase/functions/device-api/index.ts` — adicionar bloco `if (path === 'cadastro' && req.method === 'POST')` junto às demais rotas
 
-1. Adicionar `useEffect` apos a criacao do form:
-```typescript
-useEffect(() => {
-  if (open) {
-    form.reset({
-      name: device?.name || "",
-      device_code: device?.device_code || generateDeviceCode(),
-      store_id: device?.store_id || undefined,
-      current_playlist_id: device?.current_playlist_id || undefined,
-      resolution: device?.resolution || "1920x1080",
-      camera_enabled: device?.camera_enabled || false,
-      store_code: (device as any)?.store_code || "",
-    });
-  }
-}, [device, open]);
+### Resposta de sucesso (200)
+```json
+{
+  "device_id": "uuid",
+  "device_token": "uuid-string",
+  "device_code": "serial_number",
+  "group_id": "uuid | null",
+  "company_name": "Nome da Empresa",
+  "store_name": "Nome da Loja"
+}
 ```
 
-2. Adicionar `useEffect` ao import do React (ja esta `useState`, adicionar `useEffect`).
-
-Essa unica alteracao resolve o problema para criar e editar: ao abrir para novo, reseta com valores padrao; ao abrir para editar, preenche com os dados existentes.
+### Resposta de erro
+- 400: campos obrigatórios ausentes
+- 404: empresa ou loja não encontrada
 
