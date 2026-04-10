@@ -12,6 +12,7 @@ export interface Company {
   cnpj: string | null;
   is_active: boolean;
   settings: Json | null;
+  default_playlist_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +62,7 @@ export interface CompanyUpdate {
   cnpj?: string | null;
   is_active?: boolean;
   settings?: Json | null;
+  default_playlist_id?: string | null;
 }
 
 export interface CompanyIntegrationInsert {
