@@ -41,6 +41,20 @@ export default function Companies() {
     removeCompanyIntegration
   } = useCompanies();
 
+  // Fetch playlists for default playlist selector
+  const { data: playlists = [] } = useQuery({
+    queryKey: ["playlists-for-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("playlists")
+        .select("id, name, tenant_id")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isIntegrationDialogOpen, setIsIntegrationDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<CompanyWithIntegrations | null>(null);
