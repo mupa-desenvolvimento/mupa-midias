@@ -729,12 +729,28 @@ export const useOfflinePlayer = (deviceCode: string) => {
       
       const localState = loadLocalState();
       if (localState) {
+        // Restaura blob URLs do IndexedDB para todos os itens (playlists e canais)
         for (const playlist of localState.playlists) {
           for (const item of playlist.items) {
             const blobUrl = await loadFromIndexedDB(item.media.id);
             if (blobUrl) {
               item.media.blob_url = blobUrl;
             }
+          }
+          for (const channel of playlist.channels || []) {
+            for (const item of channel.items) {
+              const blobUrl = await loadFromIndexedDB(item.media.id);
+              if (blobUrl) {
+                item.media.blob_url = blobUrl;
+              }
+            }
+          }
+        }
+        // Restaura override media
+        if (localState.override_media) {
+          const blobUrl = await loadFromIndexedDB(localState.override_media.id);
+          if (blobUrl) {
+            localState.override_media.blob_url = blobUrl;
           }
         }
         setDeviceState(localState);
