@@ -127,14 +127,12 @@ Deno.serve(async (req: Request) => {
       const androidId = String(body.android_id || '').trim()
       const serialNumber = String(body.serial_number || '').trim()
 
-      // Validação
+      // Validação (num_filial e serial_number são opcionais)
       const missing: string[] = []
       if (!codigoEmpresa) missing.push('codigo_empresa')
       if (!apelidoDispositivo) missing.push('apelido_dispositivo')
-      if (!numFilial) missing.push('num_filial')
       if (!deviceName) missing.push('device_name')
       if (!androidId) missing.push('android_id')
-      if (!serialNumber) missing.push('serial_number')
       if (missing.length > 0) {
         return new Response(
           JSON.stringify({ error: `Campos obrigatórios ausentes: ${missing.join(', ')}` }),
@@ -157,20 +155,24 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      // 2. Buscar loja pelo num_filial (external_id ou code) + tenant
-      const { data: store, error: storeError } = await supabase
-        .from('stores')
-        .select('id, name')
-        .eq('tenant_id', company.tenant_id)
-        .eq('is_active', true)
-        .or(`external_id.eq.${numFilial},code.eq.${numFilial}`)
-        .maybeSingle()
+      // 2. Buscar loja pelo num_filial (opcional)
+      let store: { id: string; name: string } | null = null
+      if (numFilial) {
+        const { data: storeData, error: storeError } = await supabase
+          .from('stores')
+          .select('id, name')
+          .eq('tenant_id', company.tenant_id)
+          .eq('is_active', true)
+          .or(`external_id.eq.${numFilial},code.eq.${numFilial}`)
+          .maybeSingle()
 
-      if (storeError || !store) {
-        return new Response(
-          JSON.stringify({ error: `Filial "${numFilial}" não encontrada para a empresa "${company.name}"` }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        )
+        if (storeError || !storeData) {
+          return new Response(
+            JSON.stringify({ error: `Filial "${numFilial}" não encontrada para a empresa "${company.name}"` }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          )
+        }
+        store = storeData
       }
 
       // 3. Buscar grupo padrão do tenant
