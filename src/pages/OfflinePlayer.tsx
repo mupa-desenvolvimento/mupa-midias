@@ -707,8 +707,12 @@ const OfflinePlayer = () => {
     downloadProgress.total > 0 && downloadProgress.downloaded < downloadProgress.total;
 
   // State screens
+  if (resolveError) {
+    return <LoadingScreen subMessage={resolveError} />;
+  }
+
   if (isLoading && !deviceState) {
-    return <LoadingScreen subMessage={`Dispositivo: ${deviceCode}`} />;
+    return <LoadingScreen subMessage={`Dispositivo: ${deviceCode || idDevice || "..."}`} />;
   }
 
   if (isDeviceBlocked) {
