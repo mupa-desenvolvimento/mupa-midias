@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Building2, Plug2, Trash2, Edit, Settings, Eye, EyeOff, Loader2, Link2, Unlink2, Monitor } from "lucide-react";
+import { Plus, Building2, Plug2, Trash2, Edit, Settings, Eye, EyeOff, Loader2, Link2, Unlink2, Monitor, ListMusic } from "lucide-react";
 import { toast } from "sonner";
 import type { Json } from "@/integrations/supabase/types";
 import { PageShell } from "@/components/layout/PageShell";
