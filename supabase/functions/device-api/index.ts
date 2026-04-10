@@ -263,11 +263,11 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!device && androidId) {
-        // Tentar pelo device_code = android_id
+        // Buscar pelo android_id salvo no metadata
         const { data } = await supabase
           .from('devices')
           .select('id, device_code, name, store_id, store_code, company_id, group_id, status, is_active, is_blocked, blocked_message, metadata, device_token, camera_enabled, last_seen_at, created_at, updated_at')
-          .eq('device_code', androidId)
+          .filter('metadata->>android_id', 'eq', androidId)
           .maybeSingle()
         device = data
       }
