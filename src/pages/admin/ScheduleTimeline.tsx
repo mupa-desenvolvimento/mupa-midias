@@ -1146,7 +1146,7 @@ const ScheduleTimeline = () => {
             <SelectContent>
               <SelectItem value="all">Todos os grupos</SelectItem>
               {deviceGroups.map((g: any) => (
-                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                <SelectItem key={g.id} value={g.id}>{g.name}{g.is_default ? ' ⭐' : ''}</SelectItem>
               ))}
             </SelectContent>
           </Select>
