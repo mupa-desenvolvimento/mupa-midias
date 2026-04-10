@@ -471,6 +471,40 @@ export function DeviceControlDialog({
 
           {/* Aba Conteúdo */}
           <TabsContent value="content" className="space-y-4">
+            {/* Group selector */}
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Grupo do Dispositivo
+              </Label>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedGroupId || "none"}
+                  onValueChange={(value) => handleChangeGroup(value === "none" ? null : value)}
+                  disabled={isChangingGroup || groupsLoading}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um grupo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem grupo</SelectItem>
+                    {deviceGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                        {group.store?.name ? ` (${group.store.name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isChangingGroup && (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-2" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ao alterar o grupo, a playlist associada será atribuída automaticamente e o dispositivo receberá a atualização.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
                 <h4 className="font-medium">Playlist Atual</h4>
