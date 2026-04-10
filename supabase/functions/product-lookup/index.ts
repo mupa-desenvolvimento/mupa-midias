@@ -519,7 +519,7 @@ Deno.serve(async (req: Request) => {
         }
 
         const packs = (json as any[]).map((r) => ({
-          id_product: Number(r?.id_product) || Number(id_product),
+          id_product: Number(r?.id_product) || Number(mutableIdProduct),
           id_store: Number(r?.id_store) || idStore,
           unit_pack: Number(r?.unit_pack) || 0,
           price_pack: Number(r?.price_pack) || 0,
@@ -556,7 +556,7 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((originalPrice - promoPrice) / originalPrice) * 100);
         }
 
-        const productName = (product_description && String(product_description).trim()) ? String(product_description).trim() : `Produto ${id_product}`;
+        const productName = (product_description && String(product_description).trim()) ? String(product_description).trim() : `Produto ${mutableIdProduct}`;
         const resolvedImage = await resolveProductImage(normalizedEan, supabase, device.company_id);
 
         const productData = {
