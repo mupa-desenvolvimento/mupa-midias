@@ -116,6 +116,113 @@ Deno.serve(async (req: Request) => {
   const path = url.pathname.split('/').pop() // Get last segment
 
   try {
+    // ─── POST /device-api/cadastro ───
+    // Rota pública de autocadastro de dispositivo via app Android
+    if (path === 'cadastro' && req.method === 'POST') {
+      const body = await req.json().catch(() => ({})) as Record<string, any>
+      const codigoEmpresa = String(body.codigo_empresa || '').trim().toUpperCase()
+      const apelidoDispositivo = String(body.apelido_dispositivo || '').trim()
+      const numFilial = String(body.num_filial || '').trim()
+      const deviceName = String(body.device_name || '').trim()
+      const androidId = String(body.android_id || '').trim()
+      const serialNumber = String(body.serial_number || '').trim()
+
+      // Validação
+      const missing: string[] = []
+      if (!codigoEmpresa) missing.push('codigo_empresa')
+      if (!apelidoDispositivo) missing.push('apelido_dispositivo')
+      if (!numFilial) missing.push('num_filial')
+      if (!deviceName) missing.push('device_name')
+      if (!androidId) missing.push('android_id')
+      if (!serialNumber) missing.push('serial_number')
+      if (missing.length > 0) {
+        return new Response(
+          JSON.stringify({ error: `Campos obrigatórios ausentes: ${missing.join(', ')}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // 1. Buscar empresa pelo código
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .select('id, name, tenant_id')
+        .eq('code', codigoEmpresa)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (companyError || !company) {
+        return new Response(
+          JSON.stringify({ error: `Empresa com código "${codigoEmpresa}" não encontrada ou inativa` }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // 2. Buscar loja pelo num_filial (external_id ou code) + tenant
+      const { data: store, error: storeError } = await supabase
+        .from('stores')
+        .select('id, name')
+        .eq('tenant_id', company.tenant_id)
+        .eq('is_active', true)
+        .or(`external_id.eq.${numFilial},code.eq.${numFilial}`)
+        .maybeSingle()
+
+      if (storeError || !store) {
+        return new Response(
+          JSON.stringify({ error: `Filial "${numFilial}" não encontrada para a empresa "${company.name}"` }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // 3. Buscar grupo padrão do tenant
+      const { data: defaultGroup } = await supabase
+        .from('device_groups')
+        .select('id')
+        .eq('tenant_id', company.tenant_id)
+        .eq('is_default', true)
+        .maybeSingle()
+
+      // 4. Registrar dispositivo via RPC
+      const { data: registerResult, error: registerError } = await supabase.rpc('register_device', {
+        p_device_code: serialNumber,
+        p_name: apelidoDispositivo,
+        p_store_id: store.id,
+        p_company_id: company.id,
+        p_group_id: defaultGroup?.id || null,
+        p_store_code: numFilial,
+      })
+
+      if (registerError) {
+        return new Response(
+          JSON.stringify({ error: registerError.message || 'Erro ao registrar dispositivo' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      const result = registerResult as any
+
+      // 5. Salvar android_id e device_name no metadata
+      if (result?.device_id) {
+        await supabase
+          .from('devices')
+          .update({
+            metadata: { android_id: androidId, device_name: deviceName } as any,
+          })
+          .eq('id', result.device_id)
+      }
+
+      return new Response(
+        JSON.stringify({
+          device_id: result.device_id,
+          device_token: result.device_token,
+          device_code: serialNumber,
+          group_id: result.group_id || null,
+          company_name: company.name,
+          store_name: store.name,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     if (path === 'price') {
       const queryBarcode = url.searchParams.get('barcode') || ''
       const queryStore = url.searchParams.get('store') || ''
