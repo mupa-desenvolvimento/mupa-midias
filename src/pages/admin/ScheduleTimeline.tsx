@@ -160,7 +160,7 @@ const ScheduleTimeline = () => {
 
   // Group CRUD dialog
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
-  const [groupForm, setGroupForm] = useState({ name: "", description: "" });
+  const [groupForm, setGroupForm] = useState({ name: "", description: "", is_default: false });
   const [editingGroup, setEditingGroup] = useState<any>(null);
 
   // Add devices to group dialog
@@ -200,7 +200,7 @@ const ScheduleTimeline = () => {
   const { data: deviceGroups = [] } = useQuery({
     queryKey: ["device-groups-schedule"],
     queryFn: async () => {
-      const { data } = await supabase.from("device_groups").select("id, name, description, store_id, tenant_id").order("name");
+      const { data } = await supabase.from("device_groups").select("id, name, description, store_id, tenant_id, is_default").order("name");
       return data || [];
     },
   });
@@ -497,17 +497,17 @@ const ScheduleTimeline = () => {
 
   // Group mutations
   const createGroup = useMutation({
-    mutationFn: async (g: { name: string; description: string }) => {
-      const { error } = await supabase.from("device_groups").insert([{ name: g.name, description: g.description || null }]);
+    mutationFn: async (g: { name: string; description: string; is_default: boolean }) => {
+      const { error } = await supabase.from("device_groups").insert([{ name: g.name, description: g.description || null, is_default: g.is_default }]);
       if (error) throw error;
     },
-    onSuccess: () => { invalidateGroups(); toast({ title: "Grupo criado" }); setGroupDialogOpen(false); setGroupForm({ name: "", description: "" }); },
+    onSuccess: () => { invalidateGroups(); toast({ title: "Grupo criado" }); setGroupDialogOpen(false); setGroupForm({ name: "", description: "", is_default: false }); },
     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
   const updateGroup = useMutation({
-    mutationFn: async ({ id, ...g }: { id: string; name: string; description: string }) => {
-      const { error } = await supabase.from("device_groups").update({ name: g.name, description: g.description || null }).eq("id", id);
+    mutationFn: async ({ id, ...g }: { id: string; name: string; description: string; is_default: boolean }) => {
+      const { error } = await supabase.from("device_groups").update({ name: g.name, description: g.description || null, is_default: g.is_default }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { invalidateGroups(); toast({ title: "Grupo atualizado" }); setGroupDialogOpen(false); setEditingGroup(null); },
@@ -1146,7 +1146,7 @@ const ScheduleTimeline = () => {
             <SelectContent>
               <SelectItem value="all">Todos os grupos</SelectItem>
               {deviceGroups.map((g: any) => (
-                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                <SelectItem key={g.id} value={g.id}>{g.name}{g.is_default ? ' ⭐' : ''}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -1163,7 +1163,7 @@ const ScheduleTimeline = () => {
           />
         </div>
 
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingGroup(null); setGroupForm({ name: "", description: "" }); setGroupDialogOpen(true); }}>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingGroup(null); setGroupForm({ name: "", description: "", is_default: false }); setGroupDialogOpen(true); }}>
           <FolderPlus className="h-4 w-4" /> Novo Grupo
         </Button>
 
@@ -1171,7 +1171,7 @@ const ScheduleTimeline = () => {
           <>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
               const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
-              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
+              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "", is_default: g.is_default ?? false }); setGroupDialogOpen(true); }
             }}>
               <Pencil className="h-3.5 w-3.5" /> Atualizar grupo
             </Button>
@@ -1259,7 +1259,7 @@ const ScheduleTimeline = () => {
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => {
               const g = deviceGroups.find((g: any) => g.id === selectedGroupId);
-              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "" }); setGroupDialogOpen(true); }
+              if (g) { setEditingGroup(g); setGroupForm({ name: g.name, description: g.description || "", is_default: g.is_default ?? false }); setGroupDialogOpen(true); }
             }}>
               <Pencil className="h-3.5 w-3.5" /> Editar grupo
             </Button>
@@ -2598,6 +2598,10 @@ const ScheduleTimeline = () => {
           <div className="space-y-4">
             <div><Label>Nome do grupo</Label><Input value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })} placeholder="Ex: Consulta Preço" /></div>
             <div><Label>Descrição</Label><Textarea value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })} rows={2} placeholder="Descrição opcional" /></div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="is_default_group" checked={groupForm.is_default} onChange={e => setGroupForm({ ...groupForm, is_default: e.target.checked })} className="h-4 w-4 rounded border-border" />
+              <Label htmlFor="is_default_group" className="text-sm font-normal cursor-pointer">Grupo padrão <span className="text-muted-foreground">(novos dispositivos serão atribuídos automaticamente)</span></Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGroupDialogOpen(false)}>Cancelar</Button>

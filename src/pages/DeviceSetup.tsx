@@ -171,7 +171,7 @@ export default function DeviceSetup() {
       // Filtrando também pelo tenant_id da empresa
       let groupsQuery = supabase
         .from('device_groups')
-        .select('id, name, description, store_id, screen_type, tenant_id')
+        .select('id, name, description, store_id, screen_type, tenant_id, is_default')
         .or(`store_id.eq.${storeId},store_id.is.null`);
       
       // Filtrar por tenant_id se a empresa tiver um
@@ -182,7 +182,14 @@ export default function DeviceSetup() {
       const { data, error } = await groupsQuery.order('name');
 
       if (error) throw error;
-      setDeviceGroups(data || []);
+      const groups = data || [];
+      setDeviceGroups(groups);
+      
+      // Auto-select default group
+      const defaultGroup = groups.find((g: any) => g.is_default);
+      if (defaultGroup) {
+        setSelectedGroupId(defaultGroup.id);
+      }
     } catch (error) {
       console.error('Error fetching device groups:', error);
       toast.error('Erro ao carregar grupos');
