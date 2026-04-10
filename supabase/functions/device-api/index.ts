@@ -85,6 +85,25 @@ const safeJsonParse = async (res: Response) => {
   }
 }
 
+const normalizeComparableValue = (value: unknown) => String(value ?? '').trim().toUpperCase()
+
+const getStoreLookupCandidates = (store: { code?: string | null; metadata?: unknown }) => {
+  const metadata = store.metadata && typeof store.metadata === 'object' ? (store.metadata as Record<string, unknown>) : {}
+  return [
+    store.code,
+    metadata.external_id,
+    metadata.externalId,
+    metadata.num_filial,
+    metadata.numFilial,
+    metadata.store_number,
+    metadata.storeNumber,
+    metadata.branch_number,
+    metadata.branchNumber,
+  ]
+    .map((value) => normalizeComparableValue(value))
+    .filter(Boolean)
+}
+
 const toStandardResponse = (raw: any, mapping: any, barcode: string, store: string): StandardPriceResponse => {
   const m = mapping && typeof mapping === 'object' ? mapping : {}
   const name = typeof m.name === 'string' ? getPathValue(raw, m.name) : undefined
@@ -119,7 +138,20 @@ Deno.serve(async (req: Request) => {
     // ─── POST /device-api/cadastro ───
     // Rota pública de autocadastro de dispositivo via app Android
     if (path === 'cadastro' && req.method === 'POST') {
-      const body = await req.json().catch(() => ({})) as Record<string, any>
+      const rawBody = await req.text()
+      let body: Record<string, any> = {}
+
+      if (rawBody.trim()) {
+        try {
+          body = JSON.parse(rawBody) as Record<string, any>
+        } catch {
+          return new Response(
+            JSON.stringify({ error: 'JSON inválido no corpo da requisição' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          )
+        }
+      }
+
       const codigoEmpresa = String(body.codigo_empresa || '').trim().toUpperCase()
       const apelidoDispositivo = String(body.apelido_dispositivo || '').trim()
       const numFilial = String(body.num_filial || '').trim()
@@ -156,23 +188,33 @@ Deno.serve(async (req: Request) => {
       }
 
       // 2. Buscar loja pelo num_filial (opcional)
-      let store: { id: string; name: string } | null = null
+      let store: { id: string; name: string; code: string; metadata: Record<string, unknown> | null } | null = null
       if (numFilial) {
-        const { data: storeData, error: storeError } = await supabase
+        const { data: storeCandidates, error: storeError } = await supabase
           .from('stores')
-          .select('id, name')
+          .select('id, name, code, metadata')
           .eq('tenant_id', company.tenant_id)
           .eq('is_active', true)
-          .or(`external_id.eq.${numFilial},code.eq.${numFilial}`)
-          .maybeSingle()
+          .order('name')
 
-        if (storeError || !storeData) {
+        if (storeError) {
+          return new Response(
+            JSON.stringify({ error: 'Erro ao buscar a filial informada' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          )
+        }
+
+        const normalizedNumFilial = normalizeComparableValue(numFilial)
+        store = (storeCandidates || []).find((candidate) => {
+          return getStoreLookupCandidates(candidate).includes(normalizedNumFilial)
+        }) || null
+
+        if (!store) {
           return new Response(
             JSON.stringify({ error: `Filial "${numFilial}" não encontrada para a empresa "${company.name}"` }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
           )
         }
-        store = storeData
       }
 
       // 3. Buscar grupo padrão do tenant
@@ -217,10 +259,10 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           device_id: result.device_id,
           device_token: result.device_token,
-          device_code: serialNumber,
+          device_code: deviceCode,
           group_id: result.group_id || null,
           company_name: company.name,
-          store_name: store.name,
+          store_name: store?.name || null,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
