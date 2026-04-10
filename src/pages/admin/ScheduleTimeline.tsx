@@ -2598,6 +2598,10 @@ const ScheduleTimeline = () => {
           <div className="space-y-4">
             <div><Label>Nome do grupo</Label><Input value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })} placeholder="Ex: Consulta Preço" /></div>
             <div><Label>Descrição</Label><Textarea value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })} rows={2} placeholder="Descrição opcional" /></div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="is_default_group" checked={groupForm.is_default} onChange={e => setGroupForm({ ...groupForm, is_default: e.target.checked })} className="h-4 w-4 rounded border-border" />
+              <Label htmlFor="is_default_group" className="text-sm font-normal cursor-pointer">Grupo padrão <span className="text-muted-foreground">(novos dispositivos serão atribuídos automaticamente)</span></Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGroupDialogOpen(false)}>Cancelar</Button>
