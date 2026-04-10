@@ -143,6 +143,7 @@ function AppContent() {
           <Route path="/detect/:deviceCode" element={<DeviceDetector />} />
           <Route path="/retail-media" element={<RetailMedia />} />
           <Route path="/play/:deviceCode" element={<OfflinePlayer />} />
+          <Route path="/play" element={<OfflinePlayer />} />
           <Route path="/webview/:deviceCode" element={<WebViewPlayer />} />
           {/* Rota específica para Android/Kodular usando query param ?device_id=XYZ */}
           <Route path="/android-player" element={<WebViewPlayer />} />

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
 import { useProductLookup } from "@/hooks/useProductLookup";
@@ -50,14 +50,53 @@ import { storageService } from "@/modules/offline-storage/StorageService";
 import { Capacitor } from "@capacitor/core";
 
 const OfflinePlayer = () => {
-  const { deviceCode } = useParams<{ deviceCode: string }>();
+  const { deviceCode: deviceCodeParam } = useParams<{ deviceCode: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
+  // Support both /play/:deviceCode (legacy) and /play?cod_user=X&id_device=Y (new)
+  const codUser = searchParams.get("cod_user");
+  const idDevice = searchParams.get("id_device");
+  const [resolvedDeviceCode, setResolvedDeviceCode] = useState<string>(deviceCodeParam || "");
+  const [resolveError, setResolveError] = useState<string | null>(null);
+
+  // Resolve device_code from android_id when using query params
+  useEffect(() => {
+    if (deviceCodeParam) {
+      setResolvedDeviceCode(deviceCodeParam);
+      return;
+    }
+    if (!idDevice) return;
+
+    const resolve = async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data, error } = await supabase
+          .from("devices")
+          .select("device_code")
+          .filter("metadata->>android_id", "eq", idDevice)
+          .maybeSingle();
+
+        if (error || !data) {
+          console.error("[OfflinePlayer] Erro ao resolver device por android_id:", error);
+          setResolveError(`Dispositivo com android_id "${idDevice}" não encontrado.`);
+          return;
+        }
+        setResolvedDeviceCode(data.device_code);
+      } catch (e) {
+        console.error("[OfflinePlayer] Erro ao resolver device:", e);
+        setResolveError("Erro ao buscar dispositivo.");
+      }
+    };
+    resolve();
+  }, [deviceCodeParam, idDevice]);
+
+  const deviceCode = resolvedDeviceCode;
 
   // Core hooks
   const {
     deviceState,
-    isLoading,
+    isLoading: isPlayerLoading,
     isSyncing,
     syncError,
     downloadProgress,
@@ -67,7 +106,9 @@ const OfflinePlayer = () => {
     syncWithServer,
     isPlaylistActiveNow,
     clearAllData,
-  } = useOfflinePlayer(deviceCode || "");
+  } = useOfflinePlayer(deviceCode);
+
+  const isLoading = isPlayerLoading || (!deviceCodeParam && idDevice && !resolvedDeviceCode && !resolveError);
 
   // Terminal state
   const [terminalMode, setTerminalMode] = useState<TerminalMode>("player");
@@ -666,8 +707,12 @@ const OfflinePlayer = () => {
     downloadProgress.total > 0 && downloadProgress.downloaded < downloadProgress.total;
 
   // State screens
+  if (resolveError) {
+    return <LoadingScreen subMessage={resolveError} />;
+  }
+
   if (isLoading && !deviceState) {
-    return <LoadingScreen subMessage={`Dispositivo: ${deviceCode}`} />;
+    return <LoadingScreen subMessage={`Dispositivo: ${deviceCode || idDevice || "..."}`} />;
   }
 
   if (isDeviceBlocked) {
