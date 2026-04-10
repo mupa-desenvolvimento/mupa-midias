@@ -27,6 +27,7 @@ export interface DeviceGroupInsert {
   store_id?: string | null;
   tenant_id?: string | null;
   screen_type?: string;
+  is_default?: boolean;
 }
 
 export interface DeviceGroupChannel {
