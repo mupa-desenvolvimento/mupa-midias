@@ -175,6 +175,7 @@ const DeviceGroupsPage = () => {
       description: null,
       store_id: null,
       screen_type: "tv",
+      is_default: false,
     });
   };
 
@@ -185,6 +186,7 @@ const DeviceGroupsPage = () => {
       description: group.description,
       store_id: group.store_id,
       screen_type: group.screen_type,
+      is_default: (group as any).is_default || false,
     });
   };
 
