@@ -160,7 +160,7 @@ export const DeviceOnboarding: React.FC = () => {
     try {
       let query = supabase
         .from('device_groups')
-        .select('id, name, description, store_id')
+        .select('id, name, description, store_id, is_default')
         .or(`store_id.eq.${store.id},store_id.is.null`);
       
       if (formData.company?.tenant_id) {
@@ -168,7 +168,14 @@ export const DeviceOnboarding: React.FC = () => {
       }
       
       const { data } = await query.order('name');
-      setGroups(data || []);
+      const groupList = data || [];
+      setGroups(groupList);
+      
+      // Auto-select default group
+      const defaultGroup = groupList.find((g: any) => g.is_default);
+      if (defaultGroup) {
+        setFormData(prev => ({ ...prev, group: defaultGroup }));
+      }
       
       nextStep('store_number');
     } catch (error) {
