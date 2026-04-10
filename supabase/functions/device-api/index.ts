@@ -238,6 +238,99 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // ─── GET /device-api/dispositivo?android_id=XXX ou ?serial_number=XXX ───
+    if (path === 'dispositivo' && req.method === 'GET') {
+      const androidId = (url.searchParams.get('android_id') || '').trim()
+      const serialNumber = (url.searchParams.get('serial_number') || '').trim()
+
+      if (!androidId && !serialNumber) {
+        return new Response(
+          JSON.stringify({ error: 'Informe android_id ou serial_number como query parameter' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // Buscar pelo device_code (serial_number tem prioridade) ou pelo android_id no metadata
+      let device: any = null
+
+      if (serialNumber) {
+        const { data } = await supabase
+          .from('devices')
+          .select('id, device_code, name, store_id, store_code, company_id, group_id, status, is_active, is_blocked, blocked_message, metadata, device_token, camera_enabled, last_seen_at, created_at, updated_at')
+          .eq('device_code', serialNumber)
+          .maybeSingle()
+        device = data
+      }
+
+      if (!device && androidId) {
+        // Tentar pelo device_code = android_id
+        const { data } = await supabase
+          .from('devices')
+          .select('id, device_code, name, store_id, store_code, company_id, group_id, status, is_active, is_blocked, blocked_message, metadata, device_token, camera_enabled, last_seen_at, created_at, updated_at')
+          .eq('device_code', androidId)
+          .maybeSingle()
+        device = data
+      }
+
+      if (!device) {
+        return new Response(
+          JSON.stringify({ error: 'Dispositivo não encontrado' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      // Buscar nome da empresa
+      let companyName: string | null = null
+      if (device.company_id) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', device.company_id)
+          .maybeSingle()
+        companyName = company?.name || null
+      }
+
+      // Buscar nome do grupo
+      let groupName: string | null = null
+      if (device.group_id) {
+        const { data: group } = await supabase
+          .from('device_groups')
+          .select('name')
+          .eq('id', device.group_id)
+          .maybeSingle()
+        groupName = group?.name || null
+      }
+
+      const meta = device.metadata && typeof device.metadata === 'object' ? device.metadata : {}
+
+      return new Response(
+        JSON.stringify({
+          device_id: device.id,
+          device_code: device.device_code,
+          device_token: device.device_token,
+          apelido_dispositivo: device.name,
+          device_name: meta.device_name || null,
+          android_id: meta.android_id || null,
+          serial_number: device.device_code !== (meta.android_id || '') ? device.device_code : null,
+          num_filial: device.store_code || meta.num_filial || null,
+          company_id: device.company_id,
+          company_name: companyName,
+          group_id: device.group_id,
+          group_name: groupName,
+          status: device.status,
+          is_active: device.is_active,
+          is_blocked: device.is_blocked,
+          blocked_message: device.blocked_message,
+          camera_enabled: device.camera_enabled,
+          last_seen_at: device.last_seen_at,
+          created_at: device.created_at,
+          updated_at: device.updated_at,
+          metadata: meta,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     if (path === 'price') {
       const queryBarcode = url.searchParams.get('barcode') || ''
       const queryStore = url.searchParams.get('store') || ''
