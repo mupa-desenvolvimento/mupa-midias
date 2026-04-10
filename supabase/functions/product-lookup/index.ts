@@ -482,7 +482,7 @@ Deno.serve(async (req: Request) => {
 
       try {
         const stockUrl = new URL('https://marketplace.assai.com.br/stock');
-        stockUrl.searchParams.set('id_product', String(id_product));
+        stockUrl.searchParams.set('id_product', String(mutableIdProduct));
         stockUrl.searchParams.set('id_store', String(idStore));
 
         const controller = new AbortController();
