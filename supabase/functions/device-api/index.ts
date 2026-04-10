@@ -281,13 +281,15 @@ Deno.serve(async (req: Request) => {
 
       // Buscar nome da empresa
       let companyName: string | null = null
+      let companyCode: string | null = null
       if (device.company_id) {
         const { data: company } = await supabase
           .from('companies')
-          .select('name')
+          .select('name, code')
           .eq('id', device.company_id)
           .maybeSingle()
         companyName = company?.name || null
+        companyCode = company?.code || null
       }
 
       // Buscar nome do grupo
@@ -314,6 +316,7 @@ Deno.serve(async (req: Request) => {
           serial_number: device.device_code !== (meta.android_id || '') ? device.device_code : null,
           num_filial: device.store_code || meta.num_filial || null,
           company_id: device.company_id,
+          codigo_empresa: companyCode,
           company_name: companyName,
           group_id: device.group_id,
           group_name: groupName,
