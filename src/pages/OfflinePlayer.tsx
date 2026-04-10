@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useDeviceSession } from "@/hooks/useDeviceSession";
+
 import { useOfflinePlayer } from "@/hooks/useOfflinePlayer";
 import { useProductLookup } from "@/hooks/useProductLookup";
 import { useProductTTS } from "@/hooks/useProductTTS";
@@ -21,7 +21,6 @@ import {
   LoadingScreen,
   BlockedScreen,
   EmptyContentScreen,
-  ActiveSessionScreen,
   VignetteOverlay,
 } from "@/components/player-core";
 import {
@@ -53,7 +52,7 @@ import { Capacitor } from "@capacitor/core";
 const OfflinePlayer = () => {
   const { deviceCode } = useParams<{ deviceCode: string }>();
   const navigate = useNavigate();
-  const deviceSession = useDeviceSession(deviceCode);
+  
 
   // Core hooks
   const {
@@ -665,14 +664,6 @@ const OfflinePlayer = () => {
   const isDeviceBlocked = deviceState?.is_blocked === true;
   const hasActiveDownload =
     downloadProgress.total > 0 && downloadProgress.downloaded < downloadProgress.total;
-
-  // Session availability check
-  if (deviceSession.status === "loading") {
-    return <LoadingScreen message="Verificando disponibilidade..." subMessage={`Dispositivo: ${deviceCode}`} />;
-  }
-  if (deviceSession.status === "blocked") {
-    return <ActiveSessionScreen deviceName={deviceSession.deviceName} message={deviceSession.errorMessage} />;
-  }
 
   // State screens
   if (isLoading && !deviceState) {

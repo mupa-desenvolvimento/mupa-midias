@@ -155,15 +155,18 @@ export const useOfflinePlayer = (deviceCode: string) => {
       }
     }
 
-    // No navegador web, NÃO tenta fetch() de URLs externas (CORS bloquearia).
-    // Tags <img> e <video> carregam cross-origin sem problemas.
-    // Apenas tenta cache se for mesma origem.
+    // No navegador web: tenta baixar e salvar no IndexedDB para funcionamento offline
     try {
-      const currentOrigin = window.location.origin;
-      const mediaOrigin = new URL(url).origin;
-      
-      if (mediaOrigin === currentOrigin) {
-        const response = await fetch(url);
+      // Primeiro tenta carregar do IndexedDB (já cacheado)
+      const cachedUrl = await loadFromIndexedDB(mediaId);
+      if (cachedUrl) {
+        mediaCacheRef.current.set(mediaId, cachedUrl);
+        return cachedUrl;
+      }
+
+      // Tenta fazer download e cachear
+      const response = await fetch(url, { mode: 'cors' });
+      if (response.ok) {
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
         mediaCacheRef.current.set(mediaId, blobUrl);
@@ -171,11 +174,12 @@ export const useOfflinePlayer = (deviceCode: string) => {
         return blobUrl;
       }
       
-      // Cross-origin: usa URL direta (funciona em <img>/<video>)
+      // Se falhar, usa URL direta
       mediaCacheRef.current.set(mediaId, url);
       return url;
     } catch (e) {
-      // Silencioso para cross-origin - usa URL original
+      // CORS ou erro de rede: usa URL direta (funciona em <img>/<video> online)
+      console.warn(`[OfflinePlayer] Cache falhou para ${mediaId}, usando URL direta:`, e);
       mediaCacheRef.current.set(mediaId, url);
       return url;
     }
@@ -725,12 +729,28 @@ export const useOfflinePlayer = (deviceCode: string) => {
       
       const localState = loadLocalState();
       if (localState) {
+        // Restaura blob URLs do IndexedDB para todos os itens (playlists e canais)
         for (const playlist of localState.playlists) {
           for (const item of playlist.items) {
             const blobUrl = await loadFromIndexedDB(item.media.id);
             if (blobUrl) {
               item.media.blob_url = blobUrl;
             }
+          }
+          for (const channel of playlist.channels || []) {
+            for (const item of channel.items) {
+              const blobUrl = await loadFromIndexedDB(item.media.id);
+              if (blobUrl) {
+                item.media.blob_url = blobUrl;
+              }
+            }
+          }
+        }
+        // Restaura override media
+        if (localState.override_media) {
+          const blobUrl = await loadFromIndexedDB(localState.override_media.id);
+          if (blobUrl) {
+            localState.override_media.blob_url = blobUrl;
           }
         }
         setDeviceState(localState);

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useDeviceSession } from "@/hooks/useDeviceSession";
 import { useParams, useSearchParams } from "react-router-dom";
 import { db } from "@/services/firebase";
 import { ref, onValue } from "firebase/database";
@@ -13,7 +12,7 @@ import { useProductDisplaySettingsBySlug } from "@/hooks/useProductDisplaySettin
 import { ProductLookupContainer } from "@/components/player/ProductLookupContainer";
 import { EanInput } from "@/components/player/EanInput";
 import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useMediaRotation, useClock } from "@/hooks/player";
-import { MediaRenderer, PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen, ActiveSessionScreen, VignetteOverlay } from "@/components/player-core";
+import { MediaRenderer, PlayerProgressBar, PlayerControls, LoadingScreen, EmptyContentScreen, DownloadScreen, VignetteOverlay } from "@/components/player-core";
 import {
   Bell,
   Camera,
@@ -29,7 +28,6 @@ const WebViewPlayer = () => {
   const { deviceCode: paramDeviceCode } = useParams<{ deviceCode: string }>();
   const [searchParams] = useSearchParams();
   const deviceCode = paramDeviceCode || searchParams.get("device_id") || searchParams.get("id");
-  const deviceSession = useDeviceSession(deviceCode);
 
   const {
     deviceState,
@@ -454,14 +452,6 @@ const WebViewPlayer = () => {
       }
     }
   }, [items, activeMedia, activePlayer]);
-
-  // Session availability check
-  if (deviceSession.status === "loading") {
-    return <LoadingScreen message="Verificando disponibilidade..." subMessage={`Dispositivo: ${deviceCode}`} />;
-  }
-  if (deviceSession.status === "blocked") {
-    return <ActiveSessionScreen deviceName={deviceSession.deviceName} message={deviceSession.errorMessage} />;
-  }
 
   // State screens
   if (isLoading && !deviceState) {
