@@ -58,6 +58,7 @@ export function DeviceControlDialog({
 }: DeviceControlDialogProps) {
   const { toast } = useToast();
   const { mediaItems, isLoading: mediaLoading } = useMediaItems();
+  const { deviceGroups, isLoading: groupsLoading } = useDeviceGroups();
   
   const [playlistItems, setPlaylistItems] = useState<any[]>([]);
   const [playlistItemsLoading, setPlaylistItemsLoading] = useState(false);
@@ -65,9 +66,11 @@ export function DeviceControlDialog({
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockedMessage, setBlockedMessage] = useState("");
   const [overrideMediaId, setOverrideMediaId] = useState<string | null>(null);
-  const [overrideDuration, setOverrideDuration] = useState("1"); // horas
+  const [overrideDuration, setOverrideDuration] = useState("1");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isChangingGroup, setIsChangingGroup] = useState(false);
 
   // Carregar estado inicial do dispositivo
   useEffect(() => {
