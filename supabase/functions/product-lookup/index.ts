@@ -412,7 +412,8 @@ Deno.serve(async (req: Request) => {
     const isGrupoAssai = String(integration || "").toLowerCase() === "grupo-assai" || isGrupoAssaiTenant;
 
     if (isGrupoAssai && priceIntegrationEnabled) {
-      if (!id_product || !Number.isFinite(Number(id_product))) {
+      let mutableIdProduct = id_product;
+      if (!mutableIdProduct || !Number.isFinite(Number(mutableIdProduct))) {
         try {
           const url = new URL('http://srv-mupa.ddns.net:5050/api/ean/seqproduto');
           url.searchParams.set('codbar', normalizedEan);
@@ -423,7 +424,7 @@ Deno.serve(async (req: Request) => {
           const json = await res.json().catch(() => null);
           const resolvedId = Number(json?.id_product) || 0;
           if (resolvedId > 0) {
-            id_product = resolvedId;
+            mutableIdProduct = resolvedId;
             if (json?.descricao && (!product_description || String(product_description).trim().length === 0)) {
               (body as any).product_description = String(json.descricao);
             }
@@ -481,7 +482,7 @@ Deno.serve(async (req: Request) => {
 
       try {
         const stockUrl = new URL('https://marketplace.assai.com.br/stock');
-        stockUrl.searchParams.set('id_product', String(id_product));
+        stockUrl.searchParams.set('id_product', String(mutableIdProduct));
         stockUrl.searchParams.set('id_store', String(idStore));
 
         const controller = new AbortController();
@@ -518,7 +519,7 @@ Deno.serve(async (req: Request) => {
         }
 
         const packs = (json as any[]).map((r) => ({
-          id_product: Number(r?.id_product) || Number(id_product),
+          id_product: Number(r?.id_product) || Number(mutableIdProduct),
           id_store: Number(r?.id_store) || idStore,
           unit_pack: Number(r?.unit_pack) || 0,
           price_pack: Number(r?.price_pack) || 0,
@@ -555,7 +556,7 @@ Deno.serve(async (req: Request) => {
           savingsPercent = Math.round(((originalPrice - promoPrice) / originalPrice) * 100);
         }
 
-        const productName = (product_description && String(product_description).trim()) ? String(product_description).trim() : `Produto ${id_product}`;
+        const productName = (product_description && String(product_description).trim()) ? String(product_description).trim() : `Produto ${mutableIdProduct}`;
         const resolvedImage = await resolveProductImage(normalizedEan, supabase, device.company_id);
 
         const productData = {

@@ -31,9 +31,11 @@ import {
   Loader2,
   Send,
   X,
+  Users,
 } from "lucide-react";
 import { DeviceWithRelations } from "@/hooks/useDevices";
 import { useMediaItems } from "@/hooks/useMediaItems";
+import { useDeviceGroups } from "@/hooks/useDeviceGroups";
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
 import { ref, update } from "firebase/database";
@@ -56,6 +58,7 @@ export function DeviceControlDialog({
 }: DeviceControlDialogProps) {
   const { toast } = useToast();
   const { mediaItems, isLoading: mediaLoading } = useMediaItems();
+  const { deviceGroups, isLoading: groupsLoading } = useDeviceGroups();
   
   const [playlistItems, setPlaylistItems] = useState<any[]>([]);
   const [playlistItemsLoading, setPlaylistItemsLoading] = useState(false);
@@ -63,9 +66,11 @@ export function DeviceControlDialog({
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockedMessage, setBlockedMessage] = useState("");
   const [overrideMediaId, setOverrideMediaId] = useState<string | null>(null);
-  const [overrideDuration, setOverrideDuration] = useState("1"); // horas
+  const [overrideDuration, setOverrideDuration] = useState("1");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isChangingGroup, setIsChangingGroup] = useState(false);
 
   // Carregar estado inicial do dispositivo
   useEffect(() => {
@@ -73,8 +78,116 @@ export function DeviceControlDialog({
       setIsBlocked((device as any).is_blocked || false);
       setBlockedMessage((device as any).blocked_message || "Dispositivo bloqueado pelo administrador");
       setOverrideMediaId((device as any).override_media_id || null);
+      setSelectedGroupId((device as any).group_id || null);
     }
   }, [device]);
+
+  const handleChangeGroup = async (groupId: string | null) => {
+    if (!device) return;
+    
+    setIsChangingGroup(true);
+    try {
+      // 1. Get the channel/playlist associated with the group
+      let playlistId: string | null = null;
+      
+      if (groupId) {
+        // Check if the group has a direct channel_id
+        const group = deviceGroups.find(g => g.id === groupId);
+        if ((group as any)?.channel_id) {
+          // Find a playlist linked to this channel
+          const { data: playlist } = await supabase
+            .from("playlists")
+            .select("id")
+            .eq("channel_id", (group as any).channel_id)
+            .eq("is_active", true)
+            .order("priority", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (playlist) playlistId = playlist.id;
+        }
+        
+        // If no playlist found via channel, check device_group_channels
+        if (!playlistId) {
+          const { data: groupChannels } = await supabase
+            .from("device_group_channels")
+            .select("distribution_channel_id")
+            .eq("group_id", groupId)
+            .order("position", { ascending: true })
+            .limit(1);
+          
+          if (groupChannels && groupChannels.length > 0) {
+            const channelId = groupChannels[0].distribution_channel_id;
+            const { data: playlist } = await supabase
+              .from("playlists")
+              .select("id")
+              .eq("channel_id", channelId)
+              .eq("is_active", true)
+              .order("priority", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (playlist) playlistId = playlist.id;
+          }
+        }
+      }
+
+      // 2. Update device group_id and playlist
+      const updatePayload: Record<string, any> = {
+        group_id: groupId,
+        updated_at: new Date().toISOString(),
+      };
+      
+      if (playlistId) {
+        updatePayload.current_playlist_id = playlistId;
+      }
+
+      const { error } = await supabase
+        .from("devices")
+        .update(updatePayload)
+        .eq("id", device.id);
+
+      if (error) throw error;
+
+      // 3. Update group membership
+      if (groupId) {
+        await supabase
+          .from("device_group_members")
+          .upsert({ device_id: device.id, group_id: groupId }, { onConflict: "device_id,group_id" });
+      }
+
+      setSelectedGroupId(groupId);
+
+      // 4. Auto-send update to device
+      const deviceRef = ref(db, `${device.device_code}`);
+      const companyInfo = device.company ? `${device.company.id}_${device.company.name}` : "";
+      const groupName = groupId ? deviceGroups.find(g => g.id === groupId)?.name || "" : "";
+
+      await update(deviceRef, {
+        "atualizacao_plataforma": "true",
+        "empresa_id": companyInfo,
+        "device_id": device.id,
+        "last-update": new Date().toISOString(),
+        "grupo_device": groupName || "Sem grupo"
+      });
+
+      toast({
+        title: "Grupo alterado",
+        description: playlistId 
+          ? "Grupo e playlist atualizados. Atualização enviada ao dispositivo."
+          : "Grupo atualizado. Atualização enviada ao dispositivo.",
+      });
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar grupo",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingGroup(false);
+    }
+  };
 
   // Carregar itens da playlist (suportando canais e itens diretos)
   useEffect(() => {
@@ -358,6 +471,40 @@ export function DeviceControlDialog({
 
           {/* Aba Conteúdo */}
           <TabsContent value="content" className="space-y-4">
+            {/* Group selector */}
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Grupo do Dispositivo
+              </Label>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedGroupId || "none"}
+                  onValueChange={(value) => handleChangeGroup(value === "none" ? null : value)}
+                  disabled={isChangingGroup || groupsLoading}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um grupo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem grupo</SelectItem>
+                    {deviceGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                        {group.store?.name ? ` (${group.store.name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isChangingGroup && (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-2" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ao alterar o grupo, a playlist associada será atribuída automaticamente e o dispositivo receberá a atualização.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
                 <h4 className="font-medium">Playlist Atual</h4>

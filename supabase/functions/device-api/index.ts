@@ -418,11 +418,11 @@ Deno.serve(async (req: Request) => {
       // Heartbeat automático
       const savedToken = url.searchParams.get('token')
       if (savedToken) {
-        supabase.rpc('device_heartbeat', {
+        Promise.resolve(supabase.rpc('device_heartbeat', {
           p_device_token: savedToken,
           p_status: 'online',
           p_current_playlist_id: device.current_playlist_id || null,
-        }).then(() => {}).catch(() => {})
+        })).then(() => {}).catch(() => {})
       }
 
       return new Response(

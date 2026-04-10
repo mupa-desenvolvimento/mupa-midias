@@ -4468,6 +4468,14 @@ export type Database = {
         Args: { p_device_code: string }
         Returns: Json
       }
+      get_public_company_playlists: {
+        Args: { p_company_code: string }
+        Returns: {
+          id: string
+          name: string
+          tenant_id: string
+        }[]
+      }
       get_public_device_info: {
         Args: { p_device_code: string }
         Returns: {
