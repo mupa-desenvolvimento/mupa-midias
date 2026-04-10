@@ -40,6 +40,7 @@ const Tenants = () => {
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
+    company_code: '',
     max_users: 50,
     max_devices: 100,
     max_stores: 500,
@@ -90,11 +91,34 @@ const Tenants = () => {
     setFormData({
       name: '',
       slug: '',
+      company_code: '',
       max_users: 50,
       max_devices: 100,
       max_stores: 500,
       license_plan: 'lite',
     });
+  };
+
+  const generateCompanyCode = (name: string) => {
+    const letters = name
+      .replace(/[^a-zA-Z]/g, '')
+      .substring(0, 3)
+      .toUpperCase()
+      .padEnd(3, 'A');
+    const numbers = String(Math.floor(100 + Math.random() * 900));
+    return numbers + letters;
+  };
+
+  const formatCompanyCode = (value: string) => {
+    // Format: 3 digits + 3 uppercase letters
+    const clean = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const digits = clean.replace(/[^0-9]/g, '').substring(0, 3);
+    const letters = clean.replace(/[^A-Z]/g, '').substring(0, 3);
+    return digits + letters;
+  };
+
+  const isValidCompanyCode = (code: string) => {
+    return /^\d{3}[A-Z]{3}$/.test(code);
   };
 
   const PLAN_DEFAULTS = {
@@ -533,10 +557,12 @@ const Tenants = () => {
                 id="name"
                 value={formData.name}
                 onChange={(e) => {
+                  const newName = e.target.value;
                   setFormData({
                     ...formData,
-                    name: e.target.value,
-                    slug: generateSlug(e.target.value)
+                    name: newName,
+                    slug: generateSlug(newName),
+                    company_code: formData.company_code || generateCompanyCode(newName),
                   });
                 }}
                 placeholder="Ex: Empresa ABC"
@@ -551,6 +577,20 @@ const Tenants = () => {
                 placeholder="empresa-abc"
                 className="font-mono"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company_code">Código da Empresa (3 números + 3 letras)</Label>
+              <Input
+                id="company_code"
+                value={formData.company_code}
+                onChange={(e) => setFormData({ ...formData, company_code: formatCompanyCode(e.target.value) })}
+                placeholder="123ABC"
+                maxLength={6}
+                className="font-mono uppercase"
+              />
+              {formData.company_code && !isValidCompanyCode(formData.company_code) && (
+                <p className="text-xs text-destructive">Formato inválido. Use 3 números + 3 letras (ex: 123ABC)</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Plano de Licença</Label>
@@ -619,7 +659,7 @@ const Tenants = () => {
             <Button variant="outline" onClick={() => { setIsCreateOpen(false); resetForm(); }}>
               Cancelar
             </Button>
-            <Button onClick={handleCreate} disabled={!formData.name || !formData.slug}>
+            <Button onClick={handleCreate} disabled={!formData.name || !formData.slug || !isValidCompanyCode(formData.company_code)}>
               Criar Cliente
             </Button>
           </DialogFooter>
