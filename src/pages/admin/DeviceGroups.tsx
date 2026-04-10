@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Layers, Edit, Trash2, Monitor, Tv, AlertTriangle, Link2, Loader2 } from "lucide-react";
+import { Plus, Layers, Edit, Trash2, Monitor, Tv, AlertTriangle, Link2, Loader2, Star } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageShell } from "@/components/layout/PageShell";
@@ -58,6 +59,7 @@ const DeviceGroupsPage = () => {
     description: null,
     store_id: null,
     screen_type: "tv",
+    is_default: false,
   });
 
   const {
@@ -174,6 +176,7 @@ const DeviceGroupsPage = () => {
       description: null,
       store_id: null,
       screen_type: "tv",
+      is_default: false,
     });
   };
 
@@ -184,6 +187,7 @@ const DeviceGroupsPage = () => {
       description: group.description,
       store_id: group.store_id,
       screen_type: group.screen_type,
+      is_default: group.is_default || false,
     });
   };
 
@@ -240,6 +244,17 @@ const DeviceGroupsPage = () => {
           </SelectContent>
         </Select>
       </div>
+      <div className="flex items-center space-x-2 pt-2">
+        <Checkbox
+          id="is_default"
+          checked={formData.is_default || false}
+          onCheckedChange={(checked) => setFormData({ ...formData, is_default: !!checked })}
+        />
+        <Label htmlFor="is_default" className="flex items-center gap-1.5 cursor-pointer">
+          <Star className="h-4 w-4 text-amber-500" />
+          Grupo padrão (novos dispositivos serão atribuídos automaticamente)
+        </Label>
+      </div>
     </div>
   );
 
@@ -256,6 +271,7 @@ const DeviceGroupsPage = () => {
                 <div className="flex items-center space-x-2">
                   <Layers className="w-5 h-5 text-primary" />
                   <CardTitle className="text-lg">{group.name}</CardTitle>
+                  {group.is_default && <Star className="w-4 h-4 text-amber-500 fill-amber-500" />}
                 </div>
                 <Badge variant="outline" className="flex items-center gap-1">
                   <ScreenIcon className="w-3 h-3" />
