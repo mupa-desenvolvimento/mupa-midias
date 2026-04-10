@@ -453,14 +453,6 @@ const WebViewPlayer = () => {
     }
   }, [items, activeMedia, activePlayer]);
 
-  // Session availability check
-  if (deviceSession.status === "loading") {
-    return <LoadingScreen message="Verificando disponibilidade..." subMessage={`Dispositivo: ${deviceCode}`} />;
-  }
-  if (deviceSession.status === "blocked") {
-    return <ActiveSessionScreen deviceName={deviceSession.deviceName} message={deviceSession.errorMessage} />;
-  }
-
   // State screens
   if (isLoading && !deviceState) {
     return <LoadingScreen subMessage={`Dispositivo: ${deviceCode}`} />;
