@@ -176,6 +176,13 @@ export default function Companies() {
     await removeCompanyIntegration.mutateAsync(integrationId);
   };
 
+  const handleSetDefaultPlaylist = async (companyId: string, playlistId: string | null) => {
+    await updateCompany.mutateAsync({ 
+      id: companyId, 
+      default_playlist_id: playlistId 
+    });
+  };
+
   const handleDeleteCompany = async (company: Company) => {
     if (!confirm(`Tem certeza que deseja excluir a empresa "${company.name}"?`)) return;
     await deleteCompany.mutateAsync(company.id);
