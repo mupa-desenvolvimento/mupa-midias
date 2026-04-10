@@ -59,6 +59,7 @@ const DeviceGroupsPage = () => {
     description: null,
     store_id: null,
     screen_type: "tv",
+    is_default: false,
   });
 
   const {
@@ -242,6 +243,17 @@ const DeviceGroupsPage = () => {
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex items-center space-x-2 pt-2">
+        <Checkbox
+          id="is_default"
+          checked={formData.is_default || false}
+          onCheckedChange={(checked) => setFormData({ ...formData, is_default: !!checked })}
+        />
+        <Label htmlFor="is_default" className="flex items-center gap-1.5 cursor-pointer">
+          <Star className="h-4 w-4 text-amber-500" />
+          Grupo padrão (novos dispositivos serão atribuídos automaticamente)
+        </Label>
       </div>
     </div>
   );
