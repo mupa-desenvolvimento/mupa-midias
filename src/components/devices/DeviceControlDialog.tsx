@@ -31,9 +31,11 @@ import {
   Loader2,
   Send,
   X,
+  Users,
 } from "lucide-react";
 import { DeviceWithRelations } from "@/hooks/useDevices";
 import { useMediaItems } from "@/hooks/useMediaItems";
+import { useDeviceGroups } from "@/hooks/useDeviceGroups";
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
 import { ref, update } from "firebase/database";
