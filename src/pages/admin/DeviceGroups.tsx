@@ -187,7 +187,7 @@ const DeviceGroupsPage = () => {
       description: group.description,
       store_id: group.store_id,
       screen_type: group.screen_type,
-      is_default: (group as any).is_default || false,
+      is_default: group.is_default || false,
     });
   };
 
