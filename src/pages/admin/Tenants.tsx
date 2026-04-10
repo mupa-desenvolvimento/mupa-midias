@@ -150,6 +150,7 @@ const Tenants = () => {
     setFormData({
       name: tenant.name,
       slug: tenant.slug,
+      company_code: '',
       max_users: tenant.max_users || 50,
       max_devices: tenant.max_devices || 100,
       max_stores: tenant.max_stores || 500,

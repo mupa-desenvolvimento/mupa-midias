@@ -22,6 +22,7 @@ export interface Tenant {
 interface CreateTenantData {
   name: string;
   slug: string;
+  company_code?: string;
   max_users?: number;
   max_devices?: number;
   max_stores?: number;
@@ -127,6 +128,7 @@ export function useTenants() {
           slug: data.slug.toLowerCase().replace(/\s+/g, '-'),
           tenant_id: tenant.id,
           is_active: true,
+          ...(data.company_code ? { code: data.company_code } : {}),
         })
         .select()
         .single();
