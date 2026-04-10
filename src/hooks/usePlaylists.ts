@@ -19,6 +19,7 @@ export interface Playlist {
   priority: number;
   fallback_media_id: string | null;
   has_channels: boolean;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
   tenant_id?: string | null;
@@ -43,6 +44,7 @@ export interface PlaylistInsert {
   priority?: number;
   fallback_media_id?: string | null;
   has_channels?: boolean;
+  is_default?: boolean;
   tenant_id?: string | null;
 }
 

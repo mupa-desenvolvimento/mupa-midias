@@ -44,6 +44,7 @@ interface PlaylistSettingsProps {
     description: string | null;
     channel_id: string | null;
     is_active: boolean;
+    is_default: boolean;
     start_date: string | null;
     end_date: string | null;
     days_of_week: number[];
@@ -351,6 +352,19 @@ export const PlaylistSettings = ({
                 value={playlist.priority}
                 onChange={(e) => onChange({ priority: parseInt(e.target.value) || 5 })}
                 className="h-9"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="font-medium">Playlist padrão</Label>
+                <p className="text-xs text-muted-foreground">
+                  Atribuída automaticamente a novos dispositivos
+                </p>
+              </div>
+              <Switch
+                checked={playlist.is_default}
+                onCheckedChange={(checked) => onChange({ is_default: checked })}
               />
             </div>
 

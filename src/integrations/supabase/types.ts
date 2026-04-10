@@ -2799,6 +2799,7 @@ export type Database = {
           has_channels: boolean
           id: string
           is_active: boolean
+          is_default: boolean
           name: string
           priority: number | null
           schedule: Json | null
@@ -2819,6 +2820,7 @@ export type Database = {
           has_channels?: boolean
           id?: string
           is_active?: boolean
+          is_default?: boolean
           name: string
           priority?: number | null
           schedule?: Json | null
@@ -2839,6 +2841,7 @@ export type Database = {
           has_channels?: boolean
           id?: string
           is_active?: boolean
+          is_default?: boolean
           name?: string
           priority?: number | null
           schedule?: Json | null

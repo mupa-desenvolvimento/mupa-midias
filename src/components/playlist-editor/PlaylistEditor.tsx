@@ -27,6 +27,7 @@ interface PlaylistFormData {
   description: string | null;
   channel_id: string | null;
   is_active: boolean;
+  is_default: boolean;
   start_date: string | null;
   end_date: string | null;
   days_of_week: number[];
@@ -93,6 +94,7 @@ export const PlaylistEditor = () => {
     description: null,
     channel_id: null,
     is_active: true,
+    is_default: false,
     start_date: null,
     end_date: null,
     days_of_week: [0, 1, 2, 3, 4, 5, 6],
@@ -111,6 +113,7 @@ export const PlaylistEditor = () => {
         description: existingPlaylist.description,
         channel_id: existingPlaylist.channel_id,
         is_active: existingPlaylist.is_active,
+        is_default: existingPlaylist.is_default ?? false,
         start_date: (schedule?.start_date as string) || null,
         end_date: (schedule?.end_date as string) || null,
         days_of_week: (schedule?.days_of_week as number[]) || [0, 1, 2, 3, 4, 5, 6],
@@ -151,6 +154,7 @@ export const PlaylistEditor = () => {
       description: formData.description,
       channel_id: formData.channel_id,
       is_active: formData.is_active,
+      is_default: formData.is_default,
       schedule,
       content_scale: formData.content_scale,
       has_channels: true,
@@ -318,6 +322,7 @@ export const PlaylistEditor = () => {
       description: formData.description,
       channel_id: formData.channel_id,
       is_active: formData.is_active,
+      is_default: formData.is_default,
       schedule,
       content_scale: formData.content_scale,
       has_channels: playlistChannels.length > 0,
