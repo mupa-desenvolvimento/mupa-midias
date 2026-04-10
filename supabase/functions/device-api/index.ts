@@ -184,13 +184,14 @@ Deno.serve(async (req: Request) => {
         .maybeSingle()
 
       // 4. Registrar dispositivo via RPC
+      const deviceCode = serialNumber || androidId
       const { data: registerResult, error: registerError } = await supabase.rpc('register_device', {
-        p_device_code: serialNumber,
+        p_device_code: deviceCode,
         p_name: apelidoDispositivo,
-        p_store_id: store.id,
+        p_store_id: store?.id || null,
         p_company_id: company.id,
         p_group_id: defaultGroup?.id || null,
-        p_store_code: numFilial,
+        p_store_code: numFilial || null,
       })
 
       if (registerError) {
