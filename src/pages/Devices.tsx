@@ -740,7 +740,7 @@ const Devices = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       {device.camera_enabled && (
                         <Button
                           variant="ghost"
