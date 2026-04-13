@@ -944,6 +944,17 @@ const Devices = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DeviceDetailSheet
+        device={detailDevice}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={handleEditDevice}
+        onDelete={handleDeleteClick}
+        onControl={handleOpenControl}
+        onMonitor={handleOpenMonitor}
+        onUpdatePlaylist={handleSinglePlaylistUpdate}
+      />
     </PageShell>
   );
 };
