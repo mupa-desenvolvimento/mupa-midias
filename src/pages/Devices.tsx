@@ -623,7 +623,7 @@ const Devices = () => {
                         <TableCell className="text-sm">
                           {device.display_profile?.name || "Padrão"}
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0 truncate">
                               {device.api_integration?.name
