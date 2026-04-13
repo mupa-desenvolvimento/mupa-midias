@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -21,6 +21,10 @@ import {
   Lock,
   Settings2,
   Image,
+  CheckSquare,
+  Square,
+  ListMusic,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -66,11 +70,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type DeviceStatusFilter = "all" | "online" | "offline" | "pending";
 
 interface DeviceFilters {
   status: DeviceStatusFilter;
+  storeId: string;
+  playlistId: string;
 }
 
 const Devices = () => {
@@ -82,6 +89,9 @@ const Devices = () => {
   const [monitorDevice, setMonitorDevice] = useState<DeviceWithRelations | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deviceToDelete, setDeviceToDelete] = useState<DeviceWithRelations | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPlaylistId, setBulkPlaylistId] = useState<string>("");
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const { toast } = useToast();
   const { devices, isLoading, createDevice, updateDevice, deleteDevice, refetch } = useDevices();
   const { playlists } = usePlaylists();
@@ -95,25 +105,44 @@ const Devices = () => {
     setFilters,
     reset,
   } = useListState<DeviceFilters>({
-    initialFilters: { status: "all" },
-    initialPageSize: 12,
+    initialFilters: { status: "all", storeId: "all", playlistId: "all" },
+    initialPageSize: 25,
   });
+
+  // Derive unique stores and playlists for filter dropdowns
+  const storeOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    devices.forEach((d) => {
+      if (d.store?.id && d.store?.name) map.set(d.store.id, d.store.name);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [devices]);
+
+  const playlistOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    devices.forEach((d) => {
+      if (d.current_playlist?.id && d.current_playlist?.name)
+        map.set(d.current_playlist.id, d.current_playlist.name);
+    });
+    // Also include all available playlists
+    playlists.forEach((p: any) => {
+      if (p.id && p.name) map.set(p.id, p.name);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [devices, playlists]);
 
   const getDeviceStatus = (device: DeviceWithRelations) => {
     if (device.status === "pending" && !device.last_seen_at) return "pending";
-
     if (!device.last_seen_at) return "offline";
-
     const lastSeenDate = new Date(device.last_seen_at);
     const now = new Date();
     const diffInMinutes = differenceInMinutes(now, lastSeenDate);
-
     return diffInMinutes < 6 ? "online" : "offline";
   };
 
   const filteredDevices = useMemo(() => {
     const term = state.search.toLowerCase().trim();
-    const statusFilter = state.filters.status;
+    const { status: statusFilter, storeId, playlistId } = state.filters;
 
     return devices.filter((device) => {
       const matchesTerm =
@@ -125,7 +154,17 @@ const Devices = () => {
       const status = getDeviceStatus(device);
       const matchesStatus = statusFilter === "all" || status === statusFilter;
 
-      return matchesTerm && matchesStatus;
+      const matchesStore =
+        storeId === "all" ||
+        (storeId === "none" ? !device.store_id : device.store_id === storeId);
+
+      const matchesPlaylist =
+        playlistId === "all" ||
+        (playlistId === "none"
+          ? !device.current_playlist_id
+          : device.current_playlist_id === playlistId);
+
+      return matchesTerm && matchesStatus && matchesStore && matchesPlaylist;
     });
   }, [devices, state.search, state.filters]);
 
@@ -135,6 +174,71 @@ const Devices = () => {
     totalDevices === 0
       ? []
       : filteredDevices.slice(startIndex, startIndex + state.pageSize);
+
+  // Selection helpers
+  const allPageSelected = paginatedDevices.length > 0 && paginatedDevices.every((d) => selectedIds.has(d.id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (allPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paginatedDevices.forEach((d) => next.delete(d.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paginatedDevices.forEach((d) => next.add(d.id));
+        return next;
+      });
+    }
+  }, [allPageSelected, paginatedDevices]);
+
+  const selectAllFiltered = useCallback(() => {
+    setSelectedIds(new Set(filteredDevices.map((d) => d.id)));
+  }, [filteredDevices]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkPlaylistChange = useCallback(async () => {
+    if (!bulkPlaylistId || selectedIds.size === 0) return;
+    setBulkUpdating(true);
+    try {
+      const promises = Array.from(selectedIds).map((id) =>
+        updateDevice.mutateAsync({
+          id,
+          current_playlist_id: bulkPlaylistId === "__none__" ? null : bulkPlaylistId,
+        })
+      );
+      await Promise.all(promises);
+      toast({
+        title: "Playlist atualizada",
+        description: `${selectedIds.size} dispositivo(s) atualizado(s) com sucesso.`,
+      });
+      clearSelection();
+      setBulkPlaylistId("");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setBulkUpdating(false);
+    }
+  }, [bulkPlaylistId, selectedIds, updateDevice, toast, clearSelection]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -228,14 +332,28 @@ const Devices = () => {
     await updateDevice.mutateAsync({ id: device.id, price_integration_enabled: enabled });
   };
 
+  const activeFilterCount = [
+    state.filters.status !== "all",
+    state.filters.storeId !== "all",
+    state.filters.playlistId !== "all",
+    state.search.length > 0,
+  ].filter(Boolean).length;
+
   return (
     <PageShell
       className="animate-fade-in"
       header={
         <div className="flex items-center justify-between gap-4 py-4">
-          <p className="text-muted-foreground">
-            Gerencie todos os displays conectados
-          </p>
+          <div>
+            <p className="text-muted-foreground">
+              Gerencie todos os displays conectados
+            </p>
+            {activeFilterCount > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {totalDevices} de {devices.length} dispositivos
+              </p>
+            )}
+          </div>
           <Button className="gradient-primary text-white" onClick={handleAddDevice}>
             <Plus className="w-4 h-4 mr-2" />
             Adicionar Dispositivo
@@ -243,33 +361,119 @@ const Devices = () => {
         </div>
       }
       controls={
-        <div className="py-2">
+        <div className="space-y-2 py-2">
           <ListControls
             state={state}
             onSearchChange={setSearch}
             onViewChange={setView}
-            onClearFilters={reset}
+            onClearFilters={() => { reset(); clearSelection(); }}
           >
             <Select
               value={state.filters.status}
               onValueChange={(value) =>
-                setFilters({
-                  ...state.filters,
-                  status: value as DeviceStatusFilter,
-                })
+                setFilters({ ...state.filters, status: value as DeviceStatusFilter })
               }
             >
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">Todos Status</SelectItem>
                 <SelectItem value="online">Online</SelectItem>
                 <SelectItem value="offline">Offline</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select
+              value={state.filters.storeId}
+              onValueChange={(value) =>
+                setFilters({ ...state.filters, storeId: value })
+              }
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Loja" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Lojas</SelectItem>
+                <SelectItem value="none">Sem loja</SelectItem>
+                {storeOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={state.filters.playlistId}
+              onValueChange={(value) =>
+                setFilters({ ...state.filters, playlistId: value })
+              }
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Playlist" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Playlists</SelectItem>
+                <SelectItem value="none">Sem playlist</SelectItem>
+                {playlistOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </ListControls>
+
+          {/* Bulk action bar */}
+          {someSelected && (
+            <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <CheckSquare className="h-4 w-4 text-primary" />
+                <span>{selectedIds.size} selecionado(s)</span>
+              </div>
+
+              {selectedIds.size < filteredDevices.length && (
+                <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={selectAllFiltered}>
+                  Selecionar todos os {filteredDevices.length} filtrados
+                </Button>
+              )}
+
+              <div className="ml-auto flex items-center gap-2">
+                <Select value={bulkPlaylistId} onValueChange={setBulkPlaylistId}>
+                  <SelectTrigger className="w-[220px] h-8 text-sm">
+                    <ListMusic className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                    <SelectValue placeholder="Alterar playlist para..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Remover playlist</SelectItem>
+                    {playlistOptions.map(([id, name]) => (
+                      <SelectItem key={id} value={id}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  size="sm"
+                  disabled={!bulkPlaylistId || bulkUpdating}
+                  onClick={handleBulkPlaylistChange}
+                  className="h-8"
+                >
+                  {bulkUpdating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                  ) : null}
+                  Aplicar
+                </Button>
+
+                <Button variant="ghost" size="sm" className="h-8" onClick={clearSelection}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       }
       footer={
@@ -301,11 +505,11 @@ const Devices = () => {
                 Nenhum dispositivo encontrado
               </h3>
               <p className="max-w-md text-center text-muted-foreground">
-                {state.search
-                  ? "Nenhum dispositivo corresponde à sua busca."
+                {state.search || activeFilterCount > 0
+                  ? "Nenhum dispositivo corresponde aos filtros aplicados."
                   : "Adicione seu primeiro dispositivo para começar a gerenciar seus displays."}
               </p>
-              {!state.search && (
+              {!state.search && activeFilterCount === 0 && (
                 <Button className="mt-4" onClick={handleAddDevice}>
                   <Plus className="mr-2 h-4 w-4" />
                   Adicionar Primeiro Dispositivo
@@ -315,16 +519,23 @@ const Devices = () => {
           </Card>
         ) : state.view === "list" ? (
           <Card className="w-full">
-            <CardHeader>
-              <CardTitle>Visualização em lista</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Dispositivos</CardTitle>
               <CardDescription>
-                Dispositivos em formato de tabela com informações-chave
+                {totalDevices} dispositivo(s) encontrado(s)
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={allPageSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todos"
+                      />
+                    </TableHead>
                     <TableHead className="w-[120px]">ID</TableHead>
                     <TableHead>Dispositivo</TableHead>
                     <TableHead>Loja</TableHead>
@@ -332,7 +543,7 @@ const Devices = () => {
                     <TableHead>Último acesso</TableHead>
                     <TableHead>Playlist</TableHead>
                     <TableHead>Perfil</TableHead>
-                      <TableHead>Integração</TableHead>
+                    <TableHead>Integração</TableHead>
                     <TableHead>Resolução</TableHead>
                     <TableHead>Câmera IA</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -341,8 +552,19 @@ const Devices = () => {
                 <TableBody>
                   {paginatedDevices.map((device) => {
                     const currentStatus = getDeviceStatus(device);
+                    const isSelected = selectedIds.has(device.id);
                     return (
-                      <TableRow key={device.id}>
+                      <TableRow
+                        key={device.id}
+                        className={isSelected ? "bg-primary/5" : undefined}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelect(device.id)}
+                            aria-label={`Selecionar ${device.name}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-mono text-xs">
                           {device.device_code}
                         </TableCell>
@@ -455,14 +677,20 @@ const Devices = () => {
         ) : (
           paginatedDevices.map((device) => {
             const currentStatus = getDeviceStatus(device);
+            const isSelected = selectedIds.has(device.id);
             return (
               <Card
                 key={device.id}
-                className="transition-all duration-300 hover:shadow-lg"
+                className={`transition-all duration-300 hover:shadow-lg ${isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(device.id)}
+                        className="mt-1"
+                      />
                       <div className="relative">
                         <Monitor className="h-8 w-8 text-primary" />
                         <div
