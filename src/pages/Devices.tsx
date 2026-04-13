@@ -580,7 +580,8 @@ const Devices = () => {
                     return (
                       <TableRow
                         key={device.id}
-                        className={isSelected ? "bg-primary/5" : undefined}
+                        className={`cursor-pointer transition-colors ${isSelected ? "bg-primary/5" : "hover:bg-muted/50"}`}
+                        onClick={() => handleOpenDetail(device)}
                       >
                         <TableCell>
                           <Checkbox
