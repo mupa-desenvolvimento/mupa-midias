@@ -716,6 +716,7 @@ const Devices = () => {
                         checked={isSelected}
                         onCheckedChange={() => toggleSelect(device.id)}
                         className="mt-1"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
                       />
                       <div className="relative">
                         <Monitor className="h-8 w-8 text-primary" />
