@@ -37,6 +37,7 @@ export interface DeviceWithRelations extends Device {
   current_playlist?: { id: string; name: string } | null;
   price_check_integration?: { id: string; name: string } | null;
   api_integration?: { id: string; name: string } | null;
+  group?: { id: string; name: string } | null;
 }
 
 export interface DeviceInsert {
@@ -85,7 +86,8 @@ export const useDevices = () => {
         display_profile:display_profiles(id, name, resolution),
         current_playlist:playlists(id, name),
         price_check_integration:price_check_integrations(id, name),
-        api_integration:api_integrations(id, name)
+        api_integration:api_integrations(id, name),
+        group:device_groups(id, name)
       `;
 
       const fallbackSelectV2 = `
@@ -97,7 +99,8 @@ export const useDevices = () => {
         store:stores(id, name, code),
         company:companies(id, name, slug),
         display_profile:display_profiles(id, name, resolution),
-        current_playlist:playlists(id, name)
+        current_playlist:playlists(id, name),
+        group:device_groups(id, name)
       `;
 
       const fallbackSelect = `
@@ -108,7 +111,8 @@ export const useDevices = () => {
         store:stores(id, name, code),
         company:companies(id, name, slug),
         display_profile:display_profiles(id, name, resolution),
-        current_playlist:playlists(id, name)
+        current_playlist:playlists(id, name),
+        group:device_groups(id, name)
       `;
 
       // Get all company IDs for the tenant to filter devices properly
