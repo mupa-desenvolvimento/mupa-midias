@@ -654,7 +654,7 @@ const Devices = () => {
                             {device.camera_enabled ? "Ativa" : "Inativa"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
                             {device.camera_enabled && (
                               <Button
