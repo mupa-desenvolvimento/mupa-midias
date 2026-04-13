@@ -836,7 +836,7 @@ const Devices = () => {
                     <span className="text-sm text-muted-foreground">
                       Integração de Preço
                     </span>
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0" onClick={(e) => e.stopPropagation()}>
                       <span className="text-sm font-medium truncate">
                         {device.api_integration?.name ||
                           device.price_check_integration?.name ||
