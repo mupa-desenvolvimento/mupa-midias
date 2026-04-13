@@ -93,6 +93,8 @@ const Devices = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPlaylistId, setBulkPlaylistId] = useState<string>("");
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [detailDevice, setDetailDevice] = useState<DeviceWithRelations | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const { toast } = useToast();
   const { devices, isLoading, createDevice, updateDevice, deleteDevice, refetch } = useDevices();
   const { playlists } = usePlaylists();
