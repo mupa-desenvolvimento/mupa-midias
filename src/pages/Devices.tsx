@@ -706,7 +706,8 @@ const Devices = () => {
             return (
               <Card
                 key={device.id}
-                className={`transition-all duration-300 hover:shadow-lg ${isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}
+                className={`transition-all duration-300 hover:shadow-lg cursor-pointer ${isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}
+                onClick={() => handleOpenDetail(device)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
