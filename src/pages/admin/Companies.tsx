@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Building2, Plug2, Trash2, Edit, Settings, Eye, EyeOff, Loader2, Link2, Unlink2, Monitor, ListMusic } from "lucide-react";
+import { Plus, Building2, Plug2, Trash2, Edit, Settings, Eye, EyeOff, Loader2, Link2, Unlink2, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import type { Json } from "@/integrations/supabase/types";
 import { PageShell } from "@/components/layout/PageShell";
@@ -41,19 +41,6 @@ export default function Companies() {
     removeCompanyIntegration
   } = useCompanies();
 
-  // Fetch playlists for default playlist selector
-  const { data: playlists = [] } = useQuery({
-    queryKey: ["playlists-for-companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("playlists")
-        .select("id, name, tenant_id")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isIntegrationDialogOpen, setIsIntegrationDialogOpen] = useState(false);
