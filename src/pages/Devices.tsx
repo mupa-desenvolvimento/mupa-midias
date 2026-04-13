@@ -217,21 +217,33 @@ const Devices = () => {
 
   const handleBulkPlaylistChange = useCallback(async () => {
     if (!bulkPlaylistId || selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    const ids = Array.from(selectedIds);
+    const playlistValue = bulkPlaylistId === "__none__" ? null : bulkPlaylistId;
+
+    // Close the bar immediately and show background toast
     setBulkUpdating(true);
+    toast({
+      title: "Atualizando playlists...",
+      description: `Alterando ${count} dispositivo(s) em segundo plano.`,
+    });
+    clearSelection();
+    setBulkPlaylistId("");
+
     try {
-      const promises = Array.from(selectedIds).map((id) =>
-        updateDevice.mutateAsync({
-          id,
-          current_playlist_id: bulkPlaylistId === "__none__" ? null : bulkPlaylistId,
-        })
-      );
-      await Promise.all(promises);
+      const batchSize = 10;
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map((id) =>
+            updateDevice.mutateAsync({ id, current_playlist_id: playlistValue })
+          )
+        );
+      }
       toast({
         title: "Playlist atualizada",
-        description: `${selectedIds.size} dispositivo(s) atualizado(s) com sucesso.`,
+        description: `${count} dispositivo(s) atualizado(s) com sucesso.`,
       });
-      clearSelection();
-      setBulkPlaylistId("");
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar",
@@ -242,6 +254,15 @@ const Devices = () => {
       setBulkUpdating(false);
     }
   }, [bulkPlaylistId, selectedIds, updateDevice, toast, clearSelection]);
+
+  const handleOpenDetail = useCallback((device: DeviceWithRelations) => {
+    setDetailDevice(device);
+    setDetailOpen(true);
+  }, []);
+
+  const handleSinglePlaylistUpdate = useCallback(async (deviceId: string, playlistId: string | null) => {
+    await updateDevice.mutateAsync({ id: deviceId, current_playlist_id: playlistId });
+  }, [updateDevice]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
