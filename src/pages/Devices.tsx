@@ -39,6 +39,7 @@ import { ptBR } from "date-fns/locale";
 import { DeviceFormDialog } from "@/components/devices/DeviceFormDialog";
 import { DeviceControlDialog } from "@/components/devices/DeviceControlDialog";
 import { DeviceMonitorDialog } from "@/components/devices/DeviceMonitorDialog";
+import { DeviceDetailSheet } from "@/components/devices/DeviceDetailSheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,6 +93,8 @@ const Devices = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPlaylistId, setBulkPlaylistId] = useState<string>("");
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [detailDevice, setDetailDevice] = useState<DeviceWithRelations | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const { toast } = useToast();
   const { devices, isLoading, createDevice, updateDevice, deleteDevice, refetch } = useDevices();
   const { playlists } = usePlaylists();
@@ -214,21 +217,33 @@ const Devices = () => {
 
   const handleBulkPlaylistChange = useCallback(async () => {
     if (!bulkPlaylistId || selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    const ids = Array.from(selectedIds);
+    const playlistValue = bulkPlaylistId === "__none__" ? null : bulkPlaylistId;
+
+    // Close the bar immediately and show background toast
     setBulkUpdating(true);
+    toast({
+      title: "Atualizando playlists...",
+      description: `Alterando ${count} dispositivo(s) em segundo plano.`,
+    });
+    clearSelection();
+    setBulkPlaylistId("");
+
     try {
-      const promises = Array.from(selectedIds).map((id) =>
-        updateDevice.mutateAsync({
-          id,
-          current_playlist_id: bulkPlaylistId === "__none__" ? null : bulkPlaylistId,
-        })
-      );
-      await Promise.all(promises);
+      const batchSize = 10;
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map((id) =>
+            updateDevice.mutateAsync({ id, current_playlist_id: playlistValue })
+          )
+        );
+      }
       toast({
         title: "Playlist atualizada",
-        description: `${selectedIds.size} dispositivo(s) atualizado(s) com sucesso.`,
+        description: `${count} dispositivo(s) atualizado(s) com sucesso.`,
       });
-      clearSelection();
-      setBulkPlaylistId("");
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar",
@@ -239,6 +254,15 @@ const Devices = () => {
       setBulkUpdating(false);
     }
   }, [bulkPlaylistId, selectedIds, updateDevice, toast, clearSelection]);
+
+  const handleOpenDetail = useCallback((device: DeviceWithRelations) => {
+    setDetailDevice(device);
+    setDetailOpen(true);
+  }, []);
+
+  const handleSinglePlaylistUpdate = useCallback(async (deviceId: string, playlistId: string | null) => {
+    await updateDevice.mutateAsync({ id: deviceId, current_playlist_id: playlistId });
+  }, [updateDevice]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -556,9 +580,10 @@ const Devices = () => {
                     return (
                       <TableRow
                         key={device.id}
-                        className={isSelected ? "bg-primary/5" : undefined}
+                        className={`cursor-pointer transition-colors ${isSelected ? "bg-primary/5" : "hover:bg-muted/50"}`}
+                        onClick={() => handleOpenDetail(device)}
                       >
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => toggleSelect(device.id)}
@@ -598,7 +623,7 @@ const Devices = () => {
                         <TableCell className="text-sm">
                           {device.display_profile?.name || "Padrão"}
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0 truncate">
                               {device.api_integration?.name
@@ -629,7 +654,7 @@ const Devices = () => {
                             {device.camera_enabled ? "Ativa" : "Inativa"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
                             {device.camera_enabled && (
                               <Button
@@ -681,7 +706,8 @@ const Devices = () => {
             return (
               <Card
                 key={device.id}
-                className={`transition-all duration-300 hover:shadow-lg ${isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}
+                className={`transition-all duration-300 hover:shadow-lg cursor-pointer ${isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}
+                onClick={() => handleOpenDetail(device)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -690,6 +716,7 @@ const Devices = () => {
                         checked={isSelected}
                         onCheckedChange={() => toggleSelect(device.id)}
                         className="mt-1"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
                       />
                       <div className="relative">
                         <Monitor className="h-8 w-8 text-primary" />
@@ -713,7 +740,7 @@ const Devices = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       {device.camera_enabled && (
                         <Button
                           variant="ghost"
@@ -809,7 +836,7 @@ const Devices = () => {
                     <span className="text-sm text-muted-foreground">
                       Integração de Preço
                     </span>
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0" onClick={(e) => e.stopPropagation()}>
                       <span className="text-sm font-medium truncate">
                         {device.api_integration?.name ||
                           device.price_check_integration?.name ||
@@ -917,6 +944,17 @@ const Devices = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DeviceDetailSheet
+        device={detailDevice}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={handleEditDevice}
+        onDelete={handleDeleteClick}
+        onControl={handleOpenControl}
+        onMonitor={handleOpenMonitor}
+        onUpdatePlaylist={handleSinglePlaylistUpdate}
+      />
     </PageShell>
   );
 };
