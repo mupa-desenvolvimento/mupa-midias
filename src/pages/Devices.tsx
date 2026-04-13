@@ -809,10 +809,17 @@ const Devices = () => {
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Último acesso
+                      Última atualização
                     </span>
                     <span className="text-sm">
                       {formatLastSeen(device.last_seen_at)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Grupo</span>
+                    <span className="text-sm">
+                      {device.group?.name || "Sem grupo"}
                     </span>
                   </div>
 
@@ -855,7 +862,7 @@ const Devices = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  {/* <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
                       Câmera IA
                     </span>
@@ -871,7 +878,7 @@ const Devices = () => {
                     <span className="text-sm">
                       {device.display_profile?.name || "Padrão"}
                     </span>
-                  </div>
+                  </div> */}
 
                   <div className="border-t pt-3">
                     <div className="mb-2 text-xs text-muted-foreground">
