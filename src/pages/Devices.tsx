@@ -39,6 +39,7 @@ import { ptBR } from "date-fns/locale";
 import { DeviceFormDialog } from "@/components/devices/DeviceFormDialog";
 import { DeviceControlDialog } from "@/components/devices/DeviceControlDialog";
 import { DeviceMonitorDialog } from "@/components/devices/DeviceMonitorDialog";
+import { DeviceDetailSheet } from "@/components/devices/DeviceDetailSheet";
 import {
   AlertDialog,
   AlertDialogAction,
