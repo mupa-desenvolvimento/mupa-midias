@@ -563,13 +563,14 @@ const Devices = () => {
                     <TableHead className="w-[120px]">ID</TableHead>
                     <TableHead>Dispositivo</TableHead>
                     <TableHead>Loja</TableHead>
+                    <TableHead>Grupo</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Último acesso</TableHead>
+                    <TableHead>Última atualização</TableHead>
                     <TableHead>Playlist</TableHead>
-                    <TableHead>Perfil</TableHead>
+                    {/* <TableHead>Perfil</TableHead> */}
                     <TableHead>Integração</TableHead>
                     <TableHead>Resolução</TableHead>
-                    <TableHead>Câmera IA</TableHead>
+                    {/* <TableHead>Câmera IA</TableHead> */}
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -610,6 +611,9 @@ const Devices = () => {
                           {device.store?.name || "Sem loja"}
                         </TableCell>
                         <TableCell>
+                          {device.group?.name || "Sem grupo"}
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={getStatusVariant(currentStatus)}>
                             {getStatusLabel(currentStatus)}
                           </Badge>
@@ -620,9 +624,9 @@ const Devices = () => {
                         <TableCell>
                           {device.current_playlist?.name || "Nenhuma"}
                         </TableCell>
-                        <TableCell className="text-sm">
+                        {/* <TableCell className="text-sm">
                           {device.display_profile?.name || "Padrão"}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0 truncate">
@@ -645,7 +649,7 @@ const Devices = () => {
                             device.display_profile?.resolution ||
                             "-"}
                         </TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           <Badge
                             variant={
                               device.camera_enabled ? "default" : "secondary"
@@ -653,7 +657,7 @@ const Devices = () => {
                           >
                             {device.camera_enabled ? "Ativa" : "Inativa"}
                           </Badge>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
                             {device.camera_enabled && (
