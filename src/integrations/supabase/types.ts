@@ -73,7 +73,11 @@ export type Database = {
       api_integrations: {
         Row: {
           auth_body_json: Json
+          auth_body_text: string | null
+          auth_curl: string | null
+          auth_headers_json: Json | null
           auth_method: string | null
+          auth_query_params_json: Json | null
           auth_token_path: string | null
           auth_type: string
           auth_url: string | null
@@ -86,10 +90,16 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          request_body_json: Json | null
+          request_body_text: string | null
+          request_curl: string | null
           request_headers_json: Json
           request_method: string | null
           request_params_json: Json
+          request_query_params_json: Json | null
           request_url: string | null
+          request_variables_json: Json | null
+          response_data_path: string | null
           response_mapping_json: Json
           slug: string
           store_param_name: string | null
@@ -100,7 +110,11 @@ export type Database = {
         }
         Insert: {
           auth_body_json?: Json
+          auth_body_text?: string | null
+          auth_curl?: string | null
+          auth_headers_json?: Json | null
           auth_method?: string | null
+          auth_query_params_json?: Json | null
           auth_token_path?: string | null
           auth_type?: string
           auth_url?: string | null
@@ -113,10 +127,16 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          request_body_json?: Json | null
+          request_body_text?: string | null
+          request_curl?: string | null
           request_headers_json?: Json
           request_method?: string | null
           request_params_json?: Json
+          request_query_params_json?: Json | null
           request_url?: string | null
+          request_variables_json?: Json | null
+          response_data_path?: string | null
           response_mapping_json?: Json
           slug: string
           store_param_name?: string | null
@@ -127,7 +147,11 @@ export type Database = {
         }
         Update: {
           auth_body_json?: Json
+          auth_body_text?: string | null
+          auth_curl?: string | null
+          auth_headers_json?: Json | null
           auth_method?: string | null
+          auth_query_params_json?: Json | null
           auth_token_path?: string | null
           auth_type?: string
           auth_url?: string | null
@@ -140,10 +164,16 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          request_body_json?: Json | null
+          request_body_text?: string | null
+          request_curl?: string | null
           request_headers_json?: Json
           request_method?: string | null
           request_params_json?: Json
+          request_query_params_json?: Json | null
           request_url?: string | null
+          request_variables_json?: Json | null
+          response_data_path?: string | null
           response_mapping_json?: Json
           slug?: string
           store_param_name?: string | null
