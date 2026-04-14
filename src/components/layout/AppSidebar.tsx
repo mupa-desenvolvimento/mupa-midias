@@ -96,7 +96,7 @@ const superAdminItems = [
 { title: "Hierarquia", url: "/admin/enterprise/hierarchy", icon: MapPin },
 { title: "Relatórios", url: "/admin/enterprise/reports", icon: BarChart3 },
 { title: "Integrações", url: "/admin/integrations", icon: Link },
-{ title: "Price API Integrations", url: "/admin/api-integrations", icon: Link },
+{ title: "Mapeamento de Preços", url: "/admin/api-integrations", icon: Link },
 { title: "Logs", url: "/admin/logs", icon: Eye }];
 
 

@@ -33,7 +33,7 @@ const Header = () => {
       case "/admin/tenants": return "Tenants";
       case "/admin/monitoring": return "Monitoramento";
       default:
-        if (path.startsWith("/admin/api-integrations")) return "Price API Integrations";
+        if (path.startsWith("/admin/api-integrations")) return "Mapeamento de Preços";
         if (path.startsWith("/admin/auto-content/")) return "Conteúdo Automático";
         if (path.includes("/playlists/") && path.includes("/edit")) return "Editor de Playlist";
         return "Painel Administrativo";
