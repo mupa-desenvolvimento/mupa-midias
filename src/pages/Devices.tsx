@@ -611,7 +611,17 @@ const Devices = () => {
                           {device.store?.name || "Sem loja"}
                         </TableCell>
                         <TableCell>
-                          {device.group?.name || "Sem grupo"}
+                          {device.groups && device.groups.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {device.groups.map((g) => (
+                                <Badge key={g.id} variant="outline" className="text-[10px]">
+                                  {g.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            device.group?.name || "Sem grupo"
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={getStatusVariant(currentStatus)}>

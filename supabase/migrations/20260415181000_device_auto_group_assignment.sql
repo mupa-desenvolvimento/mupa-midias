@@ -11,12 +11,12 @@ DECLARE
 BEGIN
   -- 1. Identify tenant from company
   IF NEW.company_id IS NOT NULL THEN
-    SELECT tenant_id INTO v_tenant_id FROM public.companies WHERE id = NEW.company_id;
+    SELECT tenant_id INTO v_tenant_id FROM public.companies WHERE companies.id = NEW.company_id;
   END IF;
 
   -- 2. If not found, try from store
   IF v_tenant_id IS NULL AND NEW.store_id IS NOT NULL THEN
-    SELECT tenant_id INTO v_tenant_id FROM public.stores WHERE id = NEW.store_id;
+    SELECT tenant_id INTO v_tenant_id FROM public.stores WHERE stores.id = NEW.store_id;
   END IF;
 
   -- 3. If we have a tenant, find the "Grupo Padrão" in the new groups table

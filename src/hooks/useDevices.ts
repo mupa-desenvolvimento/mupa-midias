@@ -38,6 +38,7 @@ export interface DeviceWithRelations extends Device {
   price_check_integration?: { id: string; name: string } | null;
   api_integration?: { id: string; name: string } | null;
   group?: { id: string; name: string } | null;
+  groups?: { id: string; name: string }[];
 }
 
 export interface DeviceInsert {
@@ -87,7 +88,10 @@ export const useDevices = () => {
         current_playlist:playlists(id, name),
         price_check_integration:price_check_integrations(id, name),
         api_integration:api_integrations(id, name),
-        group:device_groups(id, name)
+        group:device_groups(id, name),
+        group_devices(
+          group:groups(id, name)
+        )
       `;
 
       const fallbackSelectV2 = `
@@ -100,7 +104,10 @@ export const useDevices = () => {
         company:companies(id, name, slug),
         display_profile:display_profiles(id, name, resolution),
         current_playlist:playlists(id, name),
-        group:device_groups(id, name)
+        group:device_groups(id, name),
+        group_devices(
+          group:groups(id, name)
+        )
       `;
 
       const fallbackSelect = `
@@ -112,7 +119,10 @@ export const useDevices = () => {
         company:companies(id, name, slug),
         display_profile:display_profiles(id, name, resolution),
         current_playlist:playlists(id, name),
-        group:device_groups(id, name)
+        group:device_groups(id, name),
+        group_devices(
+          group:groups(id, name)
+        )
       `;
 
       // Get all company IDs for the tenant to filter devices properly
@@ -183,15 +193,27 @@ export const useDevices = () => {
 
       if (queryError) throw queryError;
       
-      const transformedData = (data || []).map((device: any) => ({
-        ...device,
-        price_check_integration: Array.isArray(device.price_check_integration) 
-          ? device.price_check_integration[0] 
-          : device.price_check_integration,
-        api_integration: Array.isArray(device.api_integration)
-          ? device.api_integration[0]
-          : device.api_integration
-      }));
+      const transformedData = (data || []).map((device: any) => {
+        // Handle multiple groups from group_devices
+        const groups = (device.group_devices || [])
+          .map((gd: any) => gd.group)
+          .filter(Boolean);
+        
+        // For backward compatibility, use the first group as 'group'
+        const primaryGroup = groups.length > 0 ? groups[0] : device.group;
+
+        return {
+          ...device,
+          group: primaryGroup,
+          groups: groups,
+          price_check_integration: Array.isArray(device.price_check_integration) 
+            ? device.price_check_integration[0] 
+            : device.price_check_integration,
+          api_integration: Array.isArray(device.api_integration)
+            ? device.api_integration[0]
+            : device.api_integration
+        };
+      });
 
       return transformedData as DeviceWithRelations[];
     },
