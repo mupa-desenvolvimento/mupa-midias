@@ -183,7 +183,7 @@ const GroupsPage = () => {
 
   if (isLoading) {
     return (
-      <PageShell title="Grupos" description="Gerencie a estrutura hierárquica de grupos e playlists">
+      <PageShell header={<div><h1 className="text-2xl font-bold">Grupos</h1><p className="text-muted-foreground text-sm">Gerencie a estrutura hierárquica de grupos e playlists</p></div>}>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -193,13 +193,17 @@ const GroupsPage = () => {
 
   return (
     <PageShell 
-      title="Grupos" 
-      description="Gerencie a estrutura hierárquica de grupos e playlists"
-      actions={
-        <Button onClick={() => handleOpenCreate()} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Criar Grupo
-        </Button>
+      header={
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Grupos</h1>
+            <p className="text-muted-foreground text-sm">Gerencie a estrutura hierárquica de grupos e playlists</p>
+          </div>
+          <Button onClick={() => handleOpenCreate()} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Criar Grupo
+          </Button>
+        </div>
       }
     >
       <div className="space-y-4">
