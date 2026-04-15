@@ -31,6 +31,7 @@ import Stores from "./pages/admin/Stores";
 import { NewsModule } from "./pages/admin/news/NewsModule";
 import StoresMap from "./pages/admin/StoresMap";
 import EnterpriseManager from "./pages/admin/EnterpriseManager";
+import Groups from "./pages/admin/Groups";
 import RetailMedia from "./pages/RetailMedia";
 import Playlists from "./pages/admin/Playlists";
 import PlaylistEditorPage from "./pages/admin/PlaylistEditor";
@@ -189,6 +190,7 @@ function AppContent() {
                         <Route path="devices" element={<Devices />} />
                         <Route path="stores" element={<Stores />} />
                         <Route path="regions" element={<EnterpriseManager />} />
+                        <Route path="groups" element={<Groups />} />
                         <Route path="playlists" element={<Playlists />} />
                         <Route path="playlists/:id/edit" element={<PlaylistEditorPage />} />
                         <Route path="playlists/new" element={<PlaylistEditorPage />} />
