@@ -9,6 +9,7 @@ import { kioskService } from "@/modules/kiosk-controller";
 const PlayerDevice = () => {
   const [searchParams] = useSearchParams();
   const deviceId = searchParams.get("id");
+
   // Initialize Services (Push & Kiosk)
   useEffect(() => {
     if (deviceId) {
@@ -25,7 +26,9 @@ const PlayerDevice = () => {
   const {
     deviceState,
     isLoading,
+    isSyncing,
     syncError,
+    downloadProgress,
     getActiveItems,
     syncWithServer,
   } = useOfflinePlayer(deviceId || "");
@@ -57,20 +60,17 @@ const PlayerDevice = () => {
   useEffect(() => {
     if (!currentMedia) return;
 
-    // Reset progress
     setProgress(0);
 
     const startTime = Date.now();
     const durationMs = duration * 1000;
 
-    // Progress Interval
     const progressInterval = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const pct = Math.min((elapsed / durationMs) * 100, 100);
       setProgress(pct);
     }, 100);
 
-    // Next Item Timeout
     const nextTimeout = setTimeout(() => {
       if (items.length > 1 && !overrideMedia) {
         setCurrentIndex((prev) => (prev + 1) % items.length);
@@ -104,12 +104,19 @@ const PlayerDevice = () => {
     );
   }
 
-  // 2. Loading
+  // 2. Loading / Syncing
   if (isLoading && !deviceState) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
         <Loader2 className="w-12 h-12 animate-spin text-purple-500 mb-4" />
-        <p className="text-white/60">Carregando Player...</p>
+        <p className="text-white/60">
+          {isSyncing && downloadProgress.total > 0
+            ? `Baixando mídia ${downloadProgress.downloaded + 1}/${downloadProgress.total}...`
+            : "Carregando Player..."}
+        </p>
+        {downloadProgress.current && (
+          <p className="text-xs text-white/30 mt-1">{downloadProgress.current}</p>
+        )}
         <p className="text-xs text-white/30 font-mono mt-2">{deviceId}</p>
       </div>
     );
@@ -131,12 +138,6 @@ const PlayerDevice = () => {
                     {syncError}
                 </div>
             )}
-            <button 
-                onClick={syncWithServer}
-                className="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm font-medium transition-colors"
-            >
-                Forçar Sincronização
-            </button>
         </div>
       </div>
     );
@@ -165,7 +166,7 @@ const PlayerDevice = () => {
         />
       )}
 
-      {/* Progress Bar (Debug/Visual Feedback) */}
+      {/* Progress Bar */}
       <div className="absolute bottom-0 left-0 w-full h-1 bg-white/10 z-50">
         <div 
             className="h-full bg-purple-500 transition-all duration-100 ease-linear"
