@@ -249,7 +249,8 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Enterprise section */}
+        {/* Enterprise section - HIDDEN per request */}
+        {/*
         {!isLite && (
         <SidebarGroup>
           <Collapsible defaultOpen={isEnterpriseActive}>
@@ -275,6 +276,7 @@ const AppSidebar = () => {
           </Collapsible>
         </SidebarGroup>
         )}
+        */}
         {isSectionAllowed('auto_content') &&
         <SidebarGroup>
           <Collapsible defaultOpen={isAutoContentActive}>
