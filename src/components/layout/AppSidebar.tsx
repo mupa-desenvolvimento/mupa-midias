@@ -60,6 +60,7 @@ const menuItems = [
 { title: "Dashboard", url: "/admin/dashboard", icon: Grid2x2 },
 { title: "Playlists", url: "/admin/playlists", icon: ListVideo },
 { title: "Grupos", url: "/admin/groups", icon: Layers },
+{ title: "Dispositivos", url: "/admin/devices", icon: Monitor },
 { title: "Galeria", url: "/admin/media", icon: Image },
 { title: "Creator Img", url: "/admin/graphic-editor", icon: Palette },
 { title: "Canva", url: "/admin/canva", icon: Brush },
