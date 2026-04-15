@@ -1881,6 +1881,42 @@ export type Database = {
           },
         ]
       }
+      group_devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          group_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          group_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_devices_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_devices_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string
