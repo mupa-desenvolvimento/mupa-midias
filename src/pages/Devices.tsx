@@ -299,8 +299,13 @@ const Devices = () => {
   };
 
   const openDevicePlayer = (deviceCode: string) => {
-    const deviceUrl = `/play/${deviceCode}`;
-    window.open(deviceUrl, '_blank');
+    const width = window.screen.availWidth;
+    const height = window.screen.availHeight;
+    window.open(
+      `/play/${deviceCode}`,
+      `player_${deviceCode}`,
+      `width=${width},height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no`
+    );
   };
 
   const formatLastSeen = (lastSeen: string | null) => {

@@ -92,7 +92,13 @@ export const DeviceDetailSheet = ({
   };
 
   const openDevicePlayer = () => {
-    window.open(`/play/${device.device_code}`, "_blank");
+    const width = window.screen.availWidth;
+    const height = window.screen.availHeight;
+    window.open(
+      `/play/${device.device_code}`,
+      `player_${device.device_code}`,
+      `width=${width},height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no`
+    );
   };
 
   const handlePlaylistChange = async (value: string) => {
