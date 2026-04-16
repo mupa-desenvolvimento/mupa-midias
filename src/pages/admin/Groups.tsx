@@ -294,17 +294,18 @@ const GroupsPage = () => {
   const segmentGroupName = segmentGroupId ? groups.find(g => g.id === segmentGroupId)?.name : "";
 
   return (
-    <PageShell
-      header={
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Grupos</h1>
-            <p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p>
+    <div className="h-full w-full overflow-y-auto custom-scrollbar">
+      <PageShell
+        header={
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Grupos</h1>
+              <p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        }
+      >
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4" />Grupos</TabsTrigger>
@@ -718,7 +719,8 @@ const GroupsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </PageShell>
+      </PageShell>
+    </div>
   );
 };
 

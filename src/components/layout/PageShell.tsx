@@ -17,20 +17,20 @@ export const PageShell = ({
   className,
 }: PageShellProps) => {
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
-      <div className="shrink-0 animate-fade-in">
+    <div className={cn("space-y-6 pb-10", className)}>
+      <div className="animate-fade-in">
         {header}
       </div>
       {controls && (
-        <div className="shrink-0">
+        <div>
           {controls}
         </div>
       )}
-      <div className="flex-1 min-h-0">
+      <div className="w-full">
         {children}
       </div>
       {footer && (
-        <div className="shrink-0">
+        <div className="pt-4">
           {footer}
         </div>
       )}
