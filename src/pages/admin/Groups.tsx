@@ -3,6 +3,8 @@ import { useGroups, GroupWithDetails } from "@/hooks/useGroups";
 import { useGroupDevices } from "@/hooks/useGroupDevices";
 import { useDevices } from "@/hooks/useDevices";
 import { usePlaylists } from "@/hooks/usePlaylists";
+import { useStores } from "@/hooks/useStores";
+import { useStoreInternalGroups } from "@/hooks/useStoreInternalGroups";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +14,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Folder, Edit, Trash2, Link2, ChevronRight, ChevronDown, Loader2, Monitor, X, Search } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Folder, Edit, Trash2, Link2, ChevronRight, ChevronDown, Loader2, Monitor, X, Search, Store, Globe, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// ===== Global Group Tree Item =====
 interface GroupItemProps {
   group: GroupWithDetails;
   level: number;
@@ -23,15 +28,19 @@ interface GroupItemProps {
   onDelete: (id: string) => void;
   onCreateSubgroup: (parentId: string) => void;
   onLinkDevice: (groupId: string) => void;
+  onLinkInternalGroups: (groupId: string) => void;
   getDevicesForGroup: (groupId: string) => { id: string; device_id: string; device?: { id: string; name: string; device_code: string; status: string } | null }[];
   onUnlinkDevice: (groupId: string, deviceId: string) => void;
+  getTargetsForGlobalGroup: (groupId: string) => any[];
+  onRemoveTarget: (targetId: string) => void;
 }
 
-const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup, onLinkDevice, getDevicesForGroup, onUnlinkDevice }: GroupItemProps) => {
+const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup, onLinkDevice, onLinkInternalGroups, getDevicesForGroup, onUnlinkDevice, getTargetsForGlobalGroup, onRemoveTarget }: GroupItemProps) => {
   const [expanded, setExpanded] = useState(true);
   const children = allGroups.filter(g => g.parent_id === group.id);
   const hasChildren = children.length > 0;
   const linkedDevices = getDevicesForGroup(group.id);
+  const targets = getTargetsForGlobalGroup(group.id);
 
   const getEffectivePlaylist = (g: GroupWithDetails): { name: string; isInherited: boolean } => {
     if (g.playlist) return { name: g.playlist.name, isInherited: false };
@@ -43,31 +52,19 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
   };
 
   const { name: effectivePlaylistName, isInherited } = getEffectivePlaylist(group);
+  const hasContent = hasChildren || linkedDevices.length > 0 || targets.length > 0;
 
   return (
     <div className="w-full">
-      <div 
-        className={cn(
-          "flex flex-col gap-3 p-4 rounded-xl border bg-card hover:shadow-md transition-all mb-3",
-          level > 0 && "ml-4 sm:ml-8"
-        )}
-      >
+      <div className={cn("flex flex-col gap-3 p-4 rounded-xl border bg-card hover:shadow-md transition-all mb-3", level > 0 && "ml-4 sm:ml-8")}>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <button 
-              onClick={() => setExpanded(!expanded)}
-              className={cn(
-                "p-1.5 hover:bg-accent rounded-full transition-all flex items-center justify-center", 
-                !hasChildren && !linkedDevices.length && "invisible"
-              )}
-            >
+            <button onClick={() => setExpanded(!expanded)} className={cn("p-1.5 hover:bg-accent rounded-full transition-all flex items-center justify-center", !hasContent && "invisible")}>
               {expanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
             </button>
-            
             <div className="p-2 bg-muted/50 rounded-lg">
-              <Folder className="w-5 h-5 text-primary shrink-0" />
+              <Globe className="w-5 h-5 text-primary shrink-0" />
             </div>
-            
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-base truncate">{group.name}</span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -79,33 +76,48 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
 
           <div className="flex flex-wrap items-center gap-2 ml-auto">
             {linkedDevices.length > 0 && (
-              <Badge variant="outline" className="gap-1 text-xs">
-                <Monitor className="w-3 h-3" />
-                {linkedDevices.length} dispositivo{linkedDevices.length > 1 ? 's' : ''}
-              </Badge>
+              <Badge variant="outline" className="gap-1 text-xs"><Monitor className="w-3 h-3" />{linkedDevices.length} disp.</Badge>
             )}
-
+            {targets.length > 0 && (
+              <Badge variant="outline" className="gap-1 text-xs border-primary/30 text-primary"><Store className="w-3 h-3" />{targets.length} segmento(s)</Badge>
+            )}
             <Button variant="secondary" size="sm" onClick={() => onCreateSubgroup(group.id)} className="gap-2 h-9 px-4">
-              <Plus className="w-4 h-4" />
-              <span className="hidden md:inline font-medium">Criar subgrupo</span>
+              <Plus className="w-4 h-4" /><span className="hidden md:inline font-medium">Subgrupo</span>
             </Button>
-
+            <Button variant="outline" size="sm" className="gap-2 h-9 px-4" onClick={() => onLinkInternalGroups(group.id)}>
+              <Package className="w-4 h-4" /><span className="hidden md:inline font-medium">Segmentar</span>
+            </Button>
             <Button variant="outline" size="sm" className="gap-2 h-9 px-4" onClick={() => onLinkDevice(group.id)}>
-              <Link2 className="w-4 h-4" />
-              <span className="hidden md:inline font-medium">Vincular</span>
+              <Link2 className="w-4 h-4" /><span className="hidden md:inline font-medium">Vincular</span>
             </Button>
-
             <div className="flex items-center gap-1 ml-1 border-l pl-3">
-              <Button variant="ghost" size="icon" onClick={() => onEdit(group)} className="h-9 w-9 hover:bg-primary/10 hover:text-primary">
-                <Edit className="w-4.5 h-4.5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => onDelete(group.id)} className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive">
-                <Trash2 className="w-4.5 h-4.5" />
-              </Button>
+              <Button variant="ghost" size="icon" onClick={() => onEdit(group)} className="h-9 w-9 hover:bg-primary/10 hover:text-primary"><Edit className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => onDelete(group.id)} className="h-9 w-9 text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
             </div>
           </div>
         </div>
 
+        {/* Targets (segmentos internos vinculados) */}
+        {expanded && targets.length > 0 && (
+          <div className="ml-12 pt-2 border-t border-dashed space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Segmentos vinculados</span>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {targets.map((t: any) => (
+                <div key={t.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+                  <Store className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-medium">{t.store_internal_group?.store?.name}</span>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t.store_internal_group?.name}</span>
+                  <button onClick={() => onRemoveTarget(t.id)} className="ml-1 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Direct devices */}
         {expanded && linkedDevices.length > 0 && (
           <div className="flex flex-wrap gap-2 ml-12 pt-1 border-t border-dashed">
             {linkedDevices.map(gd => (
@@ -113,9 +125,7 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
                 <Monitor className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="font-medium">{gd.device?.name || 'Dispositivo'}</span>
                 <span className="text-xs text-muted-foreground">({gd.device?.device_code})</span>
-                <Badge variant={gd.device?.status === 'active' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1.5">
-                  {gd.device?.status || 'pending'}
-                </Badge>
+                <Badge variant={gd.device?.status === 'active' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1.5">{gd.device?.status || 'pending'}</Badge>
                 <button onClick={() => onUnlinkDevice(group.id, gd.device_id)} className="ml-1 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -128,18 +138,7 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
       {expanded && hasChildren && (
         <div className="border-l-2 border-muted/20 ml-6 sm:ml-10 pl-2 sm:pl-4 transition-all">
           {children.map(child => (
-            <GroupItem 
-              key={child.id} 
-              group={child} 
-              level={level + 1} 
-              allGroups={allGroups}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onCreateSubgroup={onCreateSubgroup}
-              onLinkDevice={onLinkDevice}
-              getDevicesForGroup={getDevicesForGroup}
-              onUnlinkDevice={onUnlinkDevice}
-            />
+            <GroupItem key={child.id} group={child} level={level + 1} allGroups={allGroups} onEdit={onEdit} onDelete={onDelete} onCreateSubgroup={onCreateSubgroup} onLinkDevice={onLinkDevice} onLinkInternalGroups={onLinkInternalGroups} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={onUnlinkDevice} getTargetsForGlobalGroup={getTargetsForGlobalGroup} onRemoveTarget={onRemoveTarget} />
           ))}
         </div>
       )}
@@ -147,33 +146,54 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
   );
 };
 
+// ===== Main Page =====
 const GroupsPage = () => {
   const { groups, isLoading, createGroup, updateGroup, deleteGroup } = useGroups();
   const { devices } = useDevices();
   const { groupDevices, linkDevice, unlinkDevice, getDevicesForGroup } = useGroupDevices();
   const { playlists } = usePlaylists();
-  
+  const { stores } = useStores();
+  const {
+    internalGroups, createInternalGroup, createBulkInternalGroups, deleteInternalGroup,
+    linkDeviceToInternalGroup, unlinkDeviceFromInternalGroup, getDevicesForInternalGroup,
+    getTargetsForGlobalGroup, getInternalGroupsForStore, addGlobalGroupTarget, removeGlobalGroupTarget,
+  } = useStoreInternalGroups();
+
+  const [activeTab, setActiveTab] = useState("global");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingGroup, setEditingGroup] = useState<GroupWithDetails | null>(null);
   const [linkGroupId, setLinkGroupId] = useState<string | null>(null);
   const [deviceSearch, setDeviceSearch] = useState("");
-  
-  const [formData, setFormData] = useState({
-    name: "",
-    parent_id: "none",
-    playlist_id: "none",
-    inherit_playlist: true
-  });
+  const [segmentGroupId, setSegmentGroupId] = useState<string | null>(null);
+
+  // Internal group bulk creation
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkName, setBulkName] = useState("");
+  const [bulkSelectedStores, setBulkSelectedStores] = useState<string[]>([]);
+
+  // Internal group device linking
+  const [internalLinkGroupId, setInternalLinkGroupId] = useState<string | null>(null);
+  const [internalDeviceSearch, setInternalDeviceSearch] = useState("");
+
+  const [formData, setFormData] = useState({ name: "", parent_id: "none", playlist_id: "none", inherit_playlist: true });
 
   const rootGroups = useMemo(() => groups.filter(g => !g.parent_id), [groups]);
 
-  // Filter devices not already linked to this group
   const availableDevices = useMemo(() => {
     if (!linkGroupId) return [];
     const linkedIds = new Set(getDevicesForGroup(linkGroupId).map(gd => gd.device_id));
     return devices.filter(d => !linkedIds.has(d.id) && d.name.toLowerCase().includes(deviceSearch.toLowerCase()));
   }, [linkGroupId, devices, groupDevices, deviceSearch]);
+
+  // Devices available for internal group linking (only from same store)
+  const internalAvailableDevices = useMemo(() => {
+    if (!internalLinkGroupId) return [];
+    const ig = internalGroups.find(g => g.id === internalLinkGroupId);
+    if (!ig) return [];
+    const linkedIds = new Set(getDevicesForInternalGroup(internalLinkGroupId).map(d => d.device_id));
+    return devices.filter(d => d.store_id === ig.store_id && !linkedIds.has(d.id) && d.name.toLowerCase().includes(internalDeviceSearch.toLowerCase()));
+  }, [internalLinkGroupId, internalGroups, devices, internalDeviceSearch]);
 
   const handleOpenCreate = (parentId?: string) => {
     setEditingGroup(null);
@@ -183,22 +203,12 @@ const GroupsPage = () => {
 
   const handleEdit = (group: GroupWithDetails) => {
     setEditingGroup(group);
-    setFormData({
-      name: group.name,
-      parent_id: group.parent_id || "none",
-      playlist_id: group.playlist_id || "none",
-      inherit_playlist: !group.playlist_id
-    });
+    setFormData({ name: group.name, parent_id: group.parent_id || "none", playlist_id: group.playlist_id || "none", inherit_playlist: !group.playlist_id });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = () => {
-    const data = {
-      name: formData.name,
-      parent_id: formData.parent_id === "none" ? null : formData.parent_id,
-      playlist_id: formData.inherit_playlist ? null : (formData.playlist_id === "none" ? null : formData.playlist_id)
-    };
-
+    const data = { name: formData.name, parent_id: formData.parent_id === "none" ? null : formData.parent_id, playlist_id: formData.inherit_playlist ? null : (formData.playlist_id === "none" ? null : formData.playlist_id) };
     if (editingGroup) {
       updateGroup.mutate({ id: editingGroup.id, ...data }, { onSuccess: () => setIsDialogOpen(false) });
     } else {
@@ -215,158 +225,360 @@ const GroupsPage = () => {
     unlinkDevice.mutate({ groupId, deviceId });
   };
 
+  // Segmentation dialog: selected internal groups for the global group
+  const [segmentSelections, setSegmentSelections] = useState<Set<string>>(new Set());
+
+  const handleOpenSegment = (groupId: string) => {
+    setSegmentGroupId(groupId);
+    const existing = getTargetsForGlobalGroup(groupId).map(t => t.store_internal_group_id);
+    setSegmentSelections(new Set(existing));
+  };
+
+  const handleToggleSegment = (internalGroupId: string) => {
+    setSegmentSelections(prev => {
+      const next = new Set(prev);
+      if (next.has(internalGroupId)) next.delete(internalGroupId);
+      else next.add(internalGroupId);
+      return next;
+    });
+  };
+
+  const handleSaveSegments = async () => {
+    if (!segmentGroupId) return;
+    const existing = getTargetsForGlobalGroup(segmentGroupId);
+    const existingIds = new Set(existing.map(t => t.store_internal_group_id));
+
+    // Add new
+    for (const id of segmentSelections) {
+      if (!existingIds.has(id)) {
+        await addGlobalGroupTarget.mutateAsync({ groupId: segmentGroupId, storeInternalGroupId: id });
+      }
+    }
+    // Remove old
+    for (const t of existing) {
+      if (!segmentSelections.has(t.store_internal_group_id)) {
+        await removeGlobalGroupTarget.mutateAsync(t.id);
+      }
+    }
+    setSegmentGroupId(null);
+  };
+
+  // Stores grouped for segmentation dialog
+  const storesWithInternalGroups = useMemo(() => {
+    return stores.map(s => ({
+      ...s,
+      internalGroups: getInternalGroupsForStore(s.id),
+    })).filter(s => s.internalGroups.length > 0);
+  }, [stores, internalGroups]);
+
   if (isLoading) {
     return (
-      <PageShell header={<div><h1 className="text-2xl font-bold">Grupos</h1><p className="text-muted-foreground text-sm">Gerencie a estrutura hierárquica de grupos e playlists</p></div>}>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+      <PageShell header={<div><h1 className="text-2xl font-bold">Grupos</h1><p className="text-muted-foreground text-sm">Gerencie grupos globais e segmentação por loja</p></div>}>
+        <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       </PageShell>
     );
   }
 
   const linkGroupName = linkGroupId ? groups.find(g => g.id === linkGroupId)?.name : "";
+  const segmentGroupName = segmentGroupId ? groups.find(g => g.id === segmentGroupId)?.name : "";
 
   return (
-    <PageShell 
+    <PageShell
       header={
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Grupos</h1>
-            <p className="text-muted-foreground text-sm">Gerencie a estrutura hierárquica de grupos e playlists</p>
+            <p className="text-muted-foreground text-sm">Gerencie grupos globais e segmentação por loja</p>
           </div>
-          <Button onClick={() => handleOpenCreate()} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Criar Grupo
-          </Button>
         </div>
       }
     >
-      <div className="space-y-4">
-        {rootGroups.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center h-64 text-center">
-              <Folder className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-              <h3 className="text-lg font-medium">Nenhum grupo encontrado</h3>
-              <p className="text-muted-foreground mb-4">Comece criando o primeiro grupo da sua estrutura.</p>
-              <Button onClick={() => handleOpenCreate()}>Criar Primeiro Grupo</Button>
-            </CardContent>
-          </Card>
-        ) : (
-          rootGroups.map(group => (
-            <GroupItem 
-              key={group.id} 
-              group={group} 
-              level={0} 
-              allGroups={groups}
-              onEdit={handleEdit}
-              onDelete={setDeleteId}
-              onCreateSubgroup={handleOpenCreate}
-              onLinkDevice={id => { setLinkGroupId(id); setDeviceSearch(""); }}
-              getDevicesForGroup={getDevicesForGroup}
-              onUnlinkDevice={handleUnlinkDevice}
-            />
-          ))
-        )}
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4" />Grupos Globais</TabsTrigger>
+            <TabsTrigger value="internal" className="gap-2"><Store className="w-4 h-4" />Grupos Internos (Loja)</TabsTrigger>
+          </TabsList>
 
-      {/* Create/Edit Group Dialog */}
+          {activeTab === "global" && (
+            <Button onClick={() => handleOpenCreate()} className="gap-2"><Plus className="w-4 h-4" />Criar Grupo Global</Button>
+          )}
+          {activeTab === "internal" && (
+            <Button onClick={() => { setBulkDialogOpen(true); setBulkName(""); setBulkSelectedStores([]); }} className="gap-2"><Plus className="w-4 h-4" />Criar Grupo Interno</Button>
+          )}
+        </div>
+
+        {/* === GLOBAL GROUPS TAB === */}
+        <TabsContent value="global" className="space-y-4">
+          {rootGroups.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+                <Globe className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
+                <h3 className="text-lg font-medium">Nenhum grupo global encontrado</h3>
+                <p className="text-muted-foreground mb-4">Crie grupos globais para agrupar segmentos de lojas.</p>
+                <Button onClick={() => handleOpenCreate()}>Criar Primeiro Grupo</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            rootGroups.map(group => (
+              <GroupItem key={group.id} group={group} level={0} allGroups={groups} onEdit={handleEdit} onDelete={setDeleteId} onCreateSubgroup={handleOpenCreate} onLinkDevice={id => { setLinkGroupId(id); setDeviceSearch(""); }} onLinkInternalGroups={handleOpenSegment} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={handleUnlinkDevice} getTargetsForGlobalGroup={getTargetsForGlobalGroup} onRemoveTarget={(id) => removeGlobalGroupTarget.mutate(id)} />
+            ))
+          )}
+        </TabsContent>
+
+        {/* === INTERNAL GROUPS TAB === */}
+        <TabsContent value="internal" className="space-y-4">
+          {stores.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+                <Store className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
+                <h3 className="text-lg font-medium">Nenhuma loja cadastrada</h3>
+                <p className="text-muted-foreground">Cadastre lojas primeiro para criar grupos internos.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            stores.map(store => {
+              const storeGroups = getInternalGroupsForStore(store.id);
+              return (
+                <Card key={store.id} className="overflow-hidden">
+                  <div className="p-4 border-b bg-muted/30 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Store className="w-5 h-5 text-primary" />
+                      <div>
+                        <span className="font-bold text-base">{store.name}</span>
+                        <span className="text-xs text-muted-foreground ml-2">({store.code})</span>
+                      </div>
+                    </div>
+                    <Badge variant="outline">{storeGroups.length} grupo(s)</Badge>
+                  </div>
+                  <CardContent className="p-4 space-y-2">
+                    {storeGroups.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum grupo interno nesta loja</p>
+                    ) : (
+                      storeGroups.map(ig => {
+                        const igDevices = getDevicesForInternalGroup(ig.id);
+                        return (
+                          <div key={ig.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-background">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Package className="w-4 h-4 text-primary" />
+                                <span className="font-semibold">{ig.name}</span>
+                                {igDevices.length > 0 && (
+                                  <Badge variant="outline" className="text-xs gap-1"><Monitor className="w-3 h-3" />{igDevices.length}</Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => { setInternalLinkGroupId(ig.id); setInternalDeviceSearch(""); }}>
+                                  <Link2 className="w-3.5 h-3.5" />Vincular
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => deleteInternalGroup.mutate(ig.id)}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                            {igDevices.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 ml-6">
+                                {igDevices.map(igd => (
+                                  <div key={igd.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/50 border text-xs">
+                                    <Monitor className="w-3 h-3 text-muted-foreground" />
+                                    <span>{igd.device?.name}</span>
+                                    <button onClick={() => unlinkDeviceFromInternalGroup.mutate({ internalGroupId: ig.id, deviceId: igd.device_id })} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Create/Edit Global Group Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingGroup ? "Editar Grupo" : "Criar Novo Grupo"}</DialogTitle>
-          </DialogHeader>
-          
+          <DialogHeader><DialogTitle>{editingGroup ? "Editar Grupo Global" : "Criar Grupo Global"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Grupo *</Label>
-              <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: Lojas Sul, Terminais de Consulta..." />
+              <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: Heineken, Litoral..." />
             </div>
-
             <div className="space-y-2">
               <Label>Grupo Pai</Label>
               <Select value={formData.parent_id} onValueChange={v => setFormData({ ...formData, parent_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione um grupo pai" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem pai (Raiz)</SelectItem>
-                  {groups.filter(g => g.id !== editingGroup?.id).map(g => (
-                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                  ))}
+                  {groups.filter(g => g.id !== editingGroup?.id).map(g => (<SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
-              <Label className="text-sm font-semibold">Configuração de Playlist</Label>
+              <Label className="text-sm font-semibold">Playlist</Label>
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <input type="radio" id="inherit" checked={formData.inherit_playlist} onChange={() => setFormData({ ...formData, inherit_playlist: true })} />
-                  <Label htmlFor="inherit" className="font-normal cursor-pointer">Herdar playlist do grupo pai</Label>
+                  <Label htmlFor="inherit" className="font-normal cursor-pointer">Herdar do grupo pai</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="radio" id="custom" checked={!formData.inherit_playlist} onChange={() => setFormData({ ...formData, inherit_playlist: false })} />
-                  <Label htmlFor="custom" className="font-normal cursor-pointer">Selecionar outra playlist</Label>
+                  <Label htmlFor="custom" className="font-normal cursor-pointer">Selecionar outra</Label>
                 </div>
               </div>
               {!formData.inherit_playlist && (
-                <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <Select value={formData.playlist_id} onValueChange={v => setFormData({ ...formData, playlist_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione uma playlist" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      {playlists.map(p => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={formData.playlist_id} onValueChange={v => setFormData({ ...formData, playlist_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {playlists.map(p => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={!formData.name}>{editingGroup ? "Salvar Alterações" : "Criar Grupo"}</Button>
+            <Button onClick={handleSubmit} disabled={!formData.name}>{editingGroup ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Link Device Dialog */}
+      {/* Link Device to Global Group Dialog */}
       <Dialog open={!!linkGroupId} onOpenChange={() => setLinkGroupId(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Vincular Dispositivo ao Grupo "{linkGroupName}"</DialogTitle>
-          </DialogHeader>
-          
+          <DialogHeader><DialogTitle>Vincular Dispositivo — "{linkGroupName}"</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Buscar dispositivo por nome..." 
-                value={deviceSearch} 
-                onChange={e => setDeviceSearch(e.target.value)}
-                className="pl-9"
-              />
+              <Input placeholder="Buscar dispositivo..." value={deviceSearch} onChange={e => setDeviceSearch(e.target.value)} className="pl-9" />
             </div>
-
             <div className="max-h-[320px] overflow-y-auto space-y-1 border rounded-lg p-2">
               {availableDevices.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {deviceSearch ? "Nenhum dispositivo encontrado" : "Todos os dispositivos já estão vinculados"}
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-8">{deviceSearch ? "Nenhum encontrado" : "Todos já vinculados"}</p>
               ) : (
                 availableDevices.map(device => (
-                  <button
-                    key={device.id}
-                    onClick={() => handleLinkDevice(device.id)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors text-left"
-                  >
+                  <button key={device.id} onClick={() => handleLinkDevice(device.id)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors text-left">
                     <Monitor className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-sm truncate block">{device.name}</span>
                       <span className="text-xs text-muted-foreground">{device.device_code}</span>
                     </div>
-                    <Badge variant={device.status === 'active' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1.5 shrink-0">
-                      {device.status}
-                    </Badge>
+                    <Badge variant={device.status === 'active' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1.5 shrink-0">{device.status}</Badge>
+                    <Plus className="w-4 h-4 text-primary shrink-0" />
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Segmentation Dialog: link internal groups to global group */}
+      <Dialog open={!!segmentGroupId} onOpenChange={() => setSegmentGroupId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Segmentar Grupo — "{segmentGroupName}"</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Selecione os grupos internos de loja que devem fazer parte deste grupo global.</p>
+          <div className="max-h-[400px] overflow-y-auto space-y-3 border rounded-lg p-3 mt-2">
+            {storesWithInternalGroups.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum grupo interno criado. Crie grupos internos na aba "Grupos Internos".</p>
+            ) : (
+              storesWithInternalGroups.map(store => (
+                <div key={store.id} className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Store className="w-4 h-4 text-primary" />{store.name}
+                  </div>
+                  <div className="ml-6 space-y-1">
+                    {store.internalGroups.map(ig => (
+                      <label key={ig.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer transition-colors">
+                        <Checkbox checked={segmentSelections.has(ig.id)} onCheckedChange={() => handleToggleSegment(ig.id)} />
+                        <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-sm">{ig.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSegmentGroupId(null)}>Cancelar</Button>
+            <Button onClick={handleSaveSegments} disabled={addGlobalGroupTarget.isPending}>Salvar Segmentação</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Create Internal Group Dialog */}
+      <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Criar Grupo Interno em Lojas</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nome do Grupo Interno *</Label>
+              <Input value={bulkName} onChange={e => setBulkName(e.target.value)} placeholder="Ex: Bebidas, Açougue, Hortifruti..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Selecione as lojas</Label>
+              <div className="max-h-[250px] overflow-y-auto space-y-1 border rounded-lg p-2">
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer border-b mb-1 pb-2">
+                  <Checkbox checked={bulkSelectedStores.length === stores.length && stores.length > 0} onCheckedChange={(checked) => {
+                    setBulkSelectedStores(checked ? stores.map(s => s.id) : []);
+                  }} />
+                  <span className="text-sm font-semibold">Selecionar todas</span>
+                </label>
+                {stores.map(s => (
+                  <label key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer transition-colors">
+                    <Checkbox checked={bulkSelectedStores.includes(s.id)} onCheckedChange={(checked) => {
+                      setBulkSelectedStores(prev => checked ? [...prev, s.id] : prev.filter(id => id !== s.id));
+                    }} />
+                    <Store className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-sm">{s.name}</span>
+                    <span className="text-xs text-muted-foreground">({s.code})</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!bulkName || bulkSelectedStores.length === 0) return;
+              createBulkInternalGroups.mutate({ name: bulkName, storeIds: bulkSelectedStores }, { onSuccess: () => setBulkDialogOpen(false) });
+            }} disabled={!bulkName || bulkSelectedStores.length === 0 || createBulkInternalGroups.isPending}>
+              Criar em {bulkSelectedStores.length} loja(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Device to Internal Group Dialog */}
+      <Dialog open={!!internalLinkGroupId} onOpenChange={() => setInternalLinkGroupId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Vincular Dispositivo ao Grupo Interno</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Buscar dispositivo da loja..." value={internalDeviceSearch} onChange={e => setInternalDeviceSearch(e.target.value)} className="pl-9" />
+            </div>
+            <div className="max-h-[320px] overflow-y-auto space-y-1 border rounded-lg p-2">
+              {internalAvailableDevices.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum dispositivo disponível nesta loja</p>
+              ) : (
+                internalAvailableDevices.map(device => (
+                  <button key={device.id} onClick={() => linkDeviceToInternalGroup.mutate({ internalGroupId: internalLinkGroupId!, deviceId: device.id })} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors text-left">
+                    <Monitor className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm truncate block">{device.name}</span>
+                      <span className="text-xs text-muted-foreground">{device.device_code}</span>
+                    </div>
                     <Plus className="w-4 h-4 text-primary shrink-0" />
                   </button>
                 ))
@@ -381,7 +593,7 @@ const GroupsPage = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Grupo?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação não pode ser desfeita. Todos os subgrupos também serão excluídos.</AlertDialogDescription>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. Todos os subgrupos e vínculos também serão excluídos.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

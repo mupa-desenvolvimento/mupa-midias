@@ -1881,6 +1881,42 @@ export type Database = {
           },
         ]
       }
+      global_group_targets: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          store_internal_group_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          store_internal_group_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          store_internal_group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_group_targets_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_group_targets_store_internal_group_id_fkey"
+            columns: ["store_internal_group_id"]
+            isOneToOne: false
+            referencedRelation: "store_internal_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_devices: {
         Row: {
           created_at: string
@@ -3839,6 +3875,84 @@ export type Database = {
           },
         ]
       }
+      store_internal_group_devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          internal_group_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          internal_group_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          internal_group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_internal_group_devices_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_internal_group_devices_internal_group_id_fkey"
+            columns: ["internal_group_id"]
+            isOneToOne: false
+            referencedRelation: "store_internal_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_internal_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          store_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          store_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          store_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_internal_groups_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_internal_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_regions: {
         Row: {
           created_at: string
@@ -4404,6 +4518,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_default_group_id: {
+        Row: {
+          id: string | null
+        }
+        Insert: {
+          id?: string | null
+        }
+        Update: {
+          id?: string | null
+        }
+        Relationships: []
       }
       weather_locations: {
         Row: {
