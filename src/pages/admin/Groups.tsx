@@ -5,6 +5,7 @@ import { useDevices } from "@/hooks/useDevices";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { useStores } from "@/hooks/useStores";
 import { useStoreInternalGroups } from "@/hooks/useStoreInternalGroups";
+import { useGroupStores } from "@/hooks/useGroupStores";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,16 +32,16 @@ interface GroupItemProps {
   onLinkInternalGroups: (groupId: string) => void;
   getDevicesForGroup: (groupId: string) => { id: string; device_id: string; device?: { id: string; name: string; device_code: string; status: string } | null }[];
   onUnlinkDevice: (groupId: string, deviceId: string) => void;
-  getTargetsForGlobalGroup: (groupId: string) => any[];
-  onRemoveTarget: (targetId: string) => void;
+  getStoresForGroup: (groupId: string) => { id: string; store_id: string; store?: { id: string; name: string; code: string } | null }[];
+  onUnlinkStore: (groupId: string, storeId: string) => void;
 }
 
-const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup, onLinkDevice, onLinkInternalGroups, getDevicesForGroup, onUnlinkDevice, getTargetsForGlobalGroup, onRemoveTarget }: GroupItemProps) => {
+const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup, onLinkDevice, onLinkInternalGroups, getDevicesForGroup, onUnlinkDevice, getStoresForGroup, onUnlinkStore }: GroupItemProps) => {
   const [expanded, setExpanded] = useState(true);
   const children = allGroups.filter(g => g.parent_id === group.id);
   const hasChildren = children.length > 0;
   const linkedDevices = getDevicesForGroup(group.id);
-  const targets = getTargetsForGlobalGroup(group.id);
+  const linkedStores = getStoresForGroup(group.id);
 
   const getEffectivePlaylist = (g: GroupWithDetails): { name: string; isInherited: boolean } => {
     if (g.playlist) return { name: g.playlist.name, isInherited: false };
@@ -52,7 +53,7 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
   };
 
   const { name: effectivePlaylistName, isInherited } = getEffectivePlaylist(group);
-  const hasContent = hasChildren || linkedDevices.length > 0 || targets.length > 0;
+  const hasContent = hasChildren || linkedDevices.length > 0 || linkedStores.length > 0;
 
   return (
     <div className="w-full">
@@ -78,8 +79,8 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
             {linkedDevices.length > 0 && (
               <Badge variant="outline" className="gap-1 text-xs"><Monitor className="w-3 h-3" />{linkedDevices.length} disp.</Badge>
             )}
-            {targets.length > 0 && (
-              <Badge variant="outline" className="gap-1 text-xs border-primary/30 text-primary"><Store className="w-3 h-3" />{targets.length} segmento(s)</Badge>
+            {linkedStores.length > 0 && (
+              <Badge variant="outline" className="gap-1 text-xs border-primary/30 text-primary"><Store className="w-3 h-3" />{linkedStores.length} loja(s)</Badge>
             )}
             <Button variant="secondary" size="sm" onClick={() => onCreateSubgroup(group.id)} className="gap-2 h-9 px-4">
               <Plus className="w-4 h-4" /><span className="hidden md:inline font-medium">Subgrupo</span>
@@ -97,18 +98,17 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
           </div>
         </div>
 
-        {/* Targets (segmentos internos vinculados) */}
-        {expanded && targets.length > 0 && (
+        {/* Lojas vinculadas */}
+        {expanded && linkedStores.length > 0 && (
           <div className="ml-12 pt-2 border-t border-dashed space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Segmentos vinculados</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lojas vinculadas</span>
             <div className="flex flex-wrap gap-2 mt-1">
-              {targets.map((t: any) => (
-                <div key={t.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+              {linkedStores.map(ls => (
+                <div key={ls.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-sm">
                   <Store className="w-3.5 h-3.5 text-primary" />
-                  <span className="font-medium">{t.store_internal_group?.store?.name}</span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">{t.store_internal_group?.name}</span>
-                  <button onClick={() => onRemoveTarget(t.id)} className="ml-1 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                  <span className="font-medium">{ls.store?.name}</span>
+                  <span className="text-xs text-muted-foreground">({ls.store?.code})</span>
+                  <button onClick={() => onUnlinkStore(group.id, ls.store_id)} className="ml-1 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -138,7 +138,7 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
       {expanded && hasChildren && (
         <div className="border-l-2 border-muted/20 ml-6 sm:ml-10 pl-2 sm:pl-4 transition-all">
           {children.map(child => (
-            <GroupItem key={child.id} group={child} level={level + 1} allGroups={allGroups} onEdit={onEdit} onDelete={onDelete} onCreateSubgroup={onCreateSubgroup} onLinkDevice={onLinkDevice} onLinkInternalGroups={onLinkInternalGroups} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={onUnlinkDevice} getTargetsForGlobalGroup={getTargetsForGlobalGroup} onRemoveTarget={onRemoveTarget} />
+            <GroupItem key={child.id} group={child} level={level + 1} allGroups={allGroups} onEdit={onEdit} onDelete={onDelete} onCreateSubgroup={onCreateSubgroup} onLinkDevice={onLinkDevice} onLinkInternalGroups={onLinkInternalGroups} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={onUnlinkDevice} getStoresForGroup={getStoresForGroup} onUnlinkStore={onUnlinkStore} />
           ))}
         </div>
       )}
@@ -151,6 +151,7 @@ const GroupsPage = () => {
   const { groups, isLoading, createGroup, updateGroup, deleteGroup } = useGroups();
   const { devices } = useDevices();
   const { groupDevices, linkDevice, unlinkDevice, getDevicesForGroup } = useGroupDevices();
+  const { groupStores, linkStore, unlinkStore, getStoresForGroup } = useGroupStores();
   const { playlists } = usePlaylists();
   const { stores } = useStores();
   const {
@@ -166,6 +167,8 @@ const GroupsPage = () => {
   const [linkGroupId, setLinkGroupId] = useState<string | null>(null);
   const [deviceSearch, setDeviceSearch] = useState("");
   const [segmentGroupId, setSegmentGroupId] = useState<string | null>(null);
+  const [segmentSearch, setSegmentSearch] = useState("");
+  const [segmentTab, setSegmentTab] = useState("stores");
 
   // Internal group bulk creation
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
@@ -181,10 +184,15 @@ const GroupsPage = () => {
   const rootGroups = useMemo(() => groups.filter(g => !g.parent_id), [groups]);
 
   const availableDevices = useMemo(() => {
-    if (!linkGroupId) return [];
-    const linkedIds = new Set(getDevicesForGroup(linkGroupId).map(gd => gd.device_id));
-    return devices.filter(d => !linkedIds.has(d.id) && d.name.toLowerCase().includes(deviceSearch.toLowerCase()));
-  }, [linkGroupId, devices, groupDevices, deviceSearch]);
+    if (!linkGroupId && !segmentGroupId) return [];
+    const targetGroupId = linkGroupId || segmentGroupId;
+    const linkedIds = new Set(getDevicesForGroup(targetGroupId!).map(gd => gd.device_id));
+    return devices.filter(d => !linkedIds.has(d.id) && d.name.toLowerCase().includes(segmentTab === "devices" ? segmentSearch.toLowerCase() : deviceSearch.toLowerCase()));
+  }, [linkGroupId, segmentGroupId, devices, groupDevices, deviceSearch, segmentSearch, segmentTab]);
+
+  const filteredStores = useMemo(() => {
+    return stores.filter(s => s.name.toLowerCase().includes(segmentSearch.toLowerCase()) || s.code.toLowerCase().includes(segmentSearch.toLowerCase()));
+  }, [stores, segmentSearch]);
 
   // Devices available for internal group linking (only from same store)
   const internalAvailableDevices = useMemo(() => {
@@ -225,39 +233,41 @@ const GroupsPage = () => {
     unlinkDevice.mutate({ groupId, deviceId });
   };
 
-  // Segmentation dialog: selected internal groups for the global group
-  const [segmentSelections, setSegmentSelections] = useState<Set<string>>(new Set());
+  // Segmentation dialog: selected stores for the global group
+  const [segmentStoreSelections, setSegmentStoreSelections] = useState<Set<string>>(new Set());
 
   const handleOpenSegment = (groupId: string) => {
     setSegmentGroupId(groupId);
-    const existing = getTargetsForGlobalGroup(groupId).map(t => t.store_internal_group_id);
-    setSegmentSelections(new Set(existing));
+    setSegmentSearch("");
+    setSegmentTab("stores");
+    const existingStores = getStoresForGroup(groupId).map(gs => gs.store_id);
+    setSegmentStoreSelections(new Set(existingStores));
   };
 
-  const handleToggleSegment = (internalGroupId: string) => {
-    setSegmentSelections(prev => {
+  const handleToggleStoreSegment = (storeId: string) => {
+    setSegmentStoreSelections(prev => {
       const next = new Set(prev);
-      if (next.has(internalGroupId)) next.delete(internalGroupId);
-      else next.add(internalGroupId);
+      if (next.has(storeId)) next.delete(storeId);
+      else next.add(storeId);
       return next;
     });
   };
 
   const handleSaveSegments = async () => {
     if (!segmentGroupId) return;
-    const existing = getTargetsForGlobalGroup(segmentGroupId);
-    const existingIds = new Set(existing.map(t => t.store_internal_group_id));
+    const existing = getStoresForGroup(segmentGroupId);
+    const existingIds = new Set(existing.map(gs => gs.store_id));
 
-    // Add new
-    for (const id of segmentSelections) {
+    // Add new stores
+    for (const id of segmentStoreSelections) {
       if (!existingIds.has(id)) {
-        await addGlobalGroupTarget.mutateAsync({ groupId: segmentGroupId, storeInternalGroupId: id });
+        await linkStore.mutateAsync({ groupId: segmentGroupId, storeId: id });
       }
     }
-    // Remove old
-    for (const t of existing) {
-      if (!segmentSelections.has(t.store_internal_group_id)) {
-        await removeGlobalGroupTarget.mutateAsync(t.id);
+    // Remove old stores
+    for (const gs of existing) {
+      if (!segmentStoreSelections.has(gs.store_id)) {
+        await unlinkStore.mutateAsync({ groupId: segmentGroupId, storeId: gs.store_id });
       }
     }
     setSegmentGroupId(null);
@@ -321,7 +331,7 @@ const GroupsPage = () => {
             </Card>
           ) : (
             rootGroups.map(group => (
-              <GroupItem key={group.id} group={group} level={0} allGroups={groups} onEdit={handleEdit} onDelete={setDeleteId} onCreateSubgroup={handleOpenCreate} onLinkDevice={id => { setLinkGroupId(id); setDeviceSearch(""); }} onLinkInternalGroups={handleOpenSegment} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={handleUnlinkDevice} getTargetsForGlobalGroup={getTargetsForGlobalGroup} onRemoveTarget={(id) => removeGlobalGroupTarget.mutate(id)} />
+              <GroupItem key={group.id} group={group} level={0} allGroups={groups} onEdit={handleEdit} onDelete={setDeleteId} onCreateSubgroup={handleOpenCreate} onLinkDevice={id => { setLinkGroupId(id); setDeviceSearch(""); }} onLinkInternalGroups={handleOpenSegment} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={handleUnlinkDevice} getStoresForGroup={getStoresForGroup} onUnlinkStore={(groupId, storeId) => unlinkStore.mutate({ groupId, storeId })} />
             ))
           )}
         </TabsContent>
@@ -513,36 +523,81 @@ const GroupsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Segmentation Dialog: link internal groups to global group */}
+      {/* Segmentation Dialog: link stores or devices to global group */}
       <Dialog open={!!segmentGroupId} onOpenChange={() => setSegmentGroupId(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Segmentar Grupo — "{segmentGroupName}"</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Selecione os setores de loja que devem fazer parte deste grupo.</p>
-          <div className="max-h-[400px] overflow-y-auto space-y-3 border rounded-lg p-3 mt-2">
-            {storesWithInternalGroups.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhum setor criado. Crie setores na aba "Lojas".</p>
-            ) : (
-              storesWithInternalGroups.map(store => (
-                <div key={store.id} className="space-y-1">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Store className="w-4 h-4 text-primary" />{store.name}
-                  </div>
-                  <div className="ml-6 space-y-1">
-                    {store.internalGroups.map(ig => (
-                      <label key={ig.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer transition-colors">
-                        <Checkbox checked={segmentSelections.has(ig.id)} onCheckedChange={() => handleToggleSegment(ig.id)} />
-                        <Package className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm">{ig.name}</span>
+          <div className="space-y-4 py-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder={segmentTab === "stores" ? "Buscar loja..." : "Buscar dispositivo..."} 
+                value={segmentSearch} 
+                onChange={e => setSegmentSearch(e.target.value)} 
+                className="pl-9" 
+              />
+            </div>
+
+            <Tabs value={segmentTab} onValueChange={v => setSegmentTab(v as any)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="stores">Lojas</TabsTrigger>
+                <TabsTrigger value="devices">Dispositivos</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="stores" className="mt-4">
+                <div className="max-h-[400px] overflow-y-auto space-y-1 border rounded-lg p-2">
+                  {filteredStores.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">Nenhuma loja encontrada.</p>
+                  ) : (
+                    filteredStores.map(store => (
+                      <label key={store.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent cursor-pointer transition-colors">
+                        <Checkbox 
+                          checked={segmentStoreSelections.has(store.id)} 
+                          onCheckedChange={() => handleToggleStoreSegment(store.id)} 
+                        />
+                        <Store className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm truncate block">{store.name}</span>
+                          <span className="text-xs text-muted-foreground">{store.code}</span>
+                        </div>
                       </label>
-                    ))}
-                  </div>
+                    ))
+                  )}
                 </div>
-              ))
-            )}
+              </TabsContent>
+
+              <TabsContent value="devices" className="mt-4">
+                <div className="max-h-[400px] overflow-y-auto space-y-1 border rounded-lg p-2">
+                  {availableDevices.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      {segmentSearch ? "Nenhum dispositivo encontrado." : "Todos os dispositivos já vinculados."}
+                    </p>
+                  ) : (
+                    availableDevices.map(device => (
+                      <button 
+                        key={device.id} 
+                        onClick={() => handleLinkDevice(device.id)} 
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors text-left"
+                      >
+                        <Monitor className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm truncate block">{device.name}</span>
+                          <span className="text-xs text-muted-foreground">{device.device_code}</span>
+                        </div>
+                        <Badge variant={device.status === 'active' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1.5 shrink-0">{device.status}</Badge>
+                        <Plus className="w-4 h-4 text-primary shrink-0" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSegmentGroupId(null)}>Cancelar</Button>
-            <Button onClick={handleSaveSegments} disabled={addGlobalGroupTarget.isPending}>Salvar Segmentação</Button>
+            {segmentTab === "stores" && (
+              <Button onClick={handleSaveSegments} disabled={linkStore.isPending}>Salvar Lojas</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
