@@ -371,7 +371,6 @@ body {
 [class*="overflow-auto"],
 [style*="overflow"] {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain; /* prevent scroll chaining */
 }
 
 /* Force fixed elements to respect full viewport on old WebViews */
