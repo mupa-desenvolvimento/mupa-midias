@@ -225,8 +225,9 @@ const GroupsPage = () => {
   };
 
   const handleLinkDevice = (deviceId: string) => {
-    if (!linkGroupId) return;
-    linkDevice.mutate({ groupId: linkGroupId, deviceId });
+    const targetGroupId = linkGroupId || segmentGroupId;
+    if (!targetGroupId) return;
+    linkDevice.mutate({ groupId: targetGroupId, deviceId });
   };
 
   const handleUnlinkDevice = (groupId: string, deviceId: string) => {
