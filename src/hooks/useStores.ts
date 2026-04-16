@@ -10,6 +10,7 @@ interface StoreInsert {
   name: string;
   city_id: string;
   address?: string | null;
+  playlist_id?: string | null;
   is_active?: boolean;
   metadata?: Json;
   tenant_id?: string | null;
@@ -20,6 +21,7 @@ interface StoreUpdate {
   name?: string;
   city_id?: string;
   address?: string | null;
+  playlist_id?: string | null;
   is_active?: boolean;
   metadata?: Json;
 }

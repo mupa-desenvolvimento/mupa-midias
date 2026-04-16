@@ -153,9 +153,9 @@ const GroupsPage = () => {
   const { groupDevices, linkDevice, unlinkDevice, getDevicesForGroup } = useGroupDevices();
   const { groupStores, linkStore, unlinkStore, getStoresForGroup } = useGroupStores();
   const { playlists } = usePlaylists();
-  const { stores } = useStores();
+  const { stores, updateStore } = useStores();
   const {
-    internalGroups, createInternalGroup, createBulkInternalGroups, deleteInternalGroup,
+    internalGroups, createInternalGroup, updateInternalGroup, createBulkInternalGroups, deleteInternalGroup,
     linkDeviceToInternalGroup, unlinkDeviceFromInternalGroup, getDevicesForInternalGroup,
     getTargetsForGlobalGroup, getInternalGroupsForStore, addGlobalGroupTarget, removeGlobalGroupTarget,
   } = useStoreInternalGroups();
@@ -369,7 +369,21 @@ const GroupsPage = () => {
                         <span className="text-xs text-muted-foreground ml-2">({store.code})</span>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      <Select 
+                        value={store.playlist_id || "none"} 
+                        onValueChange={(v) => updateStore(store.id, { playlist_id: v === "none" ? null : v })}
+                      >
+                        <SelectTrigger className="h-8 w-[180px] text-xs">
+                          <SelectValue placeholder="Playlist da Loja" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem playlist (Herança)</SelectItem>
+                          {playlists.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Badge variant="secondary">{storeDevices.length} disp.</Badge>
                       <Badge variant="outline">{storeGroups.length} setor(es)</Badge>
                     </div>
@@ -384,6 +398,20 @@ const GroupsPage = () => {
                             <div className="flex items-center gap-2">
                               <Package className="w-4 h-4 text-primary" />
                               <span className="font-semibold">{ig.name}</span>
+                              <Select 
+                                value={ig.playlist_id || "none"} 
+                                onValueChange={(v) => updateInternalGroup.mutate({ id: ig.id, playlist_id: v === "none" ? null : v })}
+                              >
+                                <SelectTrigger className="h-7 w-[160px] text-[10px] ml-2">
+                                  <SelectValue placeholder="Playlist do Setor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Herdar da Loja</SelectItem>
+                                  {playlists.map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               {igDevices.length > 0 && (
                                 <Badge variant="outline" className="text-xs gap-1"><Monitor className="w-3 h-3" />{igDevices.length}</Badge>
                               )}

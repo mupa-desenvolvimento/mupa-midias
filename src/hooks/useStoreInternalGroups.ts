@@ -8,9 +8,11 @@ export interface StoreInternalGroup {
   store_id: string;
   tenant_id: string;
   name: string;
+  playlist_id: string | null;
   created_at: string;
   updated_at: string;
   store?: { id: string; name: string; code: string } | null;
+  playlist?: { id: string; name: string } | null;
 }
 
 export interface InternalGroupDevice {
@@ -39,7 +41,11 @@ export const useStoreInternalGroups = () => {
     queryFn: async () => {
       let query = supabase
         .from("store_internal_groups")
-        .select(`*, store:stores(id, name, code)`)
+        .select(`
+          *,
+          store:stores(id, name, code),
+          playlist:playlists(id, name)
+        `)
         .order("name");
 
       if (!isSuperAdmin && tenantId) {
@@ -82,12 +88,17 @@ export const useStoreInternalGroups = () => {
   });
 
   const createInternalGroup = useMutation({
-    mutationFn: async (group: { name: string; store_id: string; tenant_id?: string }) => {
+    mutationFn: async (group: { name: string; store_id: string; playlist_id?: string | null; tenant_id?: string }) => {
       const tid = group.tenant_id || tenantId;
       if (!tid) throw new Error("tenant_id é obrigatório");
       const { data, error } = await supabase
         .from("store_internal_groups")
-        .insert([{ name: group.name, store_id: group.store_id, tenant_id: tid }])
+        .insert([{ 
+          name: group.name, 
+          store_id: group.store_id, 
+          playlist_id: group.playlist_id,
+          tenant_id: tid 
+        }])
         .select()
         .single();
       if (error) throw error;
@@ -99,6 +110,26 @@ export const useStoreInternalGroups = () => {
     },
     onError: (error) => {
       toast({ title: "Erro ao criar setor", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateInternalGroup = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<StoreInternalGroup> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("store_internal_groups")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["store-internal-groups"] });
+      toast({ title: "Setor atualizado com sucesso" });
+    },
+    onError: (error) => {
+      toast({ title: "Erro ao atualizar setor", description: error.message, variant: "destructive" });
     },
   });
 
@@ -228,6 +259,7 @@ export const useStoreInternalGroups = () => {
     globalGroupTargets,
     isLoading,
     createInternalGroup,
+    updateInternalGroup,
     createBulkInternalGroups,
     deleteInternalGroup,
     linkDeviceToInternalGroup,

@@ -1953,6 +1953,42 @@ export type Database = {
           },
         ]
       }
+      group_stores: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_stores_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_stores_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string

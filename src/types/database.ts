@@ -43,6 +43,7 @@ export interface Store {
   code: string;
   name: string;
   address: string | null;
+  playlist_id?: string | null;
   is_active: boolean;
   metadata: Record<string, unknown>;
   created_at: string;
