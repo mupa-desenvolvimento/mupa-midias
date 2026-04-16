@@ -4405,6 +4405,18 @@ export type Database = {
           },
         ]
       }
+      v_default_group_id: {
+        Row: {
+          id: string | null
+        }
+        Insert: {
+          id?: string | null
+        }
+        Update: {
+          id?: string | null
+        }
+        Relationships: []
+      }
       weather_locations: {
         Row: {
           city: string
