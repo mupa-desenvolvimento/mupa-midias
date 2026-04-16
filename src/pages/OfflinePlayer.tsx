@@ -35,15 +35,7 @@ import {
 import type { TerminalMode } from "@/components/smart-terminal";
 import type { TerminalTheme } from "@/components/smart-terminal/TerminalSettingsOverlay";
 import type { SimulationMode } from "@/components/smart-terminal/DeviceSimulator";
-import {
-  AlertCircle,
-  RefreshCw,
-  Video,
-  Image as ImageIcon,
-  Clock,
-  WifiOff,
-  Trash2,
-} from "lucide-react";
+import { AlertCircle, RefreshCw, Video, Image as ImageIcon, Clock, WifiOff, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { storageService } from "@/modules/offline-storage/StorageService";
@@ -126,7 +118,11 @@ const OfflinePlayer = () => {
   const faceCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Face detection for overlays
-  const { activeFaces } = useFaceDetection(faceVideoRef, faceCanvasRef, terminalMode === "facial" || terminalMode === "counter" || terminalMode === "loyalty");
+  const { activeFaces } = useFaceDetection(
+    faceVideoRef,
+    faceCanvasRef,
+    terminalMode === "facial" || terminalMode === "counter" || terminalMode === "loyalty",
+  );
 
   useDeviceMonitor(deviceCode || "", mediaElementRef, activeFaces);
 
@@ -134,7 +130,12 @@ const OfflinePlayer = () => {
   const { metrics, trackEvent } = useTerminalMetrics(deviceCode || "");
 
   // AI Assistant
-  const { messages: aiMessages, isLoading: aiLoading, sendMessage: aiSend, clearHistory: aiClear } = useTerminalAI(deviceCode || "");
+  const {
+    messages: aiMessages,
+    isLoading: aiLoading,
+    sendMessage: aiSend,
+    clearHistory: aiClear,
+  } = useTerminalAI(deviceCode || "");
 
   // People counter
   const { count: peopleCount, todayCount, processFaces } = usePeopleCounter();
@@ -150,10 +151,10 @@ const OfflinePlayer = () => {
       // Capacitor native: hide status bar
       if (Capacitor.isNativePlatform()) {
         try {
-          const { StatusBar } = await import('@capacitor/status-bar');
+          const { StatusBar } = await import("@capacitor/status-bar");
           await StatusBar.hide();
         } catch (e) {
-          console.warn('[Player] StatusBar hide failed:', e);
+          console.warn("[Player] StatusBar hide failed:", e);
         }
       }
 
@@ -166,11 +167,11 @@ const OfflinePlayer = () => {
           el.webkitRequestFullscreen();
         }
       } catch (e) {
-        console.warn('[Player] Fullscreen request failed:', e);
+        console.warn("[Player] Fullscreen request failed:", e);
       }
 
       // Prevent virtual keyboard: blur any focused input and set inputs to readonly temporarily
-      document.querySelectorAll('input, textarea').forEach((el) => {
+      document.querySelectorAll("input, textarea").forEach((el) => {
         (el as HTMLElement).blur();
       });
     };
@@ -183,10 +184,10 @@ const OfflinePlayer = () => {
         enterImmersiveMode();
       }
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -219,7 +220,9 @@ const OfflinePlayer = () => {
           const title = `Playlist: ${playlist.name} • Canal: ${channel.name}${channel.is_fallback ? " (fallback)" : ""}`;
           groups.push({
             title,
-            items: channelItems.map((item, idx) => `${(item.position ?? idx) + 1}. ${item.media.name} (${item.media.type})`),
+            items: channelItems.map(
+              (item, idx) => `${(item.position ?? idx) + 1}. ${item.media.name} (${item.media.type})`,
+            ),
           });
         }
       } else {
@@ -228,7 +231,9 @@ const OfflinePlayer = () => {
         const title = `Playlist: ${playlist.name}`;
         groups.push({
           title,
-          items: playlistItems.map((item, idx) => `${(item.position ?? idx) + 1}. ${item.media.name} (${item.media.type})`),
+          items: playlistItems.map(
+            (item, idx) => `${(item.position ?? idx) + 1}. ${item.media.name} (${item.media.type})`,
+          ),
         });
       }
     }
@@ -297,15 +302,18 @@ const OfflinePlayer = () => {
     };
   }, [activeMedia?.id, activeMedia?.file_url, activeMedia?.blob_url]);
 
-  const getDurationForIndex = useCallback((idx: number) => {
-    const it = items[idx];
-    const media = it?.media;
-    if (!media) return 10;
-    if (media.type === "video") {
-      return it?.duration_override ? it.duration_override : 0;
-    }
-    return it?.duration_override || media.duration || 10;
-  }, [items]);
+  const getDurationForIndex = useCallback(
+    (idx: number) => {
+      const it = items[idx];
+      const media = it?.media;
+      if (!media) return 10;
+      if (media.type === "video") {
+        return it?.duration_override ? it.duration_override : 0;
+      }
+      return it?.duration_override || media.duration || 10;
+    },
+    [items],
+  );
 
   const goToNext = useCallback(() => {
     if (items.length === 0) return;
@@ -326,44 +334,19 @@ const OfflinePlayer = () => {
       const media = it?.media;
       const duration =
         media?.type === "video"
-          ? (media.duration || it?.duration_override || 10)
-          : (it?.duration_override || media?.duration || 10);
+          ? media.duration || it?.duration_override || 10
+          : it?.duration_override || media?.duration || 10;
       trackEvent({ type: "media_view", media_id: activeMedia.id, duration });
     }
   }, [currentIndex, activeMedia?.id]);
 
-  const preloadIntoSlot = useCallback((slot: "A" | "B", index: number) => {
-    if (items.length === 0) return;
-    const item = items[index];
-    const media = item?.media;
-    if (!media) return;
-    if (media.type === "news" || media.type === "weather") {
-      const video = slot === "A" ? videoARef.current : videoBRef.current;
-      if (video) {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-        video.style.display = "none";
-      }
-      const img = slot === "A" ? imgARef.current : imgBRef.current;
-      if (img) {
-        img.style.display = "none";
-        img.removeAttribute("src");
-      }
-      setNextReadySlot(slot);
-      return;
-    }
-    const url = media.blob_url || media.file_url;
-    if (!url) return;
-
-    if (media.type === "image") {
-      const img = slot === "A" ? imgARef.current : imgBRef.current;
-      if (!img) return;
-      const loader = new Image();
-      loader.onload = () => {
-        if (!img) return;
-        img.src = url;
-        img.style.display = "block";
+  const preloadIntoSlot = useCallback(
+    (slot: "A" | "B", index: number) => {
+      if (items.length === 0) return;
+      const item = items[index];
+      const media = item?.media;
+      if (!media) return;
+      if (media.type === "news" || media.type === "weather") {
         const video = slot === "A" ? videoARef.current : videoBRef.current;
         if (video) {
           video.pause();
@@ -371,42 +354,73 @@ const OfflinePlayer = () => {
           video.load();
           video.style.display = "none";
         }
+        const img = slot === "A" ? imgARef.current : imgBRef.current;
+        if (img) {
+          img.style.display = "none";
+          img.removeAttribute("src");
+        }
         setNextReadySlot(slot);
-      };
-      loader.src = url;
-    } else {
-      if (Capacitor.isNativePlatform()) {
         return;
       }
-      const video = slot === "A" ? videoARef.current : videoBRef.current;
-      if (!video) return;
-      video.preload = "auto";
-      video.muted = true;
-      video.src = url;
-      video.load();
-      const checkReady = () => {
-        if (video.readyState === 4) {
+      const url = media.blob_url || media.file_url;
+      if (!url) return;
+
+      if (media.type === "image") {
+        const img = slot === "A" ? imgARef.current : imgBRef.current;
+        if (!img) return;
+        const loader = new Image();
+        loader.onload = () => {
+          if (!img) return;
+          img.src = url;
+          img.style.display = "block";
+          const video = slot === "A" ? videoARef.current : videoBRef.current;
+          if (video) {
+            video.pause();
+            video.removeAttribute("src");
+            video.load();
+            video.style.display = "none";
+          }
           setNextReadySlot(slot);
-          video.play().then(() => {
-            video.pause();
-            video.currentTime = 0;
-          }).catch(() => {
-            video.pause();
-            video.currentTime = 0;
-          });
-        } else {
-          window.setTimeout(checkReady, 50);
+        };
+        loader.src = url;
+      } else {
+        if (Capacitor.isNativePlatform()) {
+          return;
         }
-      };
-      checkReady();
-      video.style.display = "block";
-      const img = slot === "A" ? imgARef.current : imgBRef.current;
-      if (img) {
-        img.style.display = "none";
-        img.removeAttribute("src");
+        const video = slot === "A" ? videoARef.current : videoBRef.current;
+        if (!video) return;
+        video.preload = "auto";
+        video.muted = true;
+        video.src = url;
+        video.load();
+        const checkReady = () => {
+          if (video.readyState === 4) {
+            setNextReadySlot(slot);
+            video
+              .play()
+              .then(() => {
+                video.pause();
+                video.currentTime = 0;
+              })
+              .catch(() => {
+                video.pause();
+                video.currentTime = 0;
+              });
+          } else {
+            window.setTimeout(checkReady, 50);
+          }
+        };
+        checkReady();
+        video.style.display = "block";
+        const img = slot === "A" ? imgARef.current : imgBRef.current;
+        if (img) {
+          img.style.display = "none";
+          img.removeAttribute("src");
+        }
       }
-    }
-  }, [items]);
+    },
+    [items],
+  );
 
   useEffect(() => {
     if (displayOverrideMedia) return;
@@ -524,17 +538,23 @@ const OfflinePlayer = () => {
       const effectiveDuration = duration > 0 ? duration : 10;
       setTimeRemaining(effectiveDuration * 1000);
       setProgressPercent(0);
-      const preloadTimeout = window.setTimeout(() => {
-        const nextIndex = (currentIndex + 1) % items.length;
-        const preloadSlot = activePlayer === "A" ? "B" : "A";
-        preloadIntoSlot(preloadSlot, nextIndex);
-      }, Math.max(effectiveDuration * 1000 - 3000, 0));
-      const switchTimeout = window.setTimeout(() => {
-        const nextIndex = (currentIndex + 1) % items.length;
-        const nextSlot = activePlayer === "A" ? "B" : "A";
-        setActivePlayer(nextSlot);
-        setCurrentIndex(nextIndex);
-      }, Math.max(effectiveDuration * 1000 - 50, 0));
+      const preloadTimeout = window.setTimeout(
+        () => {
+          const nextIndex = (currentIndex + 1) % items.length;
+          const preloadSlot = activePlayer === "A" ? "B" : "A";
+          preloadIntoSlot(preloadSlot, nextIndex);
+        },
+        Math.max(effectiveDuration * 1000 - 3000, 0),
+      );
+      const switchTimeout = window.setTimeout(
+        () => {
+          const nextIndex = (currentIndex + 1) % items.length;
+          const nextSlot = activePlayer === "A" ? "B" : "A";
+          setActivePlayer(nextSlot);
+          setCurrentIndex(nextIndex);
+        },
+        Math.max(effectiveDuration * 1000 - 50, 0),
+      );
       const progressInterval = window.setInterval(() => {
         setTimeRemaining((prev) => {
           const next = Math.max(prev - 100, 0);
@@ -555,7 +575,7 @@ const OfflinePlayer = () => {
   useEffect(() => {
     if (activeFaces.length > 0) {
       processFaces(activeFaces);
-      activeFaces.forEach(face => {
+      activeFaces.forEach((face) => {
         trackEvent({ type: "face_detected" });
         if (face.isRegistered) trackEvent({ type: "face_recognized" });
       });
@@ -582,7 +602,7 @@ const OfflinePlayer = () => {
 
       return () => {
         const stream = faceVideoRef.current?.srcObject as MediaStream;
-        stream?.getTracks().forEach(track => track.stop());
+        stream?.getTracks().forEach((track) => track.stop());
       };
     }
   }, [terminalMode]);
@@ -649,7 +669,9 @@ const OfflinePlayer = () => {
         }, 3000);
       });
 
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
   }, [product, speakPrice, handleDismissProduct]);
 
@@ -665,13 +687,18 @@ const OfflinePlayer = () => {
           }
         }, 3000);
       });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
   }, [productError, speakPrice, handleDismissProduct]);
 
-  const handleEanSubmit = useCallback((ean: string) => {
-    lookupProduct(ean);
-  }, [lookupProduct]);
+  const handleEanSubmit = useCallback(
+    (ean: string) => {
+      lookupProduct(ean);
+    },
+    [lookupProduct],
+  );
 
   const handleReset = useCallback(async () => {
     toast.loading("Limpando dados...", { id: "reset" });
@@ -697,14 +724,13 @@ const OfflinePlayer = () => {
     if (!deviceState?.is_online) return "offline";
     if (terminalMode === "facial" && activeFaces.length > 0) return "recognizing";
     if (terminalMode === "product") return "product_lookup";
-    if (terminalMode === "loyalty" && activeFaces.some(f => f.isRegistered)) return "personalized_offer";
+    if (terminalMode === "loyalty" && activeFaces.some((f) => f.isRegistered)) return "personalized_offer";
     if (items.length === 0 && terminalMode === "player") return "idle";
     return "connected";
   })();
 
   const isDeviceBlocked = deviceState?.is_blocked === true;
-  const hasActiveDownload =
-    downloadProgress.total > 0 && downloadProgress.downloaded < downloadProgress.total;
+  const hasActiveDownload = downloadProgress.total > 0 && downloadProgress.downloaded < downloadProgress.total;
 
   // State screens
   if (resolveError) {
@@ -746,8 +772,8 @@ const OfflinePlayer = () => {
   }
 
   const displayMediaUrl = displayOverrideMedia
-    ? (resolvedMediaUrl || overrideMedia?.blob_url || overrideMedia?.file_url || "")
-    : (resolvedMediaUrl || activeItem?.media?.blob_url || activeItem?.media?.file_url || "");
+    ? resolvedMediaUrl || overrideMedia?.blob_url || overrideMedia?.file_url || ""
+    : resolvedMediaUrl || activeItem?.media?.blob_url || activeItem?.media?.file_url || "";
 
   const isOverlayActive = terminalMode !== "player" && terminalMode !== "product";
 
@@ -763,13 +789,15 @@ const OfflinePlayer = () => {
       />
       {Capacitor.isNativePlatform() && (
         <div className="absolute top-2 left-2 z-50 px-2 py-1 rounded bg-black/70 text-[10px] text-white/70">
-          <span>OfflinePlayer • build: {__BUILD_ID__} • rota: {deviceCode ? `/play/${deviceCode}` : "/play/:deviceCode"}</span>
+          <span>
+            OfflinePlayer • build: {__BUILD_ID__} • rota: {deviceCode ? `/play/${deviceCode}` : "/play/:deviceCode"}
+          </span>
         </div>
       )}
 
       {/* Product lookup overlay */}
       {terminalMode === "product" && (
-        <div className="absolute inset-0 z-40" style={{ backgroundColor: '#FFFFFF' }}>
+        <div className="absolute inset-0 z-40" style={{ backgroundColor: "#FFFFFF" }}>
           <ProductLookupContainer
             product={product}
             isLoading={isProductLoading}
@@ -800,7 +828,7 @@ const OfflinePlayer = () => {
       <div
         className={cn(
           "relative w-screen h-screen",
-          (terminalMode === "product" || isOverlayActive) ? "opacity-20 pointer-events-none" : "opacity-100"
+          terminalMode === "product" || isOverlayActive ? "opacity-20 pointer-events-none" : "opacity-100",
         )}
       >
         {displayOverrideMedia && activeMedia ? (
@@ -843,7 +871,7 @@ const OfflinePlayer = () => {
                   "w-full h-full object-cover transition-opacity duration-[0ms]",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "A" ? "opacity-100" : "opacity-0"
+                  activePlayer === "A" ? "opacity-100" : "opacity-0",
                 )}
                 style={{ willChange: "opacity", transform: "translateZ(0)" }}
                 playsInline
@@ -854,7 +882,7 @@ const OfflinePlayer = () => {
                   "w-full h-full object-cover transition-opacity duration-[0ms]",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "A" ? "opacity-100" : "opacity-0"
+                  activePlayer === "A" ? "opacity-100" : "opacity-0",
                 )}
                 style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
                 alt=""
@@ -867,7 +895,7 @@ const OfflinePlayer = () => {
                   "w-full h-full object-cover transition-opacity duration-[0ms]",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "B" ? "opacity-100" : "opacity-0"
+                  activePlayer === "B" ? "opacity-100" : "opacity-0",
                 )}
                 style={{ willChange: "opacity", transform: "translateZ(0)" }}
                 playsInline
@@ -878,7 +906,7 @@ const OfflinePlayer = () => {
                   "w-full h-full object-cover transition-opacity duration-[0ms]",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "B" ? "opacity-100" : "opacity-0"
+                  activePlayer === "B" ? "opacity-100" : "opacity-0",
                 )}
                 style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
                 alt=""
@@ -889,9 +917,7 @@ const OfflinePlayer = () => {
       </div>
 
       {/* Progress bar */}
-      {terminalMode === "player" && !displayOverrideMedia && (
-        <PlayerProgressBar progressPercent={progressPercent} />
-      )}
+      {terminalMode === "player" && !displayOverrideMedia && <PlayerProgressBar progressPercent={progressPercent} />}
 
       {/* Player controls */}
       {terminalMode === "player" && (
@@ -905,15 +931,7 @@ const OfflinePlayer = () => {
           onToggleFullscreen={toggleFullscreen}
           onSync={syncWithServer}
           showSyncButton
-        >
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-xs text-red-300 transition-colors"
-          >
-            <Trash2 className="w-3 h-3" />
-            <span>Apagar dados</span>
-          </button>
-        </PlayerControls>
+        ></PlayerControls>
       )}
 
       {/* Media info */}
@@ -922,9 +940,7 @@ const OfflinePlayer = () => {
           className={cn(
             "bg-black/60 backdrop-blur-sm rounded-lg p-3 transition-opacity duration-300",
             showControls ? "opacity-100" : "opacity-0",
-            isPortrait
-              ? "absolute inset-x-4 bottom-4"
-              : "absolute bottom-6 left-6"
+            isPortrait ? "absolute inset-x-4 bottom-4" : "absolute bottom-6 left-6",
           )}
         >
           <div className="flex items-center gap-3">
@@ -996,10 +1012,12 @@ const OfflinePlayer = () => {
 
       {/* Last sync */}
       {deviceState?.last_sync && terminalMode === "player" && (
-        <div className={cn(
-          "absolute bottom-10 left-1/2 -translate-x-1/2 text-white/40 text-xs transition-opacity duration-300",
-          showControls ? "opacity-100" : "opacity-0"
-        )}>
+        <div
+          className={cn(
+            "absolute bottom-10 left-1/2 -translate-x-1/2 text-white/40 text-xs transition-opacity duration-300",
+            showControls ? "opacity-100" : "opacity-0",
+          )}
+        >
           <Clock className="w-3 h-3 inline mr-1" />
           Última sinc.: {new Date(deviceState.last_sync).toLocaleTimeString("pt-BR")}
         </div>
@@ -1060,7 +1078,6 @@ const OfflinePlayer = () => {
         onReset={handleReset}
         onClose={() => setTerminalMode("player")}
       />
-
 
       {/* Hidden face camera refs (shown in overlay) */}
       {terminalMode !== "facial" && (
