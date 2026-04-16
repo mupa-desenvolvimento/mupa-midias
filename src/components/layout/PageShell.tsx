@@ -17,7 +17,7 @@ export const PageShell = ({
   className,
 }: PageShellProps) => {
   return (
-    <div className={cn("h-full max-h-full overflow-hidden flex flex-col gap-3", className)}>
+    <div className={cn("flex flex-col gap-3", className)}>
       <div className="shrink-0 animate-fade-in">
         {header}
       </div>
