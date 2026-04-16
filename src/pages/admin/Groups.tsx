@@ -86,10 +86,10 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
               <Plus className="w-4 h-4" /><span className="hidden md:inline font-medium">Subgrupo</span>
             </Button>
             <Button variant="outline" size="sm" className="gap-2 h-9 px-4" onClick={() => onLinkInternalGroups(group.id)}>
-              <Package className="w-4 h-4" /><span className="hidden md:inline font-medium">Segmentar</span>
+              <Package className="w-4 h-4" /><span className="hidden md:inline font-medium">Lojas</span>
             </Button>
             <Button variant="outline" size="sm" className="gap-2 h-9 px-4" onClick={() => onLinkDevice(group.id)}>
-              <Link2 className="w-4 h-4" /><span className="hidden md:inline font-medium">Vincular</span>
+              <Link2 className="w-4 h-4" /><span className="hidden md:inline font-medium">Dispositivos</span>
             </Button>
             <div className="flex items-center gap-1 ml-1 border-l pl-3">
               <Button variant="ghost" size="icon" onClick={() => onEdit(group)} className="h-9 w-9 hover:bg-primary/10 hover:text-primary"><Edit className="w-4 h-4" /></Button>
@@ -541,8 +541,8 @@ const GroupsPage = () => {
 
             <Tabs value={segmentTab} onValueChange={v => setSegmentTab(v as any)} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="stores">Lojas</TabsTrigger>
-                <TabsTrigger value="devices">Dispositivos</TabsTrigger>
+                <TabsTrigger value="stores">Lojas</TabsTrigger> 
+                {/* <TabsTrigger value="devices">Dispositivos</TabsTrigger> */}
               </TabsList>
               
               <TabsContent value="stores" className="mt-4">
