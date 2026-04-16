@@ -339,6 +339,15 @@ const GroupsPage = () => {
           ) : (
             stores.map(store => {
               const storeGroups = getInternalGroupsForStore(store.id);
+              const storeDevices = devices.filter(d => d.store_id === store.id);
+              
+              // Get IDs of devices already in a sector
+              const devicesInSectorsIds = new Set(
+                storeGroups.flatMap(ig => getDevicesForInternalGroup(ig.id).map(igd => igd.device_id))
+              );
+              
+              const ungroupedDevices = storeDevices.filter(d => !devicesInSectorsIds.has(d.id));
+
               return (
                 <Card key={store.id} className="overflow-hidden">
                   <div className="p-4 border-b bg-muted/30 flex items-center justify-between">
@@ -349,49 +358,73 @@ const GroupsPage = () => {
                         <span className="text-xs text-muted-foreground ml-2">({store.code})</span>
                       </div>
                     </div>
-                    <Badge variant="outline">{storeGroups.length} setor(es)</Badge>
+                    <div className="flex gap-2">
+                      <Badge variant="secondary">{storeDevices.length} disp.</Badge>
+                      <Badge variant="outline">{storeGroups.length} setor(es)</Badge>
+                    </div>
                   </div>
-                  <CardContent className="p-4 space-y-2">
-                    {storeGroups.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum setor nesta loja</p>
-                    ) : (
-                      storeGroups.map(ig => {
-                        const igDevices = getDevicesForInternalGroup(ig.id);
-                        return (
-                          <div key={ig.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-background">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Package className="w-4 h-4 text-primary" />
-                                <span className="font-semibold">{ig.name}</span>
-                                {igDevices.length > 0 && (
-                                  <Badge variant="outline" className="text-xs gap-1"><Monitor className="w-3 h-3" />{igDevices.length}</Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => { setInternalLinkGroupId(ig.id); setInternalDeviceSearch(""); }}>
-                                  <Link2 className="w-3.5 h-3.5" />Vincular
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => deleteInternalGroup.mutate(ig.id)}>
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
+                  <CardContent className="p-4 space-y-4">
+                    {/* Sectors */}
+                    {storeGroups.map(ig => {
+                      const igDevices = getDevicesForInternalGroup(ig.id);
+                      return (
+                        <div key={ig.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-background">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Package className="w-4 h-4 text-primary" />
+                              <span className="font-semibold">{ig.name}</span>
+                              {igDevices.length > 0 && (
+                                <Badge variant="outline" className="text-xs gap-1"><Monitor className="w-3 h-3" />{igDevices.length}</Badge>
+                              )}
                             </div>
-                            {igDevices.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 ml-6">
-                                {igDevices.map(igd => (
-                                  <div key={igd.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/50 border text-xs">
-                                    <Monitor className="w-3 h-3 text-muted-foreground" />
-                                    <span>{igd.device?.name}</span>
-                                    <button onClick={() => unlinkDeviceFromInternalGroup.mutate({ internalGroupId: ig.id, deviceId: igd.device_id })} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => { setInternalLinkGroupId(ig.id); setInternalDeviceSearch(""); }}>
+                                <Link2 className="w-3.5 h-3.5" />Vincular
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => deleteInternalGroup.mutate(ig.id)}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
                           </div>
-                        );
-                      })
+                          {igDevices.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 ml-6">
+                              {igDevices.map(igd => (
+                                <div key={igd.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/50 border text-xs">
+                                  <Monitor className="w-3 h-3 text-muted-foreground" />
+                                  <span>{igd.device?.name}</span>
+                                  <button onClick={() => unlinkDeviceFromInternalGroup.mutate({ internalGroupId: ig.id, deviceId: igd.device_id })} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Ungrouped Devices */}
+                    {ungroupedDevices.length > 0 && (
+                      <div className="flex flex-col gap-2 p-3 rounded-lg border border-dashed bg-muted/5">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium text-muted-foreground">Dispositivos sem setor</span>
+                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5">{ungroupedDevices.length}</Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 ml-6">
+                          {ungroupedDevices.map(device => (
+                            <div key={device.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-background border text-xs">
+                              <Monitor className="w-3 h-3 text-muted-foreground" />
+                              <span>{device.name}</span>
+                              <span className="text-[10px] text-muted-foreground">({device.device_code})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {storeGroups.length === 0 && ungroupedDevices.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum setor ou dispositivo nesta loja</p>
                     )}
                   </CardContent>
                 </Card>
