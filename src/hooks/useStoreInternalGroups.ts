@@ -83,13 +83,11 @@ export const useStoreInternalGroups = () => {
 
   const createInternalGroup = useMutation({
     mutationFn: async (group: { name: string; store_id: string; tenant_id?: string }) => {
-      const groupData = { ...group };
-      if (!isSuperAdmin && tenantId && !groupData.tenant_id) {
-        groupData.tenant_id = tenantId;
-      }
+      const tid = group.tenant_id || tenantId;
+      if (!tid) throw new Error("tenant_id é obrigatório");
       const { data, error } = await supabase
         .from("store_internal_groups")
-        .insert([groupData])
+        .insert([{ name: group.name, store_id: group.store_id, tenant_id: tid }])
         .select()
         .single();
       if (error) throw error;
