@@ -273,7 +273,7 @@ const GroupsPage = () => {
 
   if (isLoading) {
     return (
-      <PageShell header={<div><h1 className="text-2xl font-bold">Grupos</h1><p className="text-muted-foreground text-sm">Gerencie grupos globais e segmentação por loja</p></div>}>
+      <PageShell header={<div><h1 className="text-2xl font-bold">Grupos</h1><p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p></div>}>
         <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       </PageShell>
     );
@@ -288,7 +288,7 @@ const GroupsPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Grupos</h1>
-            <p className="text-muted-foreground text-sm">Gerencie grupos globais e segmentação por loja</p>
+            <p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p>
           </div>
         </div>
       }
@@ -296,15 +296,15 @@ const GroupsPage = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex items-center justify-between">
           <TabsList>
-            <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4" />Grupos Globais</TabsTrigger>
-            <TabsTrigger value="internal" className="gap-2"><Store className="w-4 h-4" />Grupos Internos (Loja)</TabsTrigger>
+            <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4" />Grupos</TabsTrigger>
+            <TabsTrigger value="internal" className="gap-2"><Store className="w-4 h-4" />Lojas</TabsTrigger>
           </TabsList>
 
           {activeTab === "global" && (
-            <Button onClick={() => handleOpenCreate()} className="gap-2"><Plus className="w-4 h-4" />Criar Grupo Global</Button>
+            <Button onClick={() => handleOpenCreate()} className="gap-2"><Plus className="w-4 h-4" />Criar Grupo</Button>
           )}
           {activeTab === "internal" && (
-            <Button onClick={() => { setBulkDialogOpen(true); setBulkName(""); setBulkSelectedStores([]); }} className="gap-2"><Plus className="w-4 h-4" />Criar Grupo Interno</Button>
+            <Button onClick={() => { setBulkDialogOpen(true); setBulkName(""); setBulkSelectedStores([]); }} className="gap-2"><Plus className="w-4 h-4" />Criar Setor</Button>
           )}
         </div>
 
@@ -314,8 +314,8 @@ const GroupsPage = () => {
             <Card>
               <CardContent className="flex flex-col items-center justify-center h-64 text-center">
                 <Globe className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-                <h3 className="text-lg font-medium">Nenhum grupo global encontrado</h3>
-                <p className="text-muted-foreground mb-4">Crie grupos globais para agrupar segmentos de lojas.</p>
+                <h3 className="text-lg font-medium">Nenhum grupo encontrado</h3>
+                <p className="text-muted-foreground mb-4">Crie grupos para agrupar segmentos de lojas.</p>
                 <Button onClick={() => handleOpenCreate()}>Criar Primeiro Grupo</Button>
               </CardContent>
             </Card>
@@ -333,7 +333,7 @@ const GroupsPage = () => {
               <CardContent className="flex flex-col items-center justify-center h-64 text-center">
                 <Store className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
                 <h3 className="text-lg font-medium">Nenhuma loja cadastrada</h3>
-                <p className="text-muted-foreground">Cadastre lojas primeiro para criar grupos internos.</p>
+                <p className="text-muted-foreground">Cadastre lojas primeiro para criar setores.</p>
               </CardContent>
             </Card>
           ) : (
@@ -349,11 +349,11 @@ const GroupsPage = () => {
                         <span className="text-xs text-muted-foreground ml-2">({store.code})</span>
                       </div>
                     </div>
-                    <Badge variant="outline">{storeGroups.length} grupo(s)</Badge>
+                    <Badge variant="outline">{storeGroups.length} setor(es)</Badge>
                   </div>
                   <CardContent className="p-4 space-y-2">
                     {storeGroups.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum grupo interno nesta loja</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum setor nesta loja</p>
                     ) : (
                       storeGroups.map(ig => {
                         const igDevices = getDevicesForInternalGroup(ig.id);
@@ -404,7 +404,7 @@ const GroupsPage = () => {
       {/* Create/Edit Global Group Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingGroup ? "Editar Grupo Global" : "Criar Grupo Global"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingGroup ? "Editar Grupo" : "Criar Grupo"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Grupo *</Label>
@@ -484,10 +484,10 @@ const GroupsPage = () => {
       <Dialog open={!!segmentGroupId} onOpenChange={() => setSegmentGroupId(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Segmentar Grupo — "{segmentGroupName}"</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Selecione os grupos internos de loja que devem fazer parte deste grupo global.</p>
+          <p className="text-sm text-muted-foreground">Selecione os setores de loja que devem fazer parte deste grupo.</p>
           <div className="max-h-[400px] overflow-y-auto space-y-3 border rounded-lg p-3 mt-2">
             {storesWithInternalGroups.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhum grupo interno criado. Crie grupos internos na aba "Grupos Internos".</p>
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum setor criado. Crie setores na aba "Lojas".</p>
             ) : (
               storesWithInternalGroups.map(store => (
                 <div key={store.id} className="space-y-1">
@@ -517,10 +517,10 @@ const GroupsPage = () => {
       {/* Bulk Create Internal Group Dialog */}
       <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Criar Grupo Interno em Lojas</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Criar Setor em Lojas</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Nome do Grupo Interno *</Label>
+              <Label>Nome do Setor *</Label>
               <Input value={bulkName} onChange={e => setBulkName(e.target.value)} placeholder="Ex: Bebidas, Açougue, Hortifruti..." />
             </div>
             <div className="space-y-2">
@@ -561,7 +561,7 @@ const GroupsPage = () => {
       <Dialog open={!!internalLinkGroupId} onOpenChange={() => setInternalLinkGroupId(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Vincular Dispositivo ao Grupo Interno</DialogTitle>
+            <DialogTitle>Vincular Dispositivo ao Setor</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="relative">

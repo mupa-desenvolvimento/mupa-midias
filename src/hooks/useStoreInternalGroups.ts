@@ -95,46 +95,48 @@ export const useStoreInternalGroups = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-internal-groups"] });
-      toast({ title: "Grupo interno criado com sucesso" });
+      toast({ title: "Setor criado com sucesso" });
     },
     onError: (error) => {
-      const msg = error.message.includes("duplicate") ? "Já existe um grupo com este nome nesta loja" : error.message;
-      toast({ title: "Erro ao criar grupo interno", description: msg, variant: "destructive" });
+      toast({ title: "Erro ao criar setor", description: error.message, variant: "destructive" });
     },
   });
 
   const createBulkInternalGroups = useMutation({
-    mutationFn: async ({ name, storeIds, tenantIdOverride }: { name: string; storeIds: string[]; tenantIdOverride?: string }) => {
-      const tid = tenantIdOverride || tenantId;
-      const rows = storeIds.map(store_id => ({ name, store_id, tenant_id: tid! }));
+    mutationFn: async (group: { name: string; storeIds: string[] }) => {
+      const tid = tenantId;
+      if (!tid) throw new Error("tenant_id é obrigatório");
+      const inserts = group.storeIds.map(sid => ({ name: group.name, store_id: sid, tenant_id: tid }));
       const { data, error } = await supabase
         .from("store_internal_groups")
-        .upsert(rows, { onConflict: "store_id,name" })
+        .insert(inserts)
         .select();
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-internal-groups"] });
-      toast({ title: `Grupo interno criado em ${data.length} loja(s)` });
+      toast({ title: "Setores criados em massa com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao criar grupos em massa", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao criar setores", description: error.message, variant: "destructive" });
     },
   });
 
   const deleteInternalGroup = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("store_internal_groups").delete().eq("id", id);
+      const { error } = await supabase
+        .from("store_internal_groups")
+        .delete()
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-internal-groups"] });
-      queryClient.invalidateQueries({ queryKey: ["global-group-targets"] });
-      toast({ title: "Grupo interno excluído" });
+      toast({ title: "Setor excluído com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao excluir grupo interno", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir setor", description: error.message, variant: "destructive" });
     },
   });
 
@@ -150,11 +152,10 @@ export const useStoreInternalGroups = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-internal-group-devices"] });
-      toast({ title: "Dispositivo vinculado ao grupo interno" });
+      toast({ title: "Dispositivo vinculado ao setor" });
     },
     onError: (error) => {
-      const msg = error.message.includes("duplicate") ? "Dispositivo já vinculado" : error.message;
-      toast({ title: "Erro ao vincular", description: msg, variant: "destructive" });
+      toast({ title: "Erro ao vincular dispositivo", description: error.message, variant: "destructive" });
     },
   });
 
@@ -169,10 +170,10 @@ export const useStoreInternalGroups = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-internal-group-devices"] });
-      toast({ title: "Dispositivo desvinculado" });
+      toast({ title: "Dispositivo removido do setor" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao desvincular", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao remover dispositivo", description: error.message, variant: "destructive" });
     },
   });
 
@@ -188,25 +189,27 @@ export const useStoreInternalGroups = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["global-group-targets"] });
-      toast({ title: "Grupo interno vinculado ao grupo global" });
+      toast({ title: "Setor vinculado ao grupo" });
     },
     onError: (error) => {
-      const msg = error.message.includes("duplicate") ? "Já vinculado" : error.message;
-      toast({ title: "Erro ao vincular", description: msg, variant: "destructive" });
+      toast({ title: "Erro ao vincular setor", description: error.message, variant: "destructive" });
     },
   });
 
   const removeGlobalGroupTarget = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("global_group_targets").delete().eq("id", id);
+      const { error } = await supabase
+        .from("global_group_targets")
+        .delete()
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["global-group-targets"] });
-      toast({ title: "Vínculo removido" });
+      toast({ title: "Setor removido do grupo" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao remover vínculo", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao remover setor", description: error.message, variant: "destructive" });
     },
   });
 
