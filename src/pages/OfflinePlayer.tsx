@@ -430,12 +430,15 @@ const OfflinePlayer = () => {
           return;
         }
         cameraStreamRef.current = stream;
+        setCameraStream(stream);
+        setCameraError(false);
         if (faceVideoRef.current && faceVideoRef.current.srcObject !== stream) {
           faceVideoRef.current.srcObject = stream;
           faceVideoRef.current.play().catch(() => {});
         }
       } catch (err) {
         console.warn("[OfflinePlayer] Camera not available:", err);
+        if (!cancelled) setCameraError(true);
       }
     };
     startCamera();
@@ -444,6 +447,7 @@ const OfflinePlayer = () => {
       cancelled = true;
       cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
       cameraStreamRef.current = null;
+      setCameraStream(null);
     };
   }, []);
 
