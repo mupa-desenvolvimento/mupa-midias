@@ -4,6 +4,7 @@ import { usePeopleRegistry } from './usePeopleRegistry';
 import { useDetectionLog } from './useDetectionLog';
 import { useAttentionHistory } from './useAttentionHistory';
 import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
+import { ensureBlazeFaceDetector, quickDetectFaces } from '@/lib/blazeFaceDetector';
 // Emotion types from face-api.js
 export type EmotionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised';
 
@@ -189,7 +190,12 @@ export const useFaceDetection = (
         
         const backend = await initializeFaceApiBackend(faceapi);
         console.log('[FaceDetection] Warm-up successful, backend:', backend);
-        
+
+        // Warm up BlazeFace pre-filter (non-blocking — failures degrade gracefully)
+        ensureBlazeFaceDetector().then((d) => {
+          console.log('[FaceDetection] BlazeFace pre-filter:', d ? 'ready' : 'unavailable (using face-api only)');
+        });
+
         setIsModelsLoaded(true);
         console.log('[FaceDetection] Models loaded successfully');
       } catch (error) {
@@ -350,6 +356,17 @@ export const useFaceDetection = (
         scaleX = displayWidth / video.videoWidth;
         scaleY = scaleX;
         offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
+      }
+
+      // Fast pre-filter with BlazeFace: skip the heavy face-api pipeline when
+      // no face is present. Falls back to running face-api directly if the
+      // pre-filter is unavailable (returns []).
+      const blazeBoxes = await quickDetectFaces(video);
+      const blazeAvailable = blazeBoxes.length > 0 || (await ensureBlazeFaceDetector()) !== null;
+      if (blazeAvailable && blazeBoxes.length === 0) {
+        // No face on screen — skip expensive inference this tick.
+        updateActiveFacesState();
+        return;
       }
 
       // Use TinyFaceDetector for speed, with full pipeline
