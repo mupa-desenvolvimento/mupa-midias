@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 import { supabase } from '@/integrations/supabase/client';
-import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
+import { initializeFaceApiBackend, initTensorFlow, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
 
 export interface DetectedFace {
   trackId: string;
@@ -160,8 +160,12 @@ export const usePlayerFaceDetection = (
     const loadModels = async () => {
       try {
         setIsLoading(true);
+
+        // CRITICAL: init TF backend BEFORE loading model weights
+        await initTensorFlow();
+
         const MODEL_URL = '/models';
-        
+
         // Only load TinyFaceDetector (fast) + needed pipelines
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as faceapi from "face-api.js";
+import { initTensorFlow } from "@/lib/faceApiBackend";
 import { Loader2, Camera, Scan, Sparkles, Smile, Frown, User, ShoppingBag, ArrowRight, RotateCcw, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -163,6 +164,9 @@ const MobileDemo = () => {
   useEffect(() => {
     const loadModels = async () => {
       try {
+        // CRITICAL: init TF backend BEFORE loading model weights
+        await initTensorFlow();
+
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
