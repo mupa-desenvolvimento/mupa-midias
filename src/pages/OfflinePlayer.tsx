@@ -12,7 +12,7 @@ import { useFaceDetection } from "@/hooks/useFaceDetection";
 import { useTerminalMetrics } from "@/hooks/useTerminalMetrics";
 import { useTerminalAI } from "@/hooks/useTerminalAI";
 import { usePeopleCounter } from "@/hooks/usePeopleCounter";
-import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useClock } from "@/hooks/player";
+import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useClock, useSeamlessMediaPlayer, type SeamlessMediaItem } from "@/hooks/player";
 import {
   MediaRenderer,
   PlayerProgressBar,
