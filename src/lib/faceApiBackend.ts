@@ -50,10 +50,15 @@ const getRegisteredBackendNames = (tf: any): string[] => {
 const canUseBackend = (tf: any, name: string) => getRegisteredBackendNames(tf).includes(name);
 
 const warmup = async () => {
-  const dummy = document.createElement('canvas');
-  dummy.width = 20;
-  dummy.height = 20;
-  await faceapi.detectAllFaces(dummy, new faceapi.TinyFaceDetectorOptions());
+  const tf = getTf();
+  if (tf?.tensor1d) {
+    // Use a simple TF operation instead of face-api detection to avoid "model not loaded" error
+    // but still force backend initialization and context creation.
+    const t = tf.tensor1d([1, 2, 3]);
+    await t.data();
+    t.dispose();
+    console.log('[TF] Warmup successful');
+  }
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -82,8 +87,9 @@ export const initTensorFlow = async (): Promise<string> => {
         }
 
         await waitForBackendStabilization(tf);
-        // warmup() removed here because models are not yet loaded when initTensorFlow is called.
-        // It's called later in initializeFaceApiBackend after models are ready.
+        // warmup() is now safe to call here because it no longer depends on face-api models.
+        // This ensures the backend (WebGL/CPU) is fully initialized before we return.
+        await warmup();
 
         const active = getCurrentBackendName(tf) ?? name;
         console.log(`[TF] ✅ Backend ready: ${active}`);
