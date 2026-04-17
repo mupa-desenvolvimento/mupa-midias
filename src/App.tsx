@@ -20,7 +20,6 @@ import DeviceSetup from "./pages/DeviceSetup";
 import DeviceDetector from "./pages/DeviceDetector";
 import OfflinePlayer from "./pages/OfflinePlayer";
 import WebViewPlayer from "./pages/WebViewPlayer";
-import Camera from "./pages/Camera";
 import CameraFullscreen from "./pages/CameraFullscreen";
 import LiveMonitoring from "./pages/LiveMonitoring";
 import DeviceDemo from "./pages/DeviceDemo";
@@ -148,7 +147,6 @@ function AppContent() {
           <Route path="/webview/:deviceCode" element={<WebViewPlayer />} />
           {/* Rota específica para Android/Kodular usando query param ?device_id=XYZ */}
           <Route path="/android-player" element={<WebViewPlayer />} />
-          <Route path="/camera" element={<Camera />} />
           <Route path="/camera-fullscreen" element={<CameraFullscreen />} />
           <Route path="/demo" element={<DeviceDemo />} />
            <Route path="/apresentacao" element={<Presentation />} />
@@ -204,7 +202,6 @@ function AppContent() {
                         <Route path="auto-content/instagram" element={<InstagramFeedManager />} />
                         <Route path="instagram/callback" element={<InstagramCallback />} />
                         <Route path="auto-content/:moduleType" element={<AutoContentModulePage />} />
-                        <Route path="camera" element={<Camera />} />
                         <Route path="monitoring" element={<LiveMonitoring />} />
                         <Route path="tenants" element={<Tenants />} />
                         <Route path="companies" element={<Companies />} />
