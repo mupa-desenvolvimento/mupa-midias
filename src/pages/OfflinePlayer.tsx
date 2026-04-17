@@ -789,6 +789,7 @@ const OfflinePlayer = () => {
           isSyncing={isSyncing}
           debugInfo={debugInfo}
           contentGroups={contentGroups}
+          cacheKey={deviceCode || undefined}
         />
       </div>
     );

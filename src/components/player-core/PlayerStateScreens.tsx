@@ -116,9 +116,9 @@ interface EmptyContentScreenProps {
 
 const CONTENT_LIST_VARIANTS = {
   hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
-  exit: { opacity: 0, y: -8, transition: { duration: 0.2, ease: "easeOut" } },
-};
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.2, ease: "easeOut" as const } },
+} as const;
 
 export const EmptyContentScreen = ({
   deviceName,
