@@ -1402,6 +1402,54 @@ export type Database = {
           },
         ]
       }
+      device_status_logs: {
+        Row: {
+          created_at: string
+          device_code: string | null
+          device_id: string
+          device_name: string | null
+          id: string
+          new_status: string
+          old_status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_code?: string | null
+          device_id: string
+          device_name?: string | null
+          id?: string
+          new_status: string
+          old_status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_code?: string | null
+          device_id?: string
+          device_name?: string | null
+          id?: string
+          new_status?: string
+          old_status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_status_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_status_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_tags: {
         Row: {
           created_at: string | null
@@ -2784,6 +2832,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "nutrition_tips_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_logs: {
+        Row: {
+          category: string
+          created_at: string
+          device_code: string | null
+          device_id: string | null
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          tenant_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          device_code?: string | null
+          device_id?: string | null
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          device_code?: string | null
+          device_id?: string | null
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

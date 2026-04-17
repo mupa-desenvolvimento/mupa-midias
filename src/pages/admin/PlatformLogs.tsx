@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollText, RefreshCw, Search, AlertCircle, CheckCircle, Clock, Database, ShoppingBag, Play, Shield } from "lucide-react";
+import { ScrollText, RefreshCw, Search, AlertCircle, CheckCircle, Clock, Database, ShoppingBag, Play, Shield, Activity, Wifi } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusBadge = (status: string) => {
   const map: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
@@ -257,9 +259,149 @@ function AdminLogsTab({ search }: { search: string }) {
   );
 }
 
+function PlatformLogsTab({ search }: { search: string }) {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["logs-platform"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_logs" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  // Realtime: refresh on every new log
+  useEffect(() => {
+    const ch = supabase
+      .channel("platform-logs-tab")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "platform_logs" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["logs-platform"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [queryClient]);
+
+  const filtered = (data || []).filter((r: any) =>
+    !search ||
+    r.message?.toLowerCase().includes(search.toLowerCase()) ||
+    r.category?.toLowerCase().includes(search.toLowerCase()) ||
+    r.device_code?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const levelBadge = (level: string) => {
+    const map: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      info: "default", debug: "secondary", warn: "outline", error: "destructive",
+    };
+    return <Badge variant={map[level] || "outline"} className="text-xs uppercase">{level}</Badge>;
+  };
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Data</TableHead>
+          <TableHead>Nível</TableHead>
+          <TableHead>Categoria</TableHead>
+          <TableHead>Mensagem</TableHead>
+          <TableHead>Dispositivo</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {isLoading ? (
+          <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+        ) : filtered.length === 0 ? (
+          <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum log encontrado</TableCell></TableRow>
+        ) : (
+          filtered.map((log: any) => (
+            <TableRow key={log.id}>
+              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(log.created_at)}</TableCell>
+              <TableCell>{levelBadge(log.level)}</TableCell>
+              <TableCell><Badge variant="outline" className="text-xs">{log.category}</Badge></TableCell>
+              <TableCell className="text-sm">{log.message}</TableCell>
+              <TableCell className="text-xs font-mono text-muted-foreground">{log.device_code || "—"}</TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  );
+}
+
+function DeviceStatusLogsTab({ search }: { search: string }) {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["logs-device-status"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("device_status_logs" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  useEffect(() => {
+    const ch = supabase
+      .channel("device-status-logs-tab")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "device_status_logs" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["logs-device-status"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [queryClient]);
+
+  const filtered = (data || []).filter((r: any) =>
+    !search ||
+    r.device_name?.toLowerCase().includes(search.toLowerCase()) ||
+    r.device_code?.toLowerCase().includes(search.toLowerCase()) ||
+    r.new_status?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Data</TableHead>
+          <TableHead>Dispositivo</TableHead>
+          <TableHead>Código</TableHead>
+          <TableHead>De</TableHead>
+          <TableHead>Para</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {isLoading ? (
+          <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+        ) : filtered.length === 0 ? (
+          <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma mudança de status registrada</TableCell></TableRow>
+        ) : (
+          filtered.map((log: any) => (
+            <TableRow key={log.id}>
+              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(log.created_at)}</TableCell>
+              <TableCell className="text-sm">{log.device_name || "—"}</TableCell>
+              <TableCell className="text-xs font-mono">{log.device_code || "—"}</TableCell>
+              <TableCell><Badge variant="outline" className="text-xs">{log.old_status || "—"}</Badge></TableCell>
+              <TableCell>
+                <Badge variant={log.new_status === "online" ? "default" : "destructive"} className="text-xs">
+                  {log.new_status}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  );
+}
+
 export default function PlatformLogs() {
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("import");
+  const [activeTab, setActiveTab] = useState("platform");
 
   return (
     <div className="space-y-6 p-6">
@@ -287,8 +429,16 @@ export default function PlatformLogs() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="platform" className="gap-2">
+            <Activity className="h-4 w-4" />
+            Plataforma
+          </TabsTrigger>
+          <TabsTrigger value="device-status" className="gap-2">
+            <Wifi className="h-4 w-4" />
+            Status
+          </TabsTrigger>
           <TabsTrigger value="import" className="gap-2">
             <Database className="h-4 w-4" />
             Importações
@@ -309,6 +459,12 @@ export default function PlatformLogs() {
 
         <Card className="mt-4">
           <CardContent className="p-0 overflow-auto max-h-[calc(100vh-320px)]">
+            <TabsContent value="platform" className="m-0">
+              <PlatformLogsTab search={search} />
+            </TabsContent>
+            <TabsContent value="device-status" className="m-0">
+              <DeviceStatusLogsTab search={search} />
+            </TabsContent>
             <TabsContent value="import" className="m-0">
               <ImportLogsTab search={search} />
             </TabsContent>
