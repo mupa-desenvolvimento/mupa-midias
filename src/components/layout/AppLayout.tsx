@@ -5,6 +5,7 @@ import Header from "./Header";
 import { AIAssistant } from "@/components/ai/AIAssistant";
 import { LitePlanBanner } from "./LitePlanBanner";
 import { useTenantLicense } from "@/hooks/useTenantLicense";
+import { useDeviceStatusNotifier } from "@/hooks/useDeviceStatusNotifier";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -12,6 +13,8 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const { isLite } = useTenantLicense();
+  // Real-time toast notifications when any device changes status
+  useDeviceStatusNotifier();
   const location = useLocation();
   const isPlaylistEditor = location.pathname.includes("/playlists/") && location.pathname.includes("/edit") || location.pathname.includes("/playlists/new");
 
