@@ -429,8 +429,16 @@ export default function PlatformLogs() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="platform" className="gap-2">
+            <Activity className="h-4 w-4" />
+            Plataforma
+          </TabsTrigger>
+          <TabsTrigger value="device-status" className="gap-2">
+            <Wifi className="h-4 w-4" />
+            Status
+          </TabsTrigger>
           <TabsTrigger value="import" className="gap-2">
             <Database className="h-4 w-4" />
             Importações
@@ -451,6 +459,12 @@ export default function PlatformLogs() {
 
         <Card className="mt-4">
           <CardContent className="p-0 overflow-auto max-h-[calc(100vh-320px)]">
+            <TabsContent value="platform" className="m-0">
+              <PlatformLogsTab search={search} />
+            </TabsContent>
+            <TabsContent value="device-status" className="m-0">
+              <DeviceStatusLogsTab search={search} />
+            </TabsContent>
             <TabsContent value="import" className="m-0">
               <ImportLogsTab search={search} />
             </TabsContent>
