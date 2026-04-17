@@ -358,6 +358,17 @@ export const useFaceDetection = (
         offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
       }
 
+      // Fast pre-filter with BlazeFace: skip the heavy face-api pipeline when
+      // no face is present. Falls back to running face-api directly if the
+      // pre-filter is unavailable (returns []).
+      const blazeBoxes = await quickDetectFaces(video);
+      const blazeAvailable = blazeBoxes.length > 0 || (await ensureBlazeFaceDetector()) !== null;
+      if (blazeAvailable && blazeBoxes.length === 0) {
+        // No face on screen — skip expensive inference this tick.
+        updateActiveFacesState();
+        return;
+      }
+
       // Use TinyFaceDetector for speed, with full pipeline
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
