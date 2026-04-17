@@ -3,7 +3,7 @@ import * as faceapi from 'face-api.js';
 import { usePeopleRegistry } from './usePeopleRegistry';
 import { useDetectionLog } from './useDetectionLog';
 import { useAttentionHistory } from './useAttentionHistory';
-import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
+import { initializeFaceApiBackend, initTensorFlow, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
 // BlazeFace pre-filter is currently a stub (see src/lib/blazeFaceDetector.ts).
 // Emotion types from face-api.js
 export type EmotionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised';
@@ -177,6 +177,10 @@ export const useFaceDetection = (
     const loadModels = async () => {
       try {
         setIsLoading(true);
+
+        // CRITICAL: TensorFlow backend must be ready BEFORE loading model weights,
+        // otherwise face-api's internal moveData() will read undefined .backend.
+        await initTensorFlow();
 
         const MODEL_URL = '/models';
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import * as faceapi from "face-api.js";
 import { Loader2, Camera, WifiOff, CheckCircle, AlertCircle } from "lucide-react";
+import { initTensorFlow } from "@/lib/faceApiBackend";
 
 const SUPABASE_URL = "https://bgcnvyoseexfmrynqbfb.supabase.co";
 
@@ -34,6 +35,9 @@ const DeviceDetector = () => {
   useEffect(() => {
     const loadModels = async () => {
       try {
+        // CRITICAL: init TF backend BEFORE loading model weights
+        await initTensorFlow();
+
         const MODEL_URL = "/models";
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
