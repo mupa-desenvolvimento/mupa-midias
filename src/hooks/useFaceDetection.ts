@@ -4,7 +4,6 @@ import { usePeopleRegistry } from './usePeopleRegistry';
 import { useDetectionLog } from './useDetectionLog';
 import { useAttentionHistory } from './useAttentionHistory';
 import { initializeFaceApiBackend, initTensorFlow, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
-// BlazeFace pre-filter is currently a stub (see src/lib/blazeFaceDetector.ts).
 // Emotion types from face-api.js
 export type EmotionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised';
 
@@ -375,8 +374,7 @@ export const useFaceDetection = (
         offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
       }
 
-      // BlazeFace pre-filter is currently a no-op stub (returns []). Run face-api
-      // directly — it's the only detector actually doing work.
+      // Run face-api.js detection (single source of truth for face detection)
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
         .withFaceLandmarks()
