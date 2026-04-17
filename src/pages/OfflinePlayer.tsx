@@ -117,11 +117,12 @@ const OfflinePlayer = () => {
   const faceVideoRef = useRef<HTMLVideoElement>(null);
   const faceCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Face detection for overlays
+  // Face detection — keep always active in background to broadcast audience data
+  // to /admin/monitoring (DemoFace), regardless of terminal mode.
   const { activeFaces } = useFaceDetection(
     faceVideoRef,
     faceCanvasRef,
-    terminalMode === "facial" || terminalMode === "counter" || terminalMode === "loyalty",
+    true,
   );
 
   useDeviceMonitor(deviceCode || "", mediaElementRef, activeFaces);
