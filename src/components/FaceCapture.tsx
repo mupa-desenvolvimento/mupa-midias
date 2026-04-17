@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Camera, RotateCcw, CheckCircle2, AlertCircle, User, Sparkles } from 'lucide-react';
 import * as faceapi from 'face-api.js';
 import { cn } from '@/lib/utils';
+import { initTensorFlow } from '@/lib/faceApiBackend';
 
 interface FaceCaptureProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -57,6 +58,9 @@ export const FaceCapture = ({
   useEffect(() => {
     const loadModels = async () => {
       try {
+        // Ensure TF backend is initialized first
+        await initTensorFlow();
+
         // Use CDN for consistency with useFaceDetection
         const modelPath = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
         const nets = faceapi.nets as any;

@@ -185,11 +185,12 @@ export const useFaceDetection = (
 
         // Skip nets that are already loaded (idempotent against remounts)
         const loaders: Promise<unknown>[] = [];
-        if (!faceapi.nets.tinyFaceDetector.isLoaded) loaders.push(faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL));
-        if (!faceapi.nets.ageGenderNet.isLoaded) loaders.push(faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL));
-        if (!faceapi.nets.faceLandmark68Net.isLoaded) loaders.push(faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL));
-        if (!faceapi.nets.faceRecognitionNet.isLoaded) loaders.push(faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL));
-        if (!faceapi.nets.faceExpressionNet.isLoaded) loaders.push(faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL));
+        const nets = faceapi.nets as any;
+        if (!nets.tinyFaceDetector.params) loaders.push(nets.tinyFaceDetector.loadFromUri(MODEL_URL));
+        if (!nets.ageGenderNet.params) loaders.push(nets.ageGenderNet.loadFromUri(MODEL_URL));
+        if (!nets.faceLandmark68Net.params) loaders.push(nets.faceLandmark68Net.loadFromUri(MODEL_URL));
+        if (!nets.faceRecognitionNet.params) loaders.push(nets.faceRecognitionNet.loadFromUri(MODEL_URL));
+        if (!nets.faceExpressionNet.params) loaders.push(nets.faceExpressionNet.loadFromUri(MODEL_URL));
         // SSD is heavy and unused (we use TinyFaceDetector); skip to speed up boot.
 
         if (loaders.length > 0) {

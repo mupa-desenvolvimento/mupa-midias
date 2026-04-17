@@ -82,7 +82,8 @@ export const initTensorFlow = async (): Promise<string> => {
         }
 
         await waitForBackendStabilization(tf);
-        await warmup();
+        // warmup() removed here because models are not yet loaded when initTensorFlow is called.
+        // It's called later in initializeFaceApiBackend after models are ready.
 
         const active = getCurrentBackendName(tf) ?? name;
         console.log(`[TF] ✅ Backend ready: ${active}`);
