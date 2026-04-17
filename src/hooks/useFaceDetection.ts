@@ -148,7 +148,7 @@ export const useFaceDetection = (
   const [isLoading, setIsLoading] = useState(false);
   const [totalSessionsToday, setTotalSessionsToday] = useState(0);
   
-  const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const detectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
   const isSwitchingBackendRef = useRef(false);
   const lastDetectedPersonsRef = useRef<Set<string>>(new Set());
@@ -357,6 +357,13 @@ export const useFaceDetection = (
         lastSkipLogRef.current = now;
         console.log('[FaceDetection] ⏸ Video not ready:', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
       }
+      return;
+    }
+
+    // Safety check for TensorFlow backend
+    const tf = (faceapi as any).tf;
+    if (tf?.engine && !tf.engine().backend) {
+      console.warn('[FaceDetection] Backend not ready, skipping frame');
       return;
     }
 
@@ -611,27 +618,31 @@ export const useFaceDetection = (
       }
     } finally {
       isDetectingRef.current = false;
+      // Schedule next detection if still active
+      if (isActiveRef.current && isModelsLoadedRef.current) {
+        detectionTimeoutRef.current = setTimeout(detectFaces, DETECTION_INTERVAL_MS);
+      }
     }
   }, [videoRef, canvasRef, findMatchingTrackedFace, updateActiveFacesState]);
 
   // Start/stop detection based on isActive
   useEffect(() => {
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
+    if (detectionTimeoutRef.current) {
+      clearTimeout(detectionTimeoutRef.current);
+      detectionTimeoutRef.current = null;
     }
 
     if (isActive && isModelsLoaded) {
-      console.log('[FaceDetection] Starting detection interval');
-      detectionIntervalRef.current = setInterval(detectFaces, DETECTION_INTERVAL_MS);
+      console.log('[FaceDetection] Starting detection sequence');
+      detectFaces(); // Kick off the sequence
     } else {
       isDetectingRef.current = false;
     }
 
     return () => {
-      if (detectionIntervalRef.current) {
-        clearInterval(detectionIntervalRef.current);
-        detectionIntervalRef.current = null;
+      if (detectionTimeoutRef.current) {
+        clearTimeout(detectionTimeoutRef.current);
+        detectionTimeoutRef.current = null;
       }
       isDetectingRef.current = false;
     };

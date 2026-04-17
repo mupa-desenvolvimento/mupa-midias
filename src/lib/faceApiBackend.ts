@@ -77,7 +77,13 @@ export const initTensorFlow = async (): Promise<string> => {
       return 'unknown';
     }
 
-    // Try WebGL first, but only keep it if a real inference warmup succeeds.
+    // Set engine flags for stability
+    if (tf.env) {
+      tf.env().set('WEBGL_CPU_FORWARD', false);
+      tf.env().set('WEBGL_PACK', true);
+      tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
+    }
+
     const candidates = ['webgl', 'cpu'].filter((b) => canUseBackend(tf, b));
 
     for (const name of candidates) {
@@ -86,9 +92,13 @@ export const initTensorFlow = async (): Promise<string> => {
           await Promise.resolve(tf.setBackend(name));
         }
 
-        await waitForBackendStabilization(tf);
-        // warmup() is now safe to call here because it no longer depends on face-api models.
-        // This ensures the backend (WebGL/CPU) is fully initialized before we return.
+        // tf.ready() is more reliable for checking backend availability
+        if (typeof tf.ready === 'function') {
+          await tf.ready();
+        } else {
+          await waitForBackendStabilization(tf);
+        }
+
         await warmup();
 
         const active = getCurrentBackendName(tf) ?? name;
@@ -99,15 +109,8 @@ export const initTensorFlow = async (): Promise<string> => {
       }
     }
 
-    // Last-resort: accept whatever backend is active after a small stabilization wait.
-    try {
-      await waitForBackendStabilization(tf);
-    } catch {
-      /* ignore */
-    }
-
     const fallback = getCurrentBackendName(tf) ?? 'unknown';
-    console.warn(`[TF] ⚠️ Falling back to current backend without verified warmup: ${fallback}`);
+    console.warn(`[TF] ⚠️ Falling back to current backend: ${fallback}`);
     return fallback;
   })();
 
