@@ -23,9 +23,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <AppSidebar />
       <main className="flex-1 flex flex-col overflow-hidden relative min-w-0 h-screen">
         <Header />
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-3 md:p-4 lg:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto p-3 md:p-4 lg:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
           {!isPlaylistEditor && <LitePlanBanner />}
-          <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 flex flex-col">
             {children}
           </div>
         </div>
