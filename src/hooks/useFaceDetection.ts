@@ -4,7 +4,7 @@ import { usePeopleRegistry } from './usePeopleRegistry';
 import { useDetectionLog } from './useDetectionLog';
 import { useAttentionHistory } from './useAttentionHistory';
 import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
-import { ensureBlazeFaceDetector, quickDetectFaces } from '@/lib/blazeFaceDetector';
+// BlazeFace pre-filter is currently a stub (see src/lib/blazeFaceDetector.ts).
 // Emotion types from face-api.js
 export type EmotionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised';
 
@@ -154,6 +154,7 @@ export const useFaceDetection = (
   const isSwitchingBackendRef = useRef(false);
   const lastDetectedPersonsRef = useRef<Set<string>>(new Set());
   const trackedFacesRef = useRef<Map<string, TrackedFaceData>>(new Map());
+  const lastSkipLogRef = useRef(0);
   
   const { registeredPeople } = usePeopleRegistry();
   const { logDetection } = useDetectionLog();
@@ -170,42 +171,46 @@ export const useFaceDetection = (
     logDetectionRef.current = logDetection;
   }, [logDetection]);
 
-  // Load face-api.js models
+  // Load face-api.js models (idempotent — survives StrictMode/remounts)
   useEffect(() => {
+    let cancelled = false;
     const loadModels = async () => {
       try {
         setIsLoading(true);
-        
+
         const MODEL_URL = '/models';
-        
-        // Load TinyFaceDetector (lighter) + SSD as fallback
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-        ]);
-        
+
+        // Skip nets that are already loaded (idempotent against remounts)
+        const loaders: Promise<unknown>[] = [];
+        if (!faceapi.nets.tinyFaceDetector.isLoaded) loaders.push(faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL));
+        if (!faceapi.nets.ageGenderNet.isLoaded) loaders.push(faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL));
+        if (!faceapi.nets.faceLandmark68Net.isLoaded) loaders.push(faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL));
+        if (!faceapi.nets.faceRecognitionNet.isLoaded) loaders.push(faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL));
+        if (!faceapi.nets.faceExpressionNet.isLoaded) loaders.push(faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL));
+        // SSD is heavy and unused (we use TinyFaceDetector); skip to speed up boot.
+
+        if (loaders.length > 0) {
+          await Promise.all(loaders);
+        }
+
+        if (cancelled) return;
+
         const backend = await initializeFaceApiBackend(faceapi);
-        console.log('[FaceDetection] Warm-up successful, backend:', backend);
+        console.log('[FaceDetection] ✅ Models ready. Backend:', backend);
 
-        // Warm up BlazeFace pre-filter (non-blocking — failures degrade gracefully)
-        ensureBlazeFaceDetector().then((d) => {
-          console.log('[FaceDetection] BlazeFace pre-filter:', d ? 'ready' : 'unavailable (using face-api only)');
-        });
-
+        if (cancelled) return;
         setIsModelsLoaded(true);
-        console.log('[FaceDetection] Models loaded successfully');
       } catch (error) {
-        console.error('[FaceDetection] Error loading models:', error);
+        console.error('[FaceDetection] ❌ Error loading models:', error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadModels();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Find matching tracked face by descriptor
@@ -315,15 +320,23 @@ export const useFaceDetection = (
     }
 
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded || !isActive) {
-      console.log('[FaceDetection] Skip: ref=', !!videoRef.current, 'canvas=', !!canvasRef.current, 'models=', isModelsLoaded, 'active=', isActive);
+      const now = Date.now();
+      if (now - lastSkipLogRef.current > 5000) {
+        lastSkipLogRef.current = now;
+        console.log('[FaceDetection] ⏸ Waiting:', { ref: !!videoRef.current, canvas: !!canvasRef.current, models: isModelsLoaded, active: isActive });
+      }
       return;
     }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     if (video.videoWidth === 0 || video.videoHeight === 0) {
-      console.log('[FaceDetection] Skip: video dimensions', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
+      const now = Date.now();
+      if (now - lastSkipLogRef.current > 5000) {
+        lastSkipLogRef.current = now;
+        console.log('[FaceDetection] ⏸ Video not ready:', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
+      }
       return;
     }
 
@@ -358,18 +371,8 @@ export const useFaceDetection = (
         offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
       }
 
-      // Fast pre-filter with BlazeFace: skip the heavy face-api pipeline when
-      // no face is present. Falls back to running face-api directly if the
-      // pre-filter is unavailable (returns []).
-      const blazeBoxes = await quickDetectFaces(video);
-      const blazeAvailable = blazeBoxes.length > 0 || (await ensureBlazeFaceDetector()) !== null;
-      if (blazeAvailable && blazeBoxes.length === 0) {
-        // No face on screen — skip expensive inference this tick.
-        updateActiveFacesState();
-        return;
-      }
-
-      // Use TinyFaceDetector for speed, with full pipeline
+      // BlazeFace pre-filter is currently a no-op stub (returns []). Run face-api
+      // directly — it's the only detector actually doing work.
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
         .withFaceLandmarks()
@@ -415,10 +418,9 @@ export const useFaceDetection = (
         ctx.fillStyle = previewColor;
         ctx.fillText(previewLabel, drawX + 2, previewLabelY);
 
-        // Keep the business logic filter for tracking/logging only
-        if (!isLooking) {
-          continue;
-        }
+        // Track ALL detected faces (not just the ones perfectly facing the camera).
+        // `isLooking` is still recorded for analytics, but should not gate detection
+        // — too restrictive a gate is the main reason "no faces" appears in the UI.
 
         // Extract emotion data
         const expressions = detection.expressions;
