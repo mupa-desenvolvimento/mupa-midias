@@ -33,15 +33,16 @@ export const ensureBlazeFaceDetector = async (): Promise<Detector | null> => {
   if (!detectorPromise) {
     detectorPromise = (async () => {
       try {
-        const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
-        // Use tfjs runtime (no @mediapipe/face_detection npm dep required;
-        // model assets are fetched from tfhub at runtime).
-        const detector = await faceDetection.createDetector(model, {
+        // Dynamic import + tfjs-only sub-path avoids bundling the
+        // @mediapipe/face_detection package, which has no ESM export.
+        const fd: any = await import('@tensorflow-models/face-detection/dist/face_detector_tfjs');
+        const model = fd.SupportedModels.MediaPipeFaceDetector;
+        const detector = await fd.createDetector(model, {
           runtime: 'tfjs',
           modelType: 'short',
           maxFaces: 5,
         });
-        return detector;
+        return detector as Detector;
       } catch (error) {
         console.warn('[BlazeFace] Failed to initialize, falling back silently:', error);
         lastFailureAt = Date.now();
