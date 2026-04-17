@@ -190,7 +190,12 @@ export const useFaceDetection = (
         
         const backend = await initializeFaceApiBackend(faceapi);
         console.log('[FaceDetection] Warm-up successful, backend:', backend);
-        
+
+        // Warm up BlazeFace pre-filter (non-blocking — failures degrade gracefully)
+        ensureBlazeFaceDetector().then((d) => {
+          console.log('[FaceDetection] BlazeFace pre-filter:', d ? 'ready' : 'unavailable (using face-api only)');
+        });
+
         setIsModelsLoaded(true);
         console.log('[FaceDetection] Models loaded successfully');
       } catch (error) {
