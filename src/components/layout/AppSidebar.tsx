@@ -64,8 +64,7 @@ const menuItems = [
 { title: "Galeria", url: "/admin/media", icon: Image },
 { title: "Creator Img", url: "/admin/graphic-editor", icon: Palette },
 { title: "Canva", url: "/admin/canva", icon: Brush },
-{ title: "Câmera", url: "/admin/camera", icon: Camera },
-{ title: "Monitoramento", url: "/admin/monitoring", icon: Eye },
+{ title: "DemoFace", url: "/admin/monitoring", icon: Eye },
 { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
 { title: "Inky Intelligence", url: "/admin/inky", icon: Brain },
 { title: "Configurações", url: "/admin/settings", icon: Settings }];

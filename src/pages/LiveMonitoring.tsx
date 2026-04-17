@@ -1,370 +1,276 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Camera as CameraIcon, Users, Play, Square, UserCheck, UserX, Clock, RefreshCw } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useFaceDetection } from "@/hooks/useFaceDetection";
-import { usePeopleRegistry } from "@/hooks/usePeopleRegistry";
-import { useDetectionLog } from "@/hooks/useDetectionLog";
+import { ScanFace, Users, Smile, Activity, Wifi, WifiOff, Clock } from "lucide-react";
+import { useDevices, type DeviceWithRelations } from "@/hooks/useDevices";
+import { supabase } from "@/integrations/supabase/client";
+import type { ActiveFace } from "@/hooks/useFaceDetection";
+import { cn } from "@/lib/utils";
+
+interface DeviceFaceState {
+  faces: ActiveFace[];
+  lastUpdate: number;
+  online: boolean;
+}
+
+const STALE_AFTER_MS = 5000;
+
+const emotionEmoji: Record<string, string> = {
+  neutral: "😐",
+  happy: "😊",
+  sad: "😢",
+  angry: "😠",
+  fearful: "😨",
+  disgusted: "🤢",
+  surprised: "😮",
+};
 
 const LiveMonitoring = () => {
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  
-  const { toast } = useToast();
-  const { registeredPeople } = usePeopleRegistry();
-  const { detectionLogs, getStats } = useDetectionLog();
-  
-  const { 
-    isModelsLoaded, 
-    isLoading, 
-    activeFaces,
-    totalLooking,
-    totalSessionsToday
-  } = useFaceDetection(videoRef, canvasRef, isStreaming);
+  const { devices } = useDevices();
+  const [deviceStates, setDeviceStates] = useState<Record<string, DeviceFaceState>>({});
+  const [now, setNow] = useState(Date.now());
 
-  const sessionStats = getStats();
+  // Only camera-enabled devices feed DemoFace
+  const monitoredDevices = useMemo(
+    () => (devices || []).filter((d) => d.camera_enabled),
+    [devices],
+  );
 
-  // Inicializar câmera
-  const startCamera = async () => {
-    if (!isModelsLoaded) {
-      toast({
-        title: "Modelos carregando",
-        description: "Aguarde o carregamento dos modelos de IA",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Subscribe to broadcast channel for each device
+  useEffect(() => {
+    if (!monitoredDevices.length) return;
 
-    try {
-      setCameraError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: 640, 
-          height: 480,
-          facingMode: 'user' 
-        },
-        audio: false
-      });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsStreaming(true);
-        
-        toast({
-          title: "Monitoramento iniciado",
-          description: "Sistema de reconhecimento ativo",
-        });
-      }
-    } catch (error) {
-      setCameraError("Erro ao acessar a câmera. Verifique as permissões.");
-      console.error("Erro ao acessar câmera:", error);
-      
-      toast({
-        title: "Erro na câmera",
-        description: "Não foi possível acessar a câmera",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Parar câmera
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setIsStreaming(false);
-    
-    toast({
-      title: "Monitoramento parado",
-      description: "Sistema de reconhecimento desativado",
+    const channels = monitoredDevices.map((device) => {
+      const channel = supabase
+        .channel(`device_monitor:${device.device_code}`)
+        .on("broadcast", { event: "faces" }, (msg) => {
+          const payload = msg.payload as { stats: ActiveFace[]; timestamp: string };
+          setDeviceStates((prev) => ({
+            ...prev,
+            [device.device_code]: {
+              faces: payload.stats || [],
+              lastUpdate: Date.now(),
+              online: true,
+            },
+          }));
+        })
+        .subscribe();
+      return channel;
     });
-  };
 
-  const registeredFaces = activeFaces.filter(face => face.isRegistered);
-  const unregisteredFaces = activeFaces.filter(face => !face.isRegistered);
+    return () => {
+      channels.forEach((c) => supabase.removeChannel(c));
+    };
+  }, [monitoredDevices]);
+
+  // Tick every second to update online/stale state
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Aggregate stats
+  const aggregate = useMemo(() => {
+    let onlineDevices = 0;
+    let totalFaces = 0;
+    const emotions: Record<string, number> = {};
+    const genders: Record<string, number> = { masculino: 0, feminino: 0, indefinido: 0 };
+
+    Object.entries(deviceStates).forEach(([_, state]) => {
+      const isOnline = now - state.lastUpdate < STALE_AFTER_MS;
+      if (!isOnline) return;
+      onlineDevices += 1;
+      totalFaces += state.faces.length;
+      state.faces.forEach((f) => {
+        emotions[f.emotion.emotion] = (emotions[f.emotion.emotion] || 0) + 1;
+        if (genders[f.gender] !== undefined) genders[f.gender] += 1;
+      });
+    });
+
+    return { onlineDevices, totalFaces, emotions, genders };
+  }, [deviceStates, now]);
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
-        <div>
-          <p className="text-muted-foreground">Visualização de faces cadastradas e não cadastradas</p>
-        </div>
-        <div className="flex space-x-2">
-          {!isStreaming ? (
-            <Button 
-              onClick={startCamera} 
-              className="gradient-primary text-white"
-              disabled={isLoading || !isModelsLoaded}
-            >
-              <Play className="w-4 h-4 mr-2" />
-              {isLoading ? "Carregando IA..." : "Iniciar Monitoramento"}
-            </Button>
-          ) : (
-            <Button variant="destructive" onClick={stopCamera}>
-              <Square className="w-4 h-4 mr-2" />
-              Parar Monitoramento
-            </Button>
-          )}
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <ScanFace className="w-6 h-6 text-primary" />
+          DemoFace
+        </h1>
+        <p className="text-muted-foreground">
+          Visualização em tempo real do reconhecimento facial enviado pelos terminais conectados
+          (rota <code className="bg-muted px-1 rounded">/play</code>).
+        </p>
       </div>
 
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Aggregated stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pessoas Cadastradas</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-500" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Terminais Online</CardTitle>
+            <Wifi className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{registeredPeople.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Total no sistema
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Faces Reconhecidas</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{registeredFaces.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Detectadas agora
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Faces Não Cadastradas</CardTitle>
-            <UserX className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{unregisteredFaces.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Detectadas agora
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Detecções Hoje</CardTitle>
-            <Clock className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{sessionStats.todayDetections}</div>
-            <p className="text-xs text-muted-foreground">
-              Pessoas únicas: {sessionStats.uniquePeopleToday}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Feed da Câmera */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CameraIcon className="w-5 h-5" />
-              <span>Feed da Câmera</span>
-              <Badge variant={isStreaming ? "default" : "secondary"}>
-                {isStreaming ? "Ativo" : "Inativo"}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative bg-black rounded-lg overflow-hidden">
-              {cameraError ? (
-                <div className="h-64 flex items-center justify-center text-white">
-                  <div className="text-center">
-                    <CameraIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>{cameraError}</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-64 object-cover"
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                  />
-                </>
-              )}
+            <div className="text-2xl font-bold">
+              {aggregate.onlineDevices}
+              <span className="text-sm text-muted-foreground font-normal"> / {monitoredDevices.length}</span>
             </div>
+            <p className="text-xs text-muted-foreground">com câmera habilitada</p>
           </CardContent>
         </Card>
 
-        {/* Faces Cadastradas Detectadas */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <UserCheck className="w-5 h-5 text-green-500" />
-              <span>Faces Cadastradas</span>
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                {registeredFaces.length}
-              </Badge>
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Pessoas Detectadas</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {registeredFaces.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <UserCheck className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma face cadastrada detectada</p>
-                </div>
-              ) : (
-                registeredFaces.map((face, index) => (
-                  <div key={`registered-${face.trackId}-${index}`} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                      <div>
-                        <h4 className="font-medium text-green-800 dark:text-green-200">{face.name}</h4>
-                        <p className="text-xs text-green-600 dark:text-green-400">CPF: {face.cpf}</p>
-                        <p className="text-xs text-green-600 dark:text-green-400">
-                          Confiança: {(face.confidence * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-yellow-600">
-                        {face.lookingDuration.toFixed(1)}s
-                      </div>
-                      <p className="text-xs text-green-600 dark:text-green-400">
-                        olhando
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="text-2xl font-bold">{aggregate.totalFaces}</div>
+            <p className="text-xs text-muted-foreground">agora mesmo</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Emoção Predominante</CardTitle>
+            <Smile className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold capitalize">
+              {Object.entries(aggregate.emotions).sort((a, b) => b[1] - a[1])[0]?.[0] || "—"}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {Object.entries(aggregate.emotions).sort((a, b) => b[1] - a[1])[0]?.[1] || 0} ocorrência(s)
+            </p>
           </CardContent>
         </Card>
 
-        {/* Faces Não Cadastradas */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <UserX className="w-5 h-5 text-orange-500" />
-              <span>Faces Não Cadastradas</span>
-              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                {unregisteredFaces.length}
-              </Badge>
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Distribuição</CardTitle>
+            <Activity className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {unregisteredFaces.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <UserX className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma face não cadastrada detectada</p>
-                </div>
-              ) : (
-                unregisteredFaces.map((face, index) => (
-                  <div key={`unregistered-${face.trackId}-${index}`} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse"></div>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <Badge 
-                            variant="outline" 
-                            className="bg-blue-100 text-blue-800 border-blue-200"
-                          >
-                            {face.gender}
-                          </Badge>
-                          <Badge 
-                            variant="outline"
-                            className="bg-purple-100 text-purple-800 border-purple-200"
-                          >
-                            {face.age} anos
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                          Confiança: {(face.confidence * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-yellow-600">
-                        {face.lookingDuration.toFixed(1)}s
-                      </div>
-                      <p className="text-xs text-orange-600 dark:text-orange-400">
-                        olhando
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="text-sm space-y-0.5">
+              <div>👨 Masculino: <span className="font-bold">{aggregate.genders.masculino}</span></div>
+              <div>👩 Feminino: <span className="font-bold">{aggregate.genders.feminino}</span></div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Últimas Detecções */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <RefreshCw className="w-5 h-5" />
-              <span>Últimas Detecções</span>
-            </div>
-            <Badge variant="outline">{detectionLogs.slice(0, 10).length} registros</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {detectionLogs.slice(0, 10).length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhuma detecção registrada</p>
-              </div>
+      {/* Device grid */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Terminais</h2>
+        {monitoredDevices.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              <ScanFace className="w-12 h-12 mx-auto mb-3 opacity-40" />
+              <p>Nenhum dispositivo com câmera habilitada.</p>
+              <p className="text-xs mt-1">Habilite a câmera nas configurações do dispositivo.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {monitoredDevices.map((device) => (
+              <DeviceCard
+                key={device.id}
+                device={device}
+                state={deviceStates[device.device_code]}
+                now={now}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+interface DeviceCardProps {
+  device: DeviceWithRelations;
+  state?: DeviceFaceState;
+  now: number;
+}
+
+const DeviceCard = ({ device, state, now }: DeviceCardProps) => {
+  const isOnline = state ? now - state.lastUpdate < STALE_AFTER_MS : false;
+  const faces = state?.faces || [];
+  const lastUpdateSec = state ? Math.round((now - state.lastUpdate) / 1000) : null;
+
+  return (
+    <Card className={cn(!isOnline && "opacity-70")}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base">
+          <span className="truncate">{device.name}</span>
+          <Badge
+            variant={isOnline ? "default" : "secondary"}
+            className={cn("ml-2", isOnline && "bg-green-500 hover:bg-green-500")}
+          >
+            {isOnline ? (
+              <>
+                <Wifi className="w-3 h-3 mr-1" /> Ao vivo
+              </>
             ) : (
-              detectionLogs.slice(0, 10).map((log) => (
-                <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <div>
-                      <h4 className="font-medium">{log.personName}</h4>
-                      <p className="text-xs text-muted-foreground">CPF: {log.personCpf}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Confiança: {(log.confidence * 100).toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      {log.detectedAt.toLocaleTimeString()}
+              <>
+                <WifiOff className="w-3 h-3 mr-1" /> Offline
+              </>
+            )}
+          </Badge>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground font-mono">{device.device_code}</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground flex items-center gap-1">
+            <Users className="w-4 h-4" /> Pessoas
+          </span>
+          <span className="text-2xl font-bold">{faces.length}</span>
+        </div>
+
+        {faces.length > 0 ? (
+          <div className="space-y-2">
+            {faces.slice(0, 3).map((face) => (
+              <div
+                key={face.trackId}
+                className="flex items-center justify-between text-sm border-t pt-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{emotionEmoji[face.emotion.emotion] || "😐"}</span>
+                  <div>
+                    <p className="font-medium capitalize">
+                      {face.gender}, {face.age}a
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {log.detectedAt.toLocaleDateString()}
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {face.emotion.emotion}
                     </p>
                   </div>
                 </div>
-              ))
+                <Badge variant="outline" className="text-xs">
+                  {(face.emotion.confidence * 100).toFixed(0)}%
+                </Badge>
+              </div>
+            ))}
+            {faces.length > 3 && (
+              <p className="text-xs text-muted-foreground text-center pt-1">
+                +{faces.length - 3} pessoa(s)
+              </p>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic text-center py-2">
+            {isOnline ? "Nenhum rosto no momento" : "Aguardando conexão do terminal..."}
+          </p>
+        )}
+
+        {lastUpdateSec !== null && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1 pt-1 border-t">
+            <Clock className="w-3 h-3" />
+            <span>Atualizado há {lastUpdateSec}s</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

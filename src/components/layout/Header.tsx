@@ -31,7 +31,7 @@ const Header = () => {
       case "/admin/analytics": return "Analytics";
       case "/admin/settings": return "Configurações";
       case "/admin/tenants": return "Tenants";
-      case "/admin/monitoring": return "Monitoramento";
+      case "/admin/monitoring": return "DemoFace";
       default:
         if (path.startsWith("/admin/api-integrations")) return "Mapeamento de Preços";
         if (path.startsWith("/admin/auto-content/")) return "Conteúdo Automático";
