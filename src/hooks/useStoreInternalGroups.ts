@@ -43,8 +43,7 @@ export const useStoreInternalGroups = () => {
         .from("store_internal_groups")
         .select(`
           *,
-          store:stores(id, name, code),
-          playlist:playlists(id, name)
+          store:stores(id, name, code)
         `)
         .order("name");
 
@@ -56,7 +55,7 @@ export const useStoreInternalGroups = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as StoreInternalGroup[];
+      return (data ?? []) as unknown as StoreInternalGroup[];
     },
     enabled: !!tenantId || isSuperAdmin,
   });
