@@ -136,7 +136,7 @@ const isFacingCamera = (landmarks: faceapi.FaceLandmarks68): boolean => {
 
 const FACE_MATCH_THRESHOLD = 0.45; // Stricter threshold for better matching
 const FACE_TIMEOUT_MS = 2000; // Remove tracked face after 2 seconds of not being seen
-const DETECTION_INTERVAL_MS = 500; // Faster detection for smoother tracking
+const DETECTION_INTERVAL_MS = 800; // Slightly slower interval for better stability on lower-end devices
 
 export const useFaceDetection = (
   videoRef: React.RefObject<HTMLVideoElement>,
@@ -155,6 +155,18 @@ export const useFaceDetection = (
   const trackedFacesRef = useRef<Map<string, TrackedFaceData>>(new Map());
   const lastSkipLogRef = useRef(0);
   
+  // Use refs for values that change to keep detectFaces stable
+  const isActiveRef = useRef(isActive);
+  const isModelsLoadedRef = useRef(isModelsLoaded);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
+
+  useEffect(() => {
+    isModelsLoadedRef.current = isModelsLoaded;
+  }, [isModelsLoaded]);
+
   const { registeredPeople } = usePeopleRegistry();
   const { logDetection } = useDetectionLog();
   const { addAttentionRecord } = useAttentionHistory();
@@ -186,14 +198,17 @@ export const useFaceDetection = (
         // Skip nets that are already loaded (idempotent against remounts)
         const loaders: Promise<unknown>[] = [];
         const nets = faceapi.nets as any;
-        if (!nets.tinyFaceDetector.params) loaders.push(nets.tinyFaceDetector.loadFromUri(MODEL_URL));
-        if (!nets.ageGenderNet.params) loaders.push(nets.ageGenderNet.loadFromUri(MODEL_URL));
-        if (!nets.faceLandmark68Net.params) loaders.push(nets.faceLandmark68Net.loadFromUri(MODEL_URL));
-        if (!nets.faceRecognitionNet.params) loaders.push(nets.faceRecognitionNet.loadFromUri(MODEL_URL));
-        if (!nets.faceExpressionNet.params) loaders.push(nets.faceExpressionNet.loadFromUri(MODEL_URL));
+        
+        // Robust check for loaded models
+        if (!nets.tinyFaceDetector?.params) loaders.push(nets.tinyFaceDetector.loadFromUri(MODEL_URL));
+        if (!nets.ageGenderNet?.params) loaders.push(nets.ageGenderNet.loadFromUri(MODEL_URL));
+        if (!nets.faceLandmark68Net?.params) loaders.push(nets.faceLandmark68Net.loadFromUri(MODEL_URL));
+        if (!nets.faceRecognitionNet?.params) loaders.push(nets.faceRecognitionNet.loadFromUri(MODEL_URL));
+        if (!nets.faceExpressionNet?.params) loaders.push(nets.faceExpressionNet.loadFromUri(MODEL_URL));
         // SSD is heavy and unused (we use TinyFaceDetector); skip to speed up boot.
 
         if (loaders.length > 0) {
+          console.log(`[FaceDetection] Loading ${loaders.length} models...`);
           await Promise.all(loaders);
         }
 
@@ -323,11 +338,11 @@ export const useFaceDetection = (
       return;
     }
 
-    if (!videoRef.current || !canvasRef.current || !isModelsLoaded || !isActive) {
+    if (!videoRef.current || !canvasRef.current || !isModelsLoadedRef.current || !isActiveRef.current) {
       const now = Date.now();
       if (now - lastSkipLogRef.current > 5000) {
         lastSkipLogRef.current = now;
-        console.log('[FaceDetection] ⏸ Waiting:', { ref: !!videoRef.current, canvas: !!canvasRef.current, models: isModelsLoaded, active: isActive });
+        console.log('[FaceDetection] ⏸ Waiting:', { ref: !!videoRef.current, canvas: !!canvasRef.current, models: isModelsLoadedRef.current, active: isActiveRef.current });
       }
       return;
     }
@@ -335,7 +350,8 @@ export const useFaceDetection = (
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
+    // Check readyState to ensure video is actually playing/ready
+    if (video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
       const now = Date.now();
       if (now - lastSkipLogRef.current > 5000) {
         lastSkipLogRef.current = now;
@@ -347,11 +363,14 @@ export const useFaceDetection = (
     isDetectingRef.current = true;
 
     try {
-      // Match canvas internal dimensions to CSS display size for proper overlay alignment
-      const displayWidth = canvas.clientWidth;
-      const displayHeight = canvas.clientHeight;
-      canvas.width = displayWidth;
-      canvas.height = displayHeight;
+      // Use clientWidth/Height but fallback to video dimensions if 0
+      const displayWidth = canvas.clientWidth || video.videoWidth;
+      const displayHeight = canvas.clientHeight || video.videoHeight;
+      
+      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+      }
       
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -375,16 +394,23 @@ export const useFaceDetection = (
         offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
       }
 
-      // Run face-api.js detection (single source of truth for face detection)
+      // Run face-api.js detection with increased sensitivity (inputSize 416, threshold 0.4)
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 }))
         .withFaceLandmarks()
         .withFaceDescriptors()
         .withAgeAndGender()
         .withFaceExpressions();
 
       if (detections.length > 0) {
-        console.log(`[FaceDetection] Detected ${detections.length} face(s)`);
+        console.log(`[FaceDetection] ✅ Detected ${detections.length} face(s)`);
+      } else {
+        // Log every 5 seconds if no faces are found to confirm detection is running
+        const now = Date.now();
+        if (now - lastSkipLogRef.current > 5000) {
+          lastSkipLogRef.current = now;
+          console.log('[FaceDetection] 🔍 Running but no faces found');
+        }
       }
 
       const now = new Date();
@@ -586,7 +612,7 @@ export const useFaceDetection = (
     } finally {
       isDetectingRef.current = false;
     }
-  }, [videoRef, canvasRef, isModelsLoaded, isActive, findMatchingTrackedFace, updateActiveFacesState]);
+  }, [videoRef, canvasRef, findMatchingTrackedFace, updateActiveFacesState]);
 
   // Start/stop detection based on isActive
   useEffect(() => {
