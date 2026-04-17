@@ -114,6 +114,13 @@ export default defineConfig(({ mode }) => ({
         __dirname,
         "./src/pwa/register-sw-react-stub.ts",
       ),
+      // @mediapipe/face_detection has no ESM export and breaks rolldown.
+      // We only use the 'tfjs' runtime of @tensorflow-models/face-detection,
+      // so stub the unused mediapipe import.
+      "@mediapipe/face_detection": path.resolve(
+        __dirname,
+        "./src/lib/mediapipeFaceDetectionStub.ts",
+      ),
     },
   },
 }));
