@@ -192,11 +192,6 @@ const OfflinePlayer = () => {
     };
   }, []);
 
-  const [activePlayer, setActivePlayer] = useState<"A" | "B">("A");
-  const [nextReadySlot, setNextReadySlot] = useState<"A" | "B" | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  const [progressPercent, setProgressPercent] = useState(0);
   const [isPortrait, setIsPortrait] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.innerHeight > window.innerWidth;
