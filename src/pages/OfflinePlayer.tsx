@@ -242,6 +242,18 @@ const OfflinePlayer = () => {
     return groups;
   }, [deviceState?.playlists]);
 
+  // Prefetch das mídias (imagens) em idle p/ Cache API + warm-up
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+    const urls = items
+      .map((it) => it?.media?.file_url)
+      .filter((u): u is string => typeof u === "string" && !!u);
+    if (urls.length === 0) return;
+    import("@/lib/mupaCache").then(({ prefetchAssets }) => {
+      prefetchAssets(urls);
+    });
+  }, [items]);
+
   // Override media check
   const hasActiveOverrideMedia = (() => {
     if (!deviceState?.override_media) return false;
@@ -789,6 +801,7 @@ const OfflinePlayer = () => {
           isSyncing={isSyncing}
           debugInfo={debugInfo}
           contentGroups={contentGroups}
+          cacheKey={deviceCode || undefined}
         />
       </div>
     );
