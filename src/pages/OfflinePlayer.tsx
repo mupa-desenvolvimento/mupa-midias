@@ -258,8 +258,60 @@ const OfflinePlayer = () => {
   const overrideMedia = hasActiveOverrideMedia ? deviceState?.override_media : null;
   const displayOverrideMedia = hasActiveOverrideMedia && overrideMedia;
 
+  // Lista normalizada para o seamless player (apenas video/image, demais tipos
+  // são renderizados via MediaRenderer fora do double-buffer).
+  const seamlessItems: SeamlessMediaItem[] = useMemo(() => {
+    return items
+      .map((it) => {
+        const m = it?.media;
+        if (!m) return null;
+        if (m.type !== "video" && m.type !== "image") return null;
+        const url = m.blob_url || m.file_url;
+        if (!url) return null;
+        return {
+          id: m.id,
+          type: m.type,
+          url,
+          duration:
+            m.type === "video"
+              ? (it?.duration_override ?? 0)
+              : (it?.duration_override || m.duration || 10),
+        } as SeamlessMediaItem;
+      })
+      .filter((x): x is SeamlessMediaItem => !!x);
+  }, [items]);
+
+  const {
+    activeSlot: activePlayer,
+    currentIndex,
+    progressPercent,
+    timeRemainingMs: timeRemaining,
+    goToNext,
+    goToPrev,
+  } = useSeamlessMediaPlayer({
+    items: seamlessItems,
+    videoARef,
+    videoBRef,
+    imgARef,
+    imgBRef,
+    crossfadeMs: 400,
+    preloadLeadSeconds: 2,
+    crossfadeLeadSeconds: 0.4,
+    paused: !!displayOverrideMedia,
+  });
+
   const activeItem = items[currentIndex] || null;
   const activeMedia = displayOverrideMedia ? overrideMedia : activeItem?.media;
+
+  // Sincroniza mediaElementRef com o slot ativo (para useDeviceMonitor)
+  useEffect(() => {
+    if (displayOverrideMedia) return;
+    if (activeMedia?.type === "video") {
+      mediaElementRef.current = activePlayer === "A" ? videoARef.current : videoBRef.current;
+    } else if (activeMedia?.type === "image") {
+      mediaElementRef.current = activePlayer === "A" ? imgARef.current : imgBRef.current;
+    }
+  }, [activePlayer, activeMedia?.id, activeMedia?.type, displayOverrideMedia]);
 
   const [resolvedMediaUrl, setResolvedMediaUrl] = useState<string>("");
 
@@ -274,64 +326,33 @@ const OfflinePlayer = () => {
     };
   }, []);
 
+  // Resolve URL apenas para override media e tipos especiais (news/weather).
+  // Vídeos/imagens "normais" usam blob_url/file_url direto via seamlessItems.
   useEffect(() => {
     let cancelled = false;
-
     const resolveUrl = async () => {
       const media = activeMedia;
-
       if (!media || !media.file_url) {
         setResolvedMediaUrl("");
         return;
       }
-
       if (media.blob_url) {
         setResolvedMediaUrl(media.blob_url);
         return;
       }
-
       try {
         const localUrl = await storageService.cacheMedia(media.file_url, media.id);
-        if (!cancelled) {
-          setResolvedMediaUrl(localUrl);
-        }
+        if (!cancelled) setResolvedMediaUrl(localUrl);
       } catch (e) {
         console.error("Failed to cache media locally (offline player):", e);
-        if (!cancelled) {
-          setResolvedMediaUrl(media.file_url);
-        }
+        if (!cancelled) setResolvedMediaUrl(media.file_url);
       }
     };
-
     resolveUrl();
-
     return () => {
       cancelled = true;
     };
   }, [activeMedia?.id, activeMedia?.file_url, activeMedia?.blob_url]);
-
-  const getDurationForIndex = useCallback(
-    (idx: number) => {
-      const it = items[idx];
-      const media = it?.media;
-      if (!media) return 10;
-      if (media.type === "video") {
-        return it?.duration_override ? it.duration_override : 0;
-      }
-      return it?.duration_override || media.duration || 10;
-    },
-    [items],
-  );
-
-  const goToNext = useCallback(() => {
-    if (items.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) % items.length);
-  }, [items.length]);
-
-  const goToPrev = useCallback(() => {
-    if (items.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
-  }, [items.length]);
 
   const getObjectFit = (): "cover" | "contain" | "fill" => "fill";
 
