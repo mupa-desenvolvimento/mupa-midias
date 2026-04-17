@@ -22,7 +22,9 @@ import {
   BlockedScreen,
   EmptyContentScreen,
   VignetteOverlay,
+  FaceRecognitionIndicator,
 } from "@/components/player-core";
+import { useFaceRecognitionStatus } from "@/hooks/useFaceRecognitionStatus";
 import {
   AIAssistantOverlay,
   MetricsOverlay,
@@ -119,11 +121,23 @@ const OfflinePlayer = () => {
 
   // Face detection — keep always active in background to broadcast audience data
   // to /admin/monitoring (DemoFace), regardless of terminal mode.
-  const { activeFaces } = useFaceDetection(
+  const { activeFaces, isModelsLoaded: faceModelsReady } = useFaceDetection(
     faceVideoRef,
     faceCanvasRef,
     true,
   );
+
+  // Estado isolado da câmera para o monitor de status (não interfere no player)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState(false);
+
+  const { status: faceStatus } = useFaceRecognitionStatus({
+    deviceCode: deviceCode || "",
+    cameraStream,
+    cameraError,
+    modelsReady: faceModelsReady,
+    activeFaces,
+  });
 
   useDeviceMonitor(deviceCode || "", mediaElementRef, activeFaces);
 
@@ -416,12 +430,15 @@ const OfflinePlayer = () => {
           return;
         }
         cameraStreamRef.current = stream;
+        setCameraStream(stream);
+        setCameraError(false);
         if (faceVideoRef.current && faceVideoRef.current.srcObject !== stream) {
           faceVideoRef.current.srcObject = stream;
           faceVideoRef.current.play().catch(() => {});
         }
       } catch (err) {
         console.warn("[OfflinePlayer] Camera not available:", err);
+        if (!cancelled) setCameraError(true);
       }
     };
     startCamera();
@@ -430,6 +447,7 @@ const OfflinePlayer = () => {
       cancelled = true;
       cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
       cameraStreamRef.current = null;
+      setCameraStream(null);
     };
   }, []);
 
@@ -663,6 +681,12 @@ const OfflinePlayer = () => {
 
       {/* Vignette effect */}
       {terminalMode === "player" && <VignetteOverlay />}
+
+      {/* Indicador discreto do reconhecimento facial (sempre visível) */}
+      <FaceRecognitionIndicator
+        status={faceStatus}
+        facesCount={activeFaces.length}
+      />
 
       {/* Media player background */}
       <div
