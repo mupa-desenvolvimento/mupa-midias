@@ -8,7 +8,7 @@
  *   - ensureBlazeFaceDetector(): Promise<Detector | null>
  *   - quickDetectFaces(input): Promise<BlazeBox[]>  (returns [] on any failure)
  */
-import type * as faceDetection from '@tensorflow-models/face-detection';
+import * as faceDetection from '@tensorflow-models/face-detection';
 
 export interface BlazeBox {
   x: number;
