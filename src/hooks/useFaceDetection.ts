@@ -154,6 +154,7 @@ export const useFaceDetection = (
   const isSwitchingBackendRef = useRef(false);
   const lastDetectedPersonsRef = useRef<Set<string>>(new Set());
   const trackedFacesRef = useRef<Map<string, TrackedFaceData>>(new Map());
+  const lastSkipLogRef = useRef(0);
   
   const { registeredPeople } = usePeopleRegistry();
   const { logDetection } = useDetectionLog();
@@ -319,15 +320,23 @@ export const useFaceDetection = (
     }
 
     if (!videoRef.current || !canvasRef.current || !isModelsLoaded || !isActive) {
-      console.log('[FaceDetection] Skip: ref=', !!videoRef.current, 'canvas=', !!canvasRef.current, 'models=', isModelsLoaded, 'active=', isActive);
+      const now = Date.now();
+      if (now - lastSkipLogRef.current > 5000) {
+        lastSkipLogRef.current = now;
+        console.log('[FaceDetection] ⏸ Waiting:', { ref: !!videoRef.current, canvas: !!canvasRef.current, models: isModelsLoaded, active: isActive });
+      }
       return;
     }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     if (video.videoWidth === 0 || video.videoHeight === 0) {
-      console.log('[FaceDetection] Skip: video dimensions', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
+      const now = Date.now();
+      if (now - lastSkipLogRef.current > 5000) {
+        lastSkipLogRef.current = now;
+        console.log('[FaceDetection] ⏸ Video not ready:', video.videoWidth, 'x', video.videoHeight, 'readyState=', video.readyState);
+      }
       return;
     }
 
