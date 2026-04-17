@@ -704,51 +704,85 @@ const OfflinePlayer = () => {
                 />
               </div>
             ) : null}
+            {/* Slot A — sempre montado, nunca display:none */}
             <div className="absolute inset-0">
               <video
                 ref={videoARef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "A" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)" }}
+                style={{
+                  opacity: activePlayer === "A" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "A" ? 2 : 1,
+                }}
                 playsInline
+                muted={false}
               />
               <img
                 ref={imgARef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "absolute inset-0 w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "A" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
+                style={{
+                  opacity:
+                    activePlayer === "A" && activeMedia?.type === "image" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "A" && activeMedia?.type === "image" ? 3 : 1,
+                }}
                 alt=""
               />
             </div>
+            {/* Slot B — sempre montado, nunca display:none */}
             <div className="absolute inset-0">
               <video
                 ref={videoBRef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "B" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)" }}
+                style={{
+                  opacity: activePlayer === "B" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "B" ? 2 : 1,
+                }}
                 playsInline
+                muted={false}
               />
               <img
                 ref={imgBRef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "absolute inset-0 w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "B" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
+                style={{
+                  opacity:
+                    activePlayer === "B" && activeMedia?.type === "image" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "B" && activeMedia?.type === "image" ? 3 : 1,
+                }}
                 alt=""
               />
             </div>
