@@ -33,16 +33,15 @@ export const ensureBlazeFaceDetector = async (): Promise<Detector | null> => {
   if (!detectorPromise) {
     detectorPromise = (async () => {
       try {
-        // Dynamic import + tfjs-only sub-path avoids bundling the
-        // @mediapipe/face_detection package, which has no ESM export.
-        const fd: any = await import('@tensorflow-models/face-detection/dist/face_detector_tfjs');
-        const model = fd.SupportedModels.MediaPipeFaceDetector;
-        const detector = await fd.createDetector(model, {
+        const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
+        // Use 'tfjs' runtime; the unused @mediapipe/face_detection import is
+        // stubbed via vite.config.ts alias.
+        const detector = await faceDetection.createDetector(model, {
           runtime: 'tfjs',
           modelType: 'short',
           maxFaces: 5,
         });
-        return detector as Detector;
+        return detector;
       } catch (error) {
         console.warn('[BlazeFace] Failed to initialize, falling back silently:', error);
         lastFailureAt = Date.now();
