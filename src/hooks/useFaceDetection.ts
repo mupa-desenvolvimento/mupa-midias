@@ -4,7 +4,7 @@ import { usePeopleRegistry } from './usePeopleRegistry';
 import { useDetectionLog } from './useDetectionLog';
 import { useAttentionHistory } from './useAttentionHistory';
 import { initializeFaceApiBackend, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
-import { ensureBlazeFaceDetector, quickDetectFaces } from '@/lib/blazeFaceDetector';
+// BlazeFace pre-filter is currently a stub (see src/lib/blazeFaceDetector.ts).
 // Emotion types from face-api.js
 export type EmotionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised';
 
