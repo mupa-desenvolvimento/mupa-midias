@@ -22,7 +22,9 @@ import {
   BlockedScreen,
   EmptyContentScreen,
   VignetteOverlay,
+  FaceRecognitionIndicator,
 } from "@/components/player-core";
+import { useFaceRecognitionStatus } from "@/hooks/useFaceRecognitionStatus";
 import {
   AIAssistantOverlay,
   MetricsOverlay,
@@ -119,11 +121,23 @@ const OfflinePlayer = () => {
 
   // Face detection — keep always active in background to broadcast audience data
   // to /admin/monitoring (DemoFace), regardless of terminal mode.
-  const { activeFaces } = useFaceDetection(
+  const { activeFaces, isModelsLoaded: faceModelsReady } = useFaceDetection(
     faceVideoRef,
     faceCanvasRef,
     true,
   );
+
+  // Estado isolado da câmera para o monitor de status (não interfere no player)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState(false);
+
+  const { status: faceStatus } = useFaceRecognitionStatus({
+    deviceCode: deviceCode || "",
+    cameraStream,
+    cameraError,
+    modelsReady: faceModelsReady,
+    activeFaces,
+  });
 
   useDeviceMonitor(deviceCode || "", mediaElementRef, activeFaces);
 

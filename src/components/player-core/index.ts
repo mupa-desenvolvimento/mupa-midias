@@ -13,3 +13,4 @@ export {
   ActiveSessionScreen,
 } from "./PlayerStateScreens";
 export { VignetteOverlay } from "./VignetteOverlay";
+export { FaceRecognitionIndicator } from "./FaceRecognitionIndicator";
