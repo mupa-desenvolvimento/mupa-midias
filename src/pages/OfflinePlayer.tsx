@@ -583,30 +583,28 @@ const OfflinePlayer = () => {
     }
   }, [activeFaces.length]);
 
-  // Initialize face camera when entering facial/counter/loyalty mode
+  // Initialize face camera always — runs in background to feed DemoFace monitoring
   useEffect(() => {
-    if (terminalMode === "facial" || terminalMode === "counter" || terminalMode === "loyalty") {
-      const startCamera = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480, facingMode: "user" },
-          });
-          if (faceVideoRef.current) {
-            faceVideoRef.current.srcObject = stream;
-            faceVideoRef.current.play().catch(() => {});
-          }
-        } catch (err) {
-          console.warn("Camera not available:", err);
+    let stream: MediaStream | null = null;
+    const startCamera = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480, facingMode: "user" },
+        });
+        if (faceVideoRef.current) {
+          faceVideoRef.current.srcObject = stream;
+          faceVideoRef.current.play().catch(() => {});
         }
-      };
-      startCamera();
+      } catch (err) {
+        console.warn("Camera not available:", err);
+      }
+    };
+    startCamera();
 
-      return () => {
-        const stream = faceVideoRef.current?.srcObject as MediaStream;
-        stream?.getTracks().forEach((track) => track.stop());
-      };
-    }
-  }, [terminalMode]);
+    return () => {
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   // Save theme
   useEffect(() => {
