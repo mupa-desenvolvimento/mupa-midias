@@ -583,27 +583,51 @@ const OfflinePlayer = () => {
     }
   }, [activeFaces.length]);
 
-  // Initialize face camera always — runs in background to feed DemoFace monitoring
+  // Initialize face camera always — runs in background to feed DemoFace monitoring.
+  // Stream is kept in a ref so it survives ref-target swaps when the
+  // FacialRecognitionOverlay mounts/unmounts its own <video>.
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+
   useEffect(() => {
-    let stream: MediaStream | null = null;
+    let cancelled = false;
     const startCamera = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: "user" },
         });
-        if (faceVideoRef.current) {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        cameraStreamRef.current = stream;
+        if (faceVideoRef.current && faceVideoRef.current.srcObject !== stream) {
           faceVideoRef.current.srcObject = stream;
           faceVideoRef.current.play().catch(() => {});
         }
       } catch (err) {
-        console.warn("Camera not available:", err);
+        console.warn("[OfflinePlayer] Camera not available:", err);
       }
     };
     startCamera();
 
     return () => {
-      stream?.getTracks().forEach((track) => track.stop());
+      cancelled = true;
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
     };
+  }, []);
+
+  // Re-attach the stream whenever the video element remounts (overlay open/close).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const video = faceVideoRef.current;
+      const stream = cameraStreamRef.current;
+      if (video && stream && video.srcObject !== stream) {
+        video.srcObject = stream;
+        video.play().catch(() => {});
+      }
+    }, 500);
+    return () => clearInterval(interval);
   }, []);
 
   // Save theme
@@ -1078,11 +1102,18 @@ const OfflinePlayer = () => {
         onClose={() => setTerminalMode("player")}
       />
 
-      {/* Hidden face camera refs (always mounted for background DemoFace broadcast) */}
+      {/* Hidden face camera refs — visible offscreen with real dimensions so the
+          browser actually decodes frames (1px hidden videos are paused on some
+          engines). Re-mounted only when the FacialRecognitionOverlay isn't showing
+          its own preview; the polling effect re-attaches the stream when swapped. */}
       {terminalMode !== "facial" && (
-        <div className="fixed -top-[9999px] left-0 w-px h-px overflow-hidden pointer-events-none" aria-hidden="true">
-          <video ref={faceVideoRef} autoPlay muted playsInline width={640} height={480} />
-          <canvas ref={faceCanvasRef} width={640} height={480} />
+        <div
+          className="fixed bottom-0 right-0 pointer-events-none opacity-0"
+          style={{ width: 64, height: 48 }}
+          aria-hidden="true"
+        >
+          <video ref={faceVideoRef} autoPlay muted playsInline width={640} height={480} className="w-full h-full" />
+          <canvas ref={faceCanvasRef} width={640} height={480} className="hidden" />
         </div>
       )}
     </div>
