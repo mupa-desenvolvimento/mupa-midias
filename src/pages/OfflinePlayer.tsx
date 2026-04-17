@@ -12,7 +12,7 @@ import { useFaceDetection } from "@/hooks/useFaceDetection";
 import { useTerminalMetrics } from "@/hooks/useTerminalMetrics";
 import { useTerminalAI } from "@/hooks/useTerminalAI";
 import { usePeopleCounter } from "@/hooks/usePeopleCounter";
-import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useClock } from "@/hooks/player";
+import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useClock, useSeamlessMediaPlayer, type SeamlessMediaItem } from "@/hooks/player";
 import {
   MediaRenderer,
   PlayerProgressBar,
@@ -192,11 +192,6 @@ const OfflinePlayer = () => {
     };
   }, []);
 
-  const [activePlayer, setActivePlayer] = useState<"A" | "B">("A");
-  const [nextReadySlot, setNextReadySlot] = useState<"A" | "B" | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  const [progressPercent, setProgressPercent] = useState(0);
   const [isPortrait, setIsPortrait] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.innerHeight > window.innerWidth;
@@ -263,8 +258,60 @@ const OfflinePlayer = () => {
   const overrideMedia = hasActiveOverrideMedia ? deviceState?.override_media : null;
   const displayOverrideMedia = hasActiveOverrideMedia && overrideMedia;
 
+  // Lista normalizada para o seamless player (apenas video/image, demais tipos
+  // são renderizados via MediaRenderer fora do double-buffer).
+  const seamlessItems: SeamlessMediaItem[] = useMemo(() => {
+    return items
+      .map((it) => {
+        const m = it?.media;
+        if (!m) return null;
+        if (m.type !== "video" && m.type !== "image") return null;
+        const url = m.blob_url || m.file_url;
+        if (!url) return null;
+        return {
+          id: m.id,
+          type: m.type,
+          url,
+          duration:
+            m.type === "video"
+              ? (it?.duration_override ?? 0)
+              : (it?.duration_override || m.duration || 10),
+        } as SeamlessMediaItem;
+      })
+      .filter((x): x is SeamlessMediaItem => !!x);
+  }, [items]);
+
+  const {
+    activeSlot: activePlayer,
+    currentIndex,
+    progressPercent,
+    timeRemainingMs: timeRemaining,
+    goToNext,
+    goToPrev,
+  } = useSeamlessMediaPlayer({
+    items: seamlessItems,
+    videoARef,
+    videoBRef,
+    imgARef,
+    imgBRef,
+    crossfadeMs: 400,
+    preloadLeadSeconds: 2,
+    crossfadeLeadSeconds: 0.4,
+    paused: !!displayOverrideMedia,
+  });
+
   const activeItem = items[currentIndex] || null;
   const activeMedia = displayOverrideMedia ? overrideMedia : activeItem?.media;
+
+  // Sincroniza mediaElementRef com o slot ativo (para useDeviceMonitor)
+  useEffect(() => {
+    if (displayOverrideMedia) return;
+    if (activeMedia?.type === "video") {
+      mediaElementRef.current = activePlayer === "A" ? videoARef.current : videoBRef.current;
+    } else if (activeMedia?.type === "image") {
+      mediaElementRef.current = activePlayer === "A" ? imgARef.current : imgBRef.current;
+    }
+  }, [activePlayer, activeMedia?.id, activeMedia?.type, displayOverrideMedia]);
 
   const [resolvedMediaUrl, setResolvedMediaUrl] = useState<string>("");
 
@@ -279,64 +326,33 @@ const OfflinePlayer = () => {
     };
   }, []);
 
+  // Resolve URL apenas para override media e tipos especiais (news/weather).
+  // Vídeos/imagens "normais" usam blob_url/file_url direto via seamlessItems.
   useEffect(() => {
     let cancelled = false;
-
     const resolveUrl = async () => {
       const media = activeMedia;
-
       if (!media || !media.file_url) {
         setResolvedMediaUrl("");
         return;
       }
-
       if (media.blob_url) {
         setResolvedMediaUrl(media.blob_url);
         return;
       }
-
       try {
         const localUrl = await storageService.cacheMedia(media.file_url, media.id);
-        if (!cancelled) {
-          setResolvedMediaUrl(localUrl);
-        }
+        if (!cancelled) setResolvedMediaUrl(localUrl);
       } catch (e) {
         console.error("Failed to cache media locally (offline player):", e);
-        if (!cancelled) {
-          setResolvedMediaUrl(media.file_url);
-        }
+        if (!cancelled) setResolvedMediaUrl(media.file_url);
       }
     };
-
     resolveUrl();
-
     return () => {
       cancelled = true;
     };
   }, [activeMedia?.id, activeMedia?.file_url, activeMedia?.blob_url]);
-
-  const getDurationForIndex = useCallback(
-    (idx: number) => {
-      const it = items[idx];
-      const media = it?.media;
-      if (!media) return 10;
-      if (media.type === "video") {
-        return it?.duration_override ? it.duration_override : 0;
-      }
-      return it?.duration_override || media.duration || 10;
-    },
-    [items],
-  );
-
-  const goToNext = useCallback(() => {
-    if (items.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) % items.length);
-  }, [items.length]);
-
-  const goToPrev = useCallback(() => {
-    if (items.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
-  }, [items.length]);
 
   const getObjectFit = (): "cover" | "contain" | "fill" => "fill";
 
@@ -353,236 +369,24 @@ const OfflinePlayer = () => {
     }
   }, [currentIndex, activeMedia?.id]);
 
-  const preloadIntoSlot = useCallback(
-    (slot: "A" | "B", index: number) => {
-      if (items.length === 0) return;
-      const item = items[index];
-      const media = item?.media;
-      if (!media) return;
-      if (media.type === "news" || media.type === "weather") {
-        const video = slot === "A" ? videoARef.current : videoBRef.current;
-        if (video) {
-          video.pause();
-          video.removeAttribute("src");
-          video.load();
-          video.style.display = "none";
-        }
-        const img = slot === "A" ? imgARef.current : imgBRef.current;
-        if (img) {
-          img.style.display = "none";
-          img.removeAttribute("src");
-        }
-        setNextReadySlot(slot);
-        return;
-      }
-      const url = media.blob_url || media.file_url;
-      if (!url) return;
-
-      if (media.type === "image") {
-        const img = slot === "A" ? imgARef.current : imgBRef.current;
-        if (!img) return;
-        const loader = new Image();
-        loader.onload = () => {
-          if (!img) return;
-          img.src = url;
-          img.style.display = "block";
-          const video = slot === "A" ? videoARef.current : videoBRef.current;
-          if (video) {
-            video.pause();
-            video.removeAttribute("src");
-            video.load();
-            video.style.display = "none";
-          }
-          setNextReadySlot(slot);
-        };
-        loader.src = url;
-      } else {
-        if (Capacitor.isNativePlatform()) {
-          return;
-        }
-        const video = slot === "A" ? videoARef.current : videoBRef.current;
-        if (!video) return;
-        video.preload = "auto";
-        video.muted = true;
-        video.src = url;
-        video.load();
-        const checkReady = () => {
-          if (video.readyState === 4) {
-            setNextReadySlot(slot);
-            video
-              .play()
-              .then(() => {
-                video.pause();
-                video.currentTime = 0;
-              })
-              .catch(() => {
-                video.pause();
-                video.currentTime = 0;
-              });
-          } else {
-            window.setTimeout(checkReady, 50);
-          }
-        };
-        checkReady();
-        video.style.display = "block";
-        const img = slot === "A" ? imgARef.current : imgBRef.current;
-        if (img) {
-          img.style.display = "none";
-          img.removeAttribute("src");
-        }
-      }
-    },
-    [items],
-  );
-
+  // Quando estamos em override / news / weather, pausamos os vídeos A/B
+  // (mas NUNCA limpamos src — evita reload de decoder no Android WebView).
   useEffect(() => {
-    if (displayOverrideMedia) return;
-    if (items.length === 0 || !activeMedia) return;
-    if (activeMedia.type === "news" || activeMedia.type === "weather") {
-      const videoA = videoARef.current;
-      const videoB = videoBRef.current;
-      if (videoA) {
-        videoA.pause();
-        videoA.removeAttribute("src");
-        videoA.load();
-        videoA.style.display = "none";
-      }
-      if (videoB) {
-        videoB.pause();
-        videoB.removeAttribute("src");
-        videoB.load();
-        videoB.style.display = "none";
-      }
-      const imgA = imgARef.current;
-      const imgB = imgBRef.current;
-      if (imgA) {
-        imgA.style.display = "none";
-        imgA.removeAttribute("src");
-      }
-      if (imgB) {
-        imgB.style.display = "none";
-        imgB.removeAttribute("src");
-      }
-      mediaElementRef.current = null;
-      return;
-    }
-    const url = resolvedMediaUrl || activeMedia.blob_url || activeMedia.file_url;
-    if (!url) return;
-    const slot = activePlayer;
-    if (activeMedia.type === "video") {
-      const video = slot === "A" ? videoARef.current : videoBRef.current;
-      if (video) {
-        video.preload = "auto";
-        video.muted = false;
-        video.src = url;
-        video.load();
-        video.play().catch(() => {});
-        const img = slot === "A" ? imgARef.current : imgBRef.current;
-        if (img) {
-          img.style.display = "none";
-          img.removeAttribute("src");
+    const isSpecial =
+      !!displayOverrideMedia ||
+      activeMedia?.type === "news" ||
+      activeMedia?.type === "weather";
+    if (!isSpecial) return;
+    [videoARef.current, videoBRef.current].forEach((v) => {
+      if (v) {
+        try {
+          v.pause();
+        } catch {
+          /* ignore */
         }
-        mediaElementRef.current = video;
       }
-    } else {
-      const img = slot === "A" ? imgARef.current : imgBRef.current;
-      if (img) {
-        img.src = url;
-        img.style.display = "block";
-        const video = slot === "A" ? videoARef.current : videoBRef.current;
-        if (video) {
-          video.pause();
-          video.removeAttribute("src");
-          video.load();
-          video.style.display = "none";
-        }
-        mediaElementRef.current = img;
-      }
-    }
-  }, [items, activeMedia, activePlayer, displayOverrideMedia, resolvedMediaUrl]);
-
-  useEffect(() => {
-    if (displayOverrideMedia) return;
-    if (items.length === 0) return;
-    const duration = getDurationForIndex(currentIndex);
-    const isVideo = items[currentIndex]?.media?.type === "video";
-
-    if (isVideo) {
-      const activeVideo = activePlayer === "A" ? videoARef.current : videoBRef.current;
-      if (!activeVideo) return;
-      const onTimeUpdate = () => {
-        if (!activeVideo.duration || isNaN(activeVideo.duration)) return;
-        const remaining = Math.max(activeVideo.duration - activeVideo.currentTime, 0);
-        setTimeRemaining(remaining * 1000);
-        const pct = (activeVideo.currentTime / activeVideo.duration) * 100;
-        setProgressPercent(isFinite(pct) ? pct : 0);
-        if (remaining <= 3) {
-          const nextIndex = (currentIndex + 1) % items.length;
-          const preloadSlot = activePlayer === "A" ? "B" : "A";
-          preloadIntoSlot(preloadSlot, nextIndex);
-        }
-        if (remaining <= 0.05) {
-          const nextIndex = (currentIndex + 1) % items.length;
-          const nextSlot = activePlayer === "A" ? "B" : "A";
-          if (nextReadySlot && nextReadySlot !== nextSlot) {
-            return;
-          }
-          const nextVideo = nextSlot === "A" ? videoARef.current : videoBRef.current;
-          const nextImg = nextSlot === "A" ? imgARef.current : imgBRef.current;
-          if (nextVideo && nextVideo.src) {
-            nextVideo.currentTime = 0;
-            nextVideo.play().catch(() => {});
-            const prevVideo = activePlayer === "A" ? videoARef.current : videoBRef.current;
-            if (prevVideo) prevVideo.pause();
-          } else if (nextImg && nextImg.src) {
-            const currentVideo = activePlayer === "A" ? videoARef.current : videoBRef.current;
-            if (currentVideo) currentVideo.pause();
-          }
-          setActivePlayer(nextSlot);
-          setCurrentIndex(nextIndex);
-          setNextReadySlot(null);
-        }
-      };
-      activeVideo.addEventListener("timeupdate", onTimeUpdate);
-      return () => {
-        activeVideo.removeEventListener("timeupdate", onTimeUpdate);
-      };
-    } else {
-      const effectiveDuration = duration > 0 ? duration : 10;
-      setTimeRemaining(effectiveDuration * 1000);
-      setProgressPercent(0);
-      const preloadTimeout = window.setTimeout(
-        () => {
-          const nextIndex = (currentIndex + 1) % items.length;
-          const preloadSlot = activePlayer === "A" ? "B" : "A";
-          preloadIntoSlot(preloadSlot, nextIndex);
-        },
-        Math.max(effectiveDuration * 1000 - 3000, 0),
-      );
-      const switchTimeout = window.setTimeout(
-        () => {
-          const nextIndex = (currentIndex + 1) % items.length;
-          const nextSlot = activePlayer === "A" ? "B" : "A";
-          setActivePlayer(nextSlot);
-          setCurrentIndex(nextIndex);
-        },
-        Math.max(effectiveDuration * 1000 - 50, 0),
-      );
-      const progressInterval = window.setInterval(() => {
-        setTimeRemaining((prev) => {
-          const next = Math.max(prev - 100, 0);
-          const pct = ((effectiveDuration * 1000 - next) / (effectiveDuration * 1000)) * 100;
-          setProgressPercent(isFinite(pct) ? pct : 0);
-          return next;
-        });
-      }, 100);
-      return () => {
-        window.clearTimeout(preloadTimeout);
-        window.clearTimeout(switchTimeout);
-        window.clearInterval(progressInterval);
-      };
-    }
-  }, [items, currentIndex, activePlayer, getDurationForIndex, nextReadySlot, displayOverrideMedia, preloadIntoSlot]);
+    });
+  }, [displayOverrideMedia, activeMedia?.type]);
 
   // Process faces for counter
   useEffect(() => {
@@ -900,51 +704,85 @@ const OfflinePlayer = () => {
                 />
               </div>
             ) : null}
+            {/* Slot A — sempre montado, nunca display:none */}
             <div className="absolute inset-0">
               <video
                 ref={videoARef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "A" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)" }}
+                style={{
+                  opacity: activePlayer === "A" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "A" ? 2 : 1,
+                }}
                 playsInline
+                muted={false}
               />
               <img
                 ref={imgARef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "absolute inset-0 w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "A" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
+                style={{
+                  opacity:
+                    activePlayer === "A" && activeMedia?.type === "image" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "A" && activeMedia?.type === "image" ? 3 : 1,
+                }}
                 alt=""
               />
             </div>
+            {/* Slot B — sempre montado, nunca display:none */}
             <div className="absolute inset-0">
               <video
                 ref={videoBRef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "B" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)" }}
+                style={{
+                  opacity: activePlayer === "B" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "B" ? 2 : 1,
+                }}
                 playsInline
+                muted={false}
               />
               <img
                 ref={imgBRef}
                 className={cn(
-                  "w-full h-full object-cover transition-opacity duration-[0ms]",
+                  "absolute inset-0 w-full h-full",
+                  getObjectFit() === "cover" && "object-cover",
                   getObjectFit() === "contain" && "object-contain",
                   getObjectFit() === "fill" && "object-fill",
-                  activePlayer === "B" ? "opacity-100" : "opacity-0",
                 )}
-                style={{ willChange: "opacity", transform: "translateZ(0)", backfaceVisibility: "hidden" }}
+                style={{
+                  opacity:
+                    activePlayer === "B" && activeMedia?.type === "image" ? 1 : 0,
+                  transition: "opacity 400ms ease-in-out",
+                  willChange: "opacity",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  zIndex: activePlayer === "B" && activeMedia?.type === "image" ? 3 : 1,
+                }}
                 alt=""
               />
             </div>
