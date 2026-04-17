@@ -409,10 +409,9 @@ export const useFaceDetection = (
         ctx.fillStyle = previewColor;
         ctx.fillText(previewLabel, drawX + 2, previewLabelY);
 
-        // Keep the business logic filter for tracking/logging only
-        if (!isLooking) {
-          continue;
-        }
+        // Track ALL detected faces (not just the ones perfectly facing the camera).
+        // `isLooking` is still recorded for analytics, but should not gate detection
+        // — too restrictive a gate is the main reason "no faces" appears in the UI.
 
         // Extract emotion data
         const expressions = detection.expressions;
