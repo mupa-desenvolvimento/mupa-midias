@@ -10,6 +10,20 @@ export const isFaceApiBackendError = (error: unknown) => {
 
 const getTf = (): any => (faceapi as any).tf;
 
+const waitForBackendStabilization = async (tf: any) => {
+  if (typeof tf?.ready === 'function') {
+    await tf.ready();
+    return;
+  }
+
+  if (typeof tf?.nextFrame === 'function') {
+    await tf.nextFrame();
+    return;
+  }
+
+  await Promise.resolve();
+};
+
 const getCurrentBackendName = (tf: any): string | null => {
   try {
     const backend = tf?.getBackend?.();
@@ -58,7 +72,7 @@ export const initTensorFlow = async (): Promise<string> => {
       return 'unknown';
     }
 
-    // Try WebGL first, fall back to CPU
+    // Try WebGL first, but only keep it if a real inference warmup succeeds.
     const candidates = ['webgl', 'cpu'].filter((b) => canUseBackend(tf, b));
 
     for (const name of candidates) {
@@ -66,23 +80,28 @@ export const initTensorFlow = async (): Promise<string> => {
         if (getCurrentBackendName(tf) !== name) {
           await Promise.resolve(tf.setBackend(name));
         }
-        await tf.ready();
+
+        await waitForBackendStabilization(tf);
+        await warmup();
+
         const active = getCurrentBackendName(tf) ?? name;
         console.log(`[TF] ✅ Backend ready: ${active}`);
         return active;
       } catch (err) {
         console.warn(`[TF] Backend "${name}" failed, trying next:`, err);
-        initPromise = null; // allow retry on next candidate cycle
       }
     }
 
-    // Last-resort: just await ready() with whatever default
+    // Last-resort: accept whatever backend is active after a small stabilization wait.
     try {
-      await tf.ready();
+      await waitForBackendStabilization(tf);
     } catch {
       /* ignore */
     }
-    return getCurrentBackendName(tf) ?? 'unknown';
+
+    const fallback = getCurrentBackendName(tf) ?? 'unknown';
+    console.warn(`[TF] ⚠️ Falling back to current backend without verified warmup: ${fallback}`);
+    return fallback;
   })();
 
   return initPromise;
@@ -107,7 +126,7 @@ export const switchFaceApiToCpu = async (_faceapiLib?: any): Promise<string> => 
   }
   try {
     await Promise.resolve(tf.setBackend('cpu'));
-    await tf.ready();
+    await waitForBackendStabilization(tf);
     initPromise = Promise.resolve('cpu');
     try {
       await warmup();
