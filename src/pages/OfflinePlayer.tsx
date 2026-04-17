@@ -1078,11 +1078,11 @@ const OfflinePlayer = () => {
         onClose={() => setTerminalMode("player")}
       />
 
-      {/* Hidden face camera refs (shown in overlay) */}
+      {/* Hidden face camera refs (always mounted for background DemoFace broadcast) */}
       {terminalMode !== "facial" && (
-        <div className="hidden">
-          <video ref={faceVideoRef} autoPlay muted playsInline />
-          <canvas ref={faceCanvasRef} />
+        <div className="fixed -top-[9999px] left-0 w-px h-px overflow-hidden pointer-events-none" aria-hidden="true">
+          <video ref={faceVideoRef} autoPlay muted playsInline width={640} height={480} />
+          <canvas ref={faceCanvasRef} width={640} height={480} />
         </div>
       )}
     </div>

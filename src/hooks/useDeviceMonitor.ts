@@ -12,7 +12,15 @@ export const useDeviceMonitor = (
 ) => {
   const [isMonitoring, setIsMonitoring] = useState(false);
   const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const facesIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const facesRef = useRef<ActiveFace[]>([]);
 
+  // Always keep latest faces snapshot for background broadcasting
+  useEffect(() => {
+    facesRef.current = faces || [];
+  }, [faces]);
+
+  // Listen for remote start/stop stream commands (frame video feed)
   useEffect(() => {
     if (!deviceCode) return;
 
@@ -32,6 +40,35 @@ export const useDeviceMonitor = (
     };
   }, [deviceCode]);
 
+  // Background face stats broadcast — always on, regardless of frame stream.
+  // This feeds the DemoFace (/admin/monitoring) page in real time.
+  useEffect(() => {
+    if (!deviceCode) return;
+
+    const channel = supabase.channel(`device_monitor:${deviceCode}`);
+    facesIntervalRef.current = setInterval(() => {
+      const stats = facesRef.current;
+      channel.send({
+        type: 'broadcast',
+        event: 'faces',
+        payload: {
+          stats,
+          count: stats.length,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }, 1000);
+
+    return () => {
+      if (facesIntervalRef.current) {
+        clearInterval(facesIntervalRef.current);
+        facesIntervalRef.current = null;
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [deviceCode]);
+
+  // Frame streaming (heavy) — only when explicitly requested by remote viewer
   useEffect(() => {
     if (!deviceCode) return;
 
@@ -75,7 +112,7 @@ export const useDeviceMonitor = (
             event: 'frame',
             payload: {
               image: imageData,
-              stats: faces || [],
+              stats: facesRef.current,
               timestamp: new Date().toISOString(),
               meta: { width: sourceWidth, height: sourceHeight },
             },
@@ -97,7 +134,7 @@ export const useDeviceMonitor = (
         monitoringIntervalRef.current = null;
       }
     };
-  }, [isMonitoring, deviceCode, sourceRef, faces]);
+  }, [isMonitoring, deviceCode, sourceRef]);
 
   return { isMonitoring };
 };
