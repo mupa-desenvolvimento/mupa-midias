@@ -682,6 +682,12 @@ const OfflinePlayer = () => {
       {/* Vignette effect */}
       {terminalMode === "player" && <VignetteOverlay />}
 
+      {/* Indicador discreto do reconhecimento facial (sempre visível) */}
+      <FaceRecognitionIndicator
+        status={faceStatus}
+        facesCount={activeFaces.length}
+      />
+
       {/* Media player background */}
       <div
         className={cn(
