@@ -34,10 +34,12 @@ export const ensureBlazeFaceDetector = async (): Promise<Detector | null> => {
     detectorPromise = (async () => {
       try {
         const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
+        // Use tfjs runtime (no @mediapipe/face_detection npm dep required;
+        // model assets are fetched from tfhub at runtime).
         const detector = await faceDetection.createDetector(model, {
-          runtime: 'mediapipe',
+          runtime: 'tfjs',
           modelType: 'short',
-          solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection',
+          maxFaces: 5,
         });
         return detector;
       } catch (error) {
