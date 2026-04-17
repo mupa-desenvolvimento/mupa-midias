@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Monitor, AlertTriangle, Loader2, Download, Lock, RefreshCw } from "lucide-react";
+import { Monitor, AlertTriangle, Download, Lock, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { readCache, writeCache } from "@/lib/mupaCache";
 
 interface LoadingScreenProps {
   message?: string;
@@ -10,11 +13,17 @@ interface LoadingScreenProps {
 }
 
 export const LoadingScreen = ({ message = "Carregando Player...", subMessage }: LoadingScreenProps) => (
-  <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white">
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.3, ease: "easeOut" }}
+    className="min-h-screen bg-black flex flex-col items-center justify-center text-white"
+  >
     <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6" />
     <h1 className="text-2xl font-semibold mb-2">{message}</h1>
     {subMessage && <p className="text-white/60">{subMessage}</p>}
-  </div>
+  </motion.div>
 );
 
 interface ErrorScreenProps {
@@ -91,6 +100,8 @@ export const BlockedScreen = ({ message, deviceName, onCheckStatus, isChecking }
   </div>
 );
 
+type ContentGroup = { title: string; items: string[] };
+
 interface EmptyContentScreenProps {
   deviceName?: string;
   playlistName?: string;
@@ -98,11 +109,16 @@ interface EmptyContentScreenProps {
   onSync?: () => void;
   isSyncing?: boolean;
   debugInfo?: string;
-  contentGroups?: Array<{
-    title: string;
-    items: string[];
-  }>;
+  contentGroups?: ContentGroup[];
+  /** Chave única para cache (ex: deviceCode). Habilita cache-first. */
+  cacheKey?: string;
 }
+
+const CONTENT_LIST_VARIANTS = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.2, ease: "easeOut" } },
+};
 
 export const EmptyContentScreen = ({
   deviceName,
@@ -112,57 +128,133 @@ export const EmptyContentScreen = ({
   isSyncing,
   debugInfo,
   contentGroups,
-}: EmptyContentScreenProps) => (
-  <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-8">
-    <Monitor className="w-20 h-20 mb-6 text-white/30" />
-    <h1 className="text-2xl font-semibold mb-2">
-      {playlistName ? "Nenhuma mídia configurada" : "Aguardando Conteúdo"}
-    </h1>
-    <p className="text-white/60 mb-4 text-center max-w-md">
-      {playlistName ? `Playlist: ${playlistName}` : deviceName || "Nenhuma playlist atribuída"}
-    </p>
-    {syncError && (
-      <div className="flex items-center gap-2 text-red-400 mb-4">
-        <AlertTriangle className="w-4 h-4" />
-        <span className="text-sm">{syncError}</span>
-      </div>
-    )}
-    {onSync && (
-      <button
-        onClick={onSync}
-        disabled={isSyncing}
-        className="flex items-center gap-2 px-4 py-2 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors"
-      >
-        <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
-        {isSyncing ? "Sincronizando..." : "Sincronizar"}
-      </button>
-    )}
-    {contentGroups && contentGroups.length > 0 && (
-      <div className="w-full max-w-xl mt-6">
-        <p className="text-white/50 text-sm mb-2">Conteúdos para reproduzir</p>
-        <div className="max-h-80 overflow-auto rounded-lg border border-white/10 bg-white/5 p-3 text-left">
-          <div className="space-y-3">
-            {contentGroups.map((group, groupIndex) => (
-              <div key={`${groupIndex}-${group.title}`}>
-                <p className="text-white/80 text-xs font-medium">{group.title}</p>
-                <ul className="mt-1 space-y-1">
-                  {group.items.map((item, itemIndex) => (
-                    <li key={`${groupIndex}-${itemIndex}`} className="text-white/60 text-xs">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+  cacheKey,
+}: EmptyContentScreenProps) => {
+  // Cache-first: mostra última lista conhecida imediatamente, atualiza quando chegar
+  const [displayGroups, setDisplayGroups] = useState<ContentGroup[] | null>(
+    contentGroups && contentGroups.length > 0 ? contentGroups : null,
+  );
+
+  // Hidrata do cache na primeira renderização (offline-friendly)
+  useEffect(() => {
+    if (!cacheKey) return;
+    if (displayGroups && displayGroups.length > 0) return;
+    let cancelled = false;
+    readCache<ContentGroup[]>(`empty-content-groups:${cacheKey}`).then((cached) => {
+      if (!cancelled && cached && cached.length > 0) {
+        setDisplayGroups(cached);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheKey]);
+
+  // Atualiza display + persiste em cache quando vierem dados frescos
+  useEffect(() => {
+    if (!contentGroups || contentGroups.length === 0) return;
+    setDisplayGroups(contentGroups);
+    if (cacheKey) {
+      writeCache(`empty-content-groups:${cacheKey}`, contentGroups);
+    }
+  }, [contentGroups, cacheKey]);
+
+  return (
+    <div className="fixed inset-0 bg-black text-white flex flex-col overflow-hidden">
+      {/* Header fixo */}
+      <header className="flex-shrink-0 px-6 pt-8 pb-4 flex flex-col items-center text-center">
+        <Monitor className="w-16 h-16 mb-4 text-white/30" />
+        <h1 className="text-2xl font-semibold mb-1">
+          {playlistName ? "Nenhuma mídia configurada" : "Aguardando Conteúdo"}
+        </h1>
+        <p className="text-white/60 text-sm max-w-md">
+          {playlistName ? `Playlist: ${playlistName}` : deviceName || "Nenhuma playlist atribuída"}
+        </p>
+
+        {syncError && (
+          <div className="flex items-center gap-2 text-red-400 mt-3">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm">{syncError}</span>
           </div>
-        </div>
-      </div>
-    )}
-    {debugInfo && (
-      <p className="text-white/30 text-xs mt-6">{debugInfo}</p>
-    )}
-  </div>
-);
+        )}
+
+        {onSync && (
+          <button
+            onClick={onSync}
+            disabled={isSyncing}
+            className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors"
+          >
+            <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
+            {isSyncing ? "Sincronizando..." : "Sincronizar"}
+          </button>
+        )}
+      </header>
+
+      {/* Lista de conteúdos: ocupa o restante e é o ÚNICO scroll */}
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col items-center px-6 pb-6">
+        <AnimatePresence mode="wait">
+          {displayGroups && displayGroups.length > 0 ? (
+            <motion.section
+              key="list"
+              variants={CONTENT_LIST_VARIANTS}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="w-full max-w-xl flex-1 min-h-0 flex flex-col"
+            >
+              <p className="text-white/50 text-xs mb-2 flex-shrink-0">
+                Conteúdos para reproduzir
+              </p>
+              <div
+                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-lg border border-white/10 bg-white/5 p-3 text-left"
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
+                <div className="space-y-3">
+                  {displayGroups.map((group, groupIndex) => (
+                    <motion.div
+                      key={`${groupIndex}-${group.title}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: Math.min(groupIndex * 0.04, 0.3) }}
+                    >
+                      <p className="text-white/80 text-xs font-medium">{group.title}</p>
+                      <ul className="mt-1 space-y-1">
+                        {group.items.map((item, itemIndex) => (
+                          <li
+                            key={`${groupIndex}-${itemIndex}`}
+                            className="text-white/60 text-xs"
+                          >
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </motion.section>
+          ) : (
+            <motion.div
+              key="idle"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="text-white/40 text-xs mt-4"
+            >
+              {isSyncing ? "Buscando conteúdos…" : "Nenhum conteúdo disponível ainda."}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {debugInfo && (
+          <p className="text-white/30 text-xs mt-4 flex-shrink-0">{debugInfo}</p>
+        )}
+      </main>
+    </div>
+  );
+};
 
 interface DownloadScreenProps {
   downloaded: number;
