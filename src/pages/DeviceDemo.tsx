@@ -154,8 +154,13 @@ const DeviceDemo = () => {
         if (videoInputs.length > 0 && !selectedCameraId) {
           setSelectedCameraId(videoInputs[0].deviceId);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao enumerar câmeras:", error);
+        if (error?.name === "NotFoundError" || error?.name === "OverconstrainedError") {
+          setCameraError("Nenhuma câmera detectada neste dispositivo. Conecte uma webcam para iniciar a demo.");
+        } else if (error?.name === "NotAllowedError") {
+          setCameraError("Permissão de câmera negada. Habilite o acesso nas configurações do navegador.");
+        }
       }
     };
 
