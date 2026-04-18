@@ -155,13 +155,31 @@ export const generateThemeFromImage = async (
       const max = Math.max(r, g, b), min = Math.min(r, g, b);
       const sat = max === 0 ? 0 : (max - min) / max;
       const lum = (max + min) / 2;
-      return lum > 25 && lum < 235 && sat > 0.12;
+      return lum > 25 && lum < 235 && sat > 0.18;
     });
-    const base: RGBTuple = usable[0] || palette[0];
+    if (!usable.length) return FALLBACK;
 
-    const cardRgb = toEarthyDark(base);
-    const bandRgb = toGoldenLight(base);
-    const priceRgb = bandRgb; // mesmo amarelo do header
+    // Cor dominante = primeira cor saturada da paleta
+    const primary: RGBTuple = usable[0];
+    const [primaryH] = rgbToHsl(primary);
+
+    // Secundária = cor cujo matiz mais difere da primária (contraste visual)
+    let secondary: RGBTuple = usable[1] || usable[0];
+    let bestDist = -1;
+    for (const c of usable.slice(1)) {
+      const [h] = rgbToHsl(c);
+      const d = hueDist(primaryH, h);
+      if (d > bestDist) { bestDist = d; secondary = c; }
+    }
+    // Se paleta é monocromática, gera complementar
+    if (bestDist < 30) {
+      const compH = (primaryH + 180) % 360;
+      secondary = hslToRgb(compH, 0.85, 0.6);
+    }
+
+    const cardRgb = toDeepShade(primary);
+    const bandRgb = toBrightAccent(secondary);
+    const priceRgb = bandRgb;
 
     return {
       cardBg: toHex(cardRgb),
