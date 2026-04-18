@@ -1,15 +1,18 @@
 import * as faceapi from 'face-api.js';
 import * as tfNs from '@tensorflow/tfjs';
 
-// CRITICAL: face-api.js@0.20 ships an ancient tfjs-core (~1.7) that frequently
-// leaves `engine().backend === undefined` on modern Chrome. We replace its
-// internal tf reference with a modern tfjs build BEFORE any model load/inference.
-// Note: namespace imports are immutable under rolldown, so we alias to a local.
+// face-api.js@0.20 ships its own ancient tfjs-core (~1.7) bundled internally.
+// On modern Chrome the WebGL backend frequently leaves `engine().backend`
+// undefined, causing "Cannot read properties of undefined (reading 'backend')"
+// inside moveData/runWebGLProgram. The fix: force CPU backend on BOTH the
+// modern tfjs we imported AND on face-api's internal tf instance.
 const tf: any = tfNs;
+const faceapiTf: any = (faceapi as any).tf;
+
+// Expose modern tf to face-api (best-effort; some bundles still use internal tf)
 try {
-  const faceapiAny = faceapi as any;
-  if (faceapiAny.tf !== tf) {
-    faceapiAny.tf = tf;
+  if (faceapiTf !== tf) {
+    (faceapi as any).tf = tf;
   }
 } catch (err) {
   console.warn('[TF] Could not patch faceapi.tf:', err);
@@ -33,29 +36,50 @@ export const isBackendReady = (): boolean => {
   }
 };
 
+const setBackendOn = async (instance: any, name: string) => {
+  if (!instance?.setBackend) return false;
+  try {
+    await instance.setBackend(name);
+    if (typeof instance.ready === 'function') await instance.ready();
+    return instance.getBackend?.() === name;
+  } catch (err) {
+    console.warn(`[TF] setBackend(${name}) failed on instance:`, err);
+    return false;
+  }
+};
+
 let initPromise: Promise<string> | null = null;
 
 export const initTensorFlow = async (): Promise<string> => {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    // Try webgl first, fall back to cpu
-    for (const name of ['webgl', 'cpu']) {
-      try {
-        await tf.setBackend(name);
-        await tf.ready();
-        // Warmup with a tiny op to force backend init
-        const t = tf.tensor1d([1, 2, 3]);
-        await t.data();
-        t.dispose();
-        const active = tf.getBackend();
-        console.log(`[TF] ✅ Backend ready: ${active}`);
-        return active;
-      } catch (err) {
-        console.warn(`[TF] Backend "${name}" failed:`, err);
-      }
+    // Force CPU on BOTH instances. CPU is slower but reliable and avoids
+    // the broken WebGL kernels in face-api's bundled tfjs-core@1.7.
+    // Modern tfjs CPU is fast enough for ~5fps face detection.
+    const backend = 'cpu';
+
+    const okModern = await setBackendOn(tf, backend);
+    if (faceapiTf && faceapiTf !== tf) {
+      await setBackendOn(faceapiTf, backend);
     }
-    throw new Error('No TF backend available');
+
+    if (!okModern) {
+      throw new Error('Failed to initialize TF backend');
+    }
+
+    // Warmup
+    try {
+      const t = tf.tensor1d([1, 2, 3]);
+      await t.data();
+      t.dispose();
+    } catch (err) {
+      console.warn('[TF] Warmup failed:', err);
+    }
+
+    const active = tf.getBackend();
+    console.log(`[TF] ✅ Backend ready: ${active}`);
+    return active;
   })();
 
   return initPromise.catch((err) => {
@@ -76,19 +100,12 @@ export const ensureBackendReady = async (): Promise<boolean> => {
   }
 };
 
-export const initializeFaceApiBackend = async (): Promise<string> => {
-  return initTensorFlow();
-};
+export const initializeFaceApiBackend = async (): Promise<string> => initTensorFlow();
 
 export const switchFaceApiToCpu = async (): Promise<string> => {
-  try {
-    await tf.setBackend('cpu');
-    await tf.ready();
-    initPromise = Promise.resolve('cpu');
-    console.warn('[TF] 🔁 Switched to CPU backend');
-    return 'cpu';
-  } catch (err) {
-    console.error('[TF] Failed to switch to CPU:', err);
-    return tf.getBackend() ?? 'unknown';
-  }
+  await setBackendOn(tf, 'cpu');
+  if (faceapiTf && faceapiTf !== tf) await setBackendOn(faceapiTf, 'cpu');
+  initPromise = Promise.resolve('cpu');
+  console.warn('[TF] 🔁 Switched to CPU backend');
+  return 'cpu';
 };
