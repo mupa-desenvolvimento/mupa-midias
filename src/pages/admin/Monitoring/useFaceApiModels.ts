@@ -7,13 +7,16 @@ const MODELS_URL = "/models";
 let loadPromise: Promise<void> | null = null;
 
 const loadAll = async () => {
+  console.log('[FaceAPI] Initializing TF backend...');
   await initTensorFlow();
+  console.log('[FaceAPI] Loading models from', MODELS_URL);
   await Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
     faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
     faceapi.nets.faceExpressionNet.loadFromUri(MODELS_URL),
     faceapi.nets.ageGenderNet.loadFromUri(MODELS_URL),
   ]);
+  console.log('[FaceAPI] ✅ All models loaded');
 };
 
 export const useFaceApiModels = () => {
