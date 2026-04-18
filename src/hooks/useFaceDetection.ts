@@ -404,9 +404,9 @@ export const useFaceDetection = (
         offsetY = (displayHeight - video.videoHeight * scaleY) / 2;
       }
 
-      // Run face-api.js detection with increased sensitivity (inputSize 416, threshold 0.4)
+      // Run face-api.js detection — inputSize 512 + lower threshold for close/large faces
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 }))
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.3 }))
         .withFaceLandmarks()
         .withFaceDescriptors()
         .withAgeAndGender()
