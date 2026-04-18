@@ -3,7 +3,7 @@ import * as faceapi from 'face-api.js';
 import { usePeopleRegistry } from './usePeopleRegistry';
 import { useDetectionLog } from './useDetectionLog';
 import { useAttentionHistory } from './useAttentionHistory';
-import { initializeFaceApiBackend, initTensorFlow, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
+import { initializeFaceApiBackend, initTensorFlow, isFaceApiBackendError, switchFaceApiToCpu, isBackendReady, ensureBackendReady } from '@/lib/faceApiBackend';
 // Emotion types from face-api.js
 export type EmotionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised';
 
@@ -360,11 +360,14 @@ export const useFaceDetection = (
       return;
     }
 
-    // Safety check for TensorFlow backend
-    const tf = (faceapi as any).tf;
-    if (tf?.engine && !tf.engine().backend) {
-      console.warn('[FaceDetection] Backend not ready, skipping frame');
-      return;
+    // Safety check for TensorFlow backend — auto-recover if undefined
+    if (!isBackendReady()) {
+      console.warn('[FaceDetection] Backend not ready, attempting recovery...');
+      const ok = await ensureBackendReady();
+      if (!ok) {
+        try { await switchFaceApiToCpu(faceapi); } catch { /* noop */ }
+        return;
+      }
     }
 
     isDetectingRef.current = true;
