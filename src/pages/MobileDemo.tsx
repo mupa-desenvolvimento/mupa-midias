@@ -167,7 +167,7 @@ const MobileDemo = () => {
         // CRITICAL: init TF backend BEFORE loading model weights
         await initTensorFlow();
 
-        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        const MODEL_URL = '/models';
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
