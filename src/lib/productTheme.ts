@@ -2,7 +2,8 @@
  * ProductTheme — extrai paleta da imagem do produto via ColorThief
  * e gera cores harmônicas com contraste WCAG ≥ 4.5:1 garantido.
  */
-import ColorThief from "colorthief";
+import * as ColorThiefMod from "colorthief";
+const ColorThief: any = (ColorThiefMod as any).default || ColorThiefMod;
 
 export type RGBTuple = [number, number, number];
 
