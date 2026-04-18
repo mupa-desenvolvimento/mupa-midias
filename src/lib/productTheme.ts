@@ -102,21 +102,27 @@ const hslToRgb = (h: number, s: number, l: number): RGBTuple => {
   ];
 };
 
-/** Escurece uma cor até ficar terrosa/escura (L ≤ 0.28), preservando matiz. */
-const toEarthyDark = (rgb: RGBTuple): RGBTuple => {
+/** Escurece uma cor preservando matiz e saturação para card de fundo. */
+const toDeepShade = (rgb: RGBTuple): RGBTuple => {
   const [h, s, l] = rgbToHsl(rgb);
-  const newS = Math.min(s, 0.55);
-  const newL = Math.min(l, 0.22);
+  // mantém matiz original, saturação razoável, escurece para L ~0.22
+  const newS = Math.max(0.35, Math.min(s, 0.7));
+  const newL = Math.min(l, 0.24);
   return hslToRgb(h, newS, newL);
 };
 
-/** Clareia/satura para virar amarelo-dourado, mantendo viés do matiz original. */
-const toGoldenLight = (rgb: RGBTuple): RGBTuple => {
-  const [h] = rgbToHsl(rgb);
-  // viés para amarelo (45–55°) mas com leve mistura do matiz original
-  const yellowH = 48;
-  const finalH = (yellowH * 0.75 + h * 0.25) % 360;
-  return hslToRgb(finalH, 0.95, 0.58);
+/** Clareia/satura para destaque (faixa + preço), preservando matiz original. */
+const toBrightAccent = (rgb: RGBTuple): RGBTuple => {
+  const [h, s] = rgbToHsl(rgb);
+  // mantém o matiz da imagem, alta saturação e luminosidade média-alta
+  const newS = Math.max(0.7, s);
+  return hslToRgb(h, newS, 0.62);
+};
+
+/** Distância angular entre dois matizes (0-180). */
+const hueDist = (a: number, b: number) => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
 };
 
 /** Carrega a imagem com CORS e roda ColorThief. */
@@ -149,13 +155,31 @@ export const generateThemeFromImage = async (
       const max = Math.max(r, g, b), min = Math.min(r, g, b);
       const sat = max === 0 ? 0 : (max - min) / max;
       const lum = (max + min) / 2;
-      return lum > 25 && lum < 235 && sat > 0.12;
+      return lum > 25 && lum < 235 && sat > 0.18;
     });
-    const base: RGBTuple = usable[0] || palette[0];
+    if (!usable.length) return FALLBACK;
 
-    const cardRgb = toEarthyDark(base);
-    const bandRgb = toGoldenLight(base);
-    const priceRgb = bandRgb; // mesmo amarelo do header
+    // Cor dominante = primeira cor saturada da paleta
+    const primary: RGBTuple = usable[0];
+    const [primaryH] = rgbToHsl(primary);
+
+    // Secundária = cor cujo matiz mais difere da primária (contraste visual)
+    let secondary: RGBTuple = usable[1] || usable[0];
+    let bestDist = -1;
+    for (const c of usable.slice(1)) {
+      const [h] = rgbToHsl(c);
+      const d = hueDist(primaryH, h);
+      if (d > bestDist) { bestDist = d; secondary = c; }
+    }
+    // Se paleta é monocromática, gera complementar
+    if (bestDist < 30) {
+      const compH = (primaryH + 180) % 360;
+      secondary = hslToRgb(compH, 0.85, 0.6);
+    }
+
+    const cardRgb = toDeepShade(primary);
+    const bandRgb = toBrightAccent(secondary);
+    const priceRgb = bandRgb;
 
     return {
       cardBg: toHex(cardRgb),
