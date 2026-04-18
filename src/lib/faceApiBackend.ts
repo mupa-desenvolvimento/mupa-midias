@@ -1,6 +1,22 @@
 import * as faceapi from 'face-api.js';
+import * as tf from '@tensorflow/tfjs';
 
-const FACE_API_BACKEND_ERROR_PATTERN = /backend|moveData|runWebGLProgram|webgl|context lost|texture/i;
+// CRITICAL: face-api.js@0.20 ships an ancient tfjs-core (~1.7) that frequently
+// leaves `engine().backend === undefined` on modern Chrome. We replace its
+// internal tf reference with a modern tfjs build BEFORE any model load/inference.
+// See: https://github.com/justadudewhohacks/face-api.js/issues/737
+try {
+  // @ts-expect-error - intentional monkey-patch
+  if (faceapi.tf !== tf) {
+    // @ts-expect-error
+    faceapi.tf = tf;
+  }
+} catch (err) {
+  console.warn('[TF] Could not patch faceapi.tf:', err);
+}
+
+const FACE_API_BACKEND_ERROR_PATTERN =
+  /backend|moveData|runWebGLProgram|webgl|context lost|texture/i;
 
 export const isFaceApiBackendError = (error: unknown) => {
   if (!(error instanceof Error)) return false;
@@ -8,30 +24,50 @@ export const isFaceApiBackendError = (error: unknown) => {
   return FACE_API_BACKEND_ERROR_PATTERN.test(text);
 };
 
-/**
- * Verifica se o backend do TF está realmente disponível (não undefined).
- * Útil como guard ANTES de chamar faceapi.detectAllFaces().
- */
 export const isBackendReady = (): boolean => {
-  const tf = getTf();
   try {
-    if (!tf?.engine) return false;
     const engine = tf.engine();
-    // .backend pode ser undefined mesmo com backendName setado se inicialização falhou
-    return !!engine?.backend && !!tf.getBackend?.();
+    return !!engine?.backend && !!tf.getBackend();
   } catch {
     return false;
   }
 };
 
-/**
- * Garante que o backend está pronto. Se não estiver, tenta reinicializar.
- * Retorna true se ficou pronto, false se falhou.
- */
+let initPromise: Promise<string> | null = null;
+
+export const initTensorFlow = async (): Promise<string> => {
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    // Try webgl first, fall back to cpu
+    for (const name of ['webgl', 'cpu']) {
+      try {
+        await tf.setBackend(name);
+        await tf.ready();
+        // Warmup with a tiny op to force backend init
+        const t = tf.tensor1d([1, 2, 3]);
+        await t.data();
+        t.dispose();
+        const active = tf.getBackend();
+        console.log(`[TF] ✅ Backend ready: ${active}`);
+        return active;
+      } catch (err) {
+        console.warn(`[TF] Backend "${name}" failed:`, err);
+      }
+    }
+    throw new Error('No TF backend available');
+  })();
+
+  return initPromise.catch((err) => {
+    initPromise = null;
+    throw err;
+  });
+};
+
 export const ensureBackendReady = async (): Promise<boolean> => {
   if (isBackendReady()) return true;
   try {
-    initPromise = null; // força nova inicialização
+    initPromise = null;
     await initTensorFlow();
     return isBackendReady();
   } catch (err) {
@@ -40,145 +76,19 @@ export const ensureBackendReady = async (): Promise<boolean> => {
   }
 };
 
-const getTf = (): any => (faceapi as any).tf;
+export const initializeFaceApiBackend = async (): Promise<string> => {
+  return initTensorFlow();
+};
 
-const waitForBackendStabilization = async (tf: any) => {
-  if (typeof tf?.ready === 'function') {
+export const switchFaceApiToCpu = async (): Promise<string> => {
+  try {
+    await tf.setBackend('cpu');
     await tf.ready();
-    return;
-  }
-
-  if (typeof tf?.nextFrame === 'function') {
-    await tf.nextFrame();
-    return;
-  }
-
-  await Promise.resolve();
-};
-
-const getCurrentBackendName = (tf: any): string | null => {
-  try {
-    const backend = tf?.getBackend?.();
-    return typeof backend === 'string' && backend.length > 0 ? backend : null;
-  } catch {
-    return null;
-  }
-};
-
-const getRegisteredBackendNames = (tf: any): string[] => {
-  const registry = tf?.ENV?.registry ?? {};
-  const registryFactory = tf?.ENV?.registryFactory ?? {};
-  return Array.from(
-    new Set(
-      [
-        ...Object.keys(registryFactory),
-        ...Object.keys(registry),
-        getCurrentBackendName(tf),
-      ].filter((b): b is string => typeof b === 'string' && b.length > 0),
-    ),
-  );
-};
-
-const canUseBackend = (tf: any, name: string) => getRegisteredBackendNames(tf).includes(name);
-
-const warmup = async () => {
-  const tf = getTf();
-  if (tf?.tensor1d) {
-    // Use a simple TF operation instead of face-api detection to avoid "model not loaded" error
-    // but still force backend initialization and context creation.
-    const t = tf.tensor1d([1, 2, 3]);
-    await t.data();
-    t.dispose();
-    console.log('[TF] Warmup successful');
-  }
-};
-
-// ─────────────────────────────────────────────────────────────
-// Singleton TF initialization — runs ONCE per app lifetime.
-// Must be awaited BEFORE any model.loadFromUri() or detection.
-// ─────────────────────────────────────────────────────────────
-let initPromise: Promise<string> | null = null;
-
-export const initTensorFlow = async (): Promise<string> => {
-  if (initPromise) return initPromise;
-
-  initPromise = (async () => {
-    const tf = getTf();
-    if (!tf?.setBackend) {
-      console.warn('[TF] tfjs not exposed via faceapi.tf — skipping init');
-      return 'unknown';
-    }
-
-    // Set engine flags for stability
-    if (tf.env) {
-      tf.env().set('WEBGL_CPU_FORWARD', false);
-      tf.env().set('WEBGL_PACK', true);
-      tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
-    }
-
-    const candidates = ['webgl', 'cpu'].filter((b) => canUseBackend(tf, b));
-
-    for (const name of candidates) {
-      try {
-        if (getCurrentBackendName(tf) !== name) {
-          await Promise.resolve(tf.setBackend(name));
-        }
-
-        // tf.ready() is more reliable for checking backend availability
-        if (typeof tf.ready === 'function') {
-          await tf.ready();
-        } else {
-          await waitForBackendStabilization(tf);
-        }
-
-        await warmup();
-
-        const active = getCurrentBackendName(tf) ?? name;
-        console.log(`[TF] ✅ Backend ready: ${active}`);
-        return active;
-      } catch (err) {
-        console.warn(`[TF] Backend "${name}" failed, trying next:`, err);
-      }
-    }
-
-    const fallback = getCurrentBackendName(tf) ?? 'unknown';
-    console.warn(`[TF] ⚠️ Falling back to current backend: ${fallback}`);
-    return fallback;
-  })();
-
-  return initPromise;
-};
-
-// Backwards-compat: existing callers expect this. Now ensures TF is ready
-// AND warms up face-api's first inference path.
-export const initializeFaceApiBackend = async (_faceapiLib?: any): Promise<string> => {
-  const backend = await initTensorFlow();
-  try {
-    await warmup();
-  } catch (err) {
-    console.warn('[TF] Warmup failed:', err);
-  }
-  return backend;
-};
-
-export const switchFaceApiToCpu = async (_faceapiLib?: any): Promise<string> => {
-  const tf = getTf();
-  if (!tf?.setBackend || !canUseBackend(tf, 'cpu')) {
-    return getCurrentBackendName(tf) ?? 'unknown';
-  }
-  try {
-    await Promise.resolve(tf.setBackend('cpu'));
-    await waitForBackendStabilization(tf);
     initPromise = Promise.resolve('cpu');
-    try {
-      await warmup();
-    } catch {
-      /* ignore warmup errors on cpu */
-    }
     console.warn('[TF] 🔁 Switched to CPU backend');
     return 'cpu';
   } catch (err) {
     console.error('[TF] Failed to switch to CPU:', err);
-    return getCurrentBackendName(tf) ?? 'unknown';
+    return tf.getBackend() ?? 'unknown';
   }
 };
