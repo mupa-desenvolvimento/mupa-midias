@@ -1,15 +1,15 @@
 import * as faceapi from 'face-api.js';
-import * as tf from '@tensorflow/tfjs';
+import * as tfNs from '@tensorflow/tfjs';
 
 // CRITICAL: face-api.js@0.20 ships an ancient tfjs-core (~1.7) that frequently
 // leaves `engine().backend === undefined` on modern Chrome. We replace its
 // internal tf reference with a modern tfjs build BEFORE any model load/inference.
-// See: https://github.com/justadudewhohacks/face-api.js/issues/737
+// Note: namespace imports are immutable under rolldown, so we alias to a local.
+const tf: any = tfNs;
 try {
-  // @ts-expect-error - intentional monkey-patch
-  if (faceapi.tf !== tf) {
-    // @ts-expect-error
-    faceapi.tf = tf;
+  const faceapiAny = faceapi as any;
+  if (faceapiAny.tf !== tf) {
+    faceapiAny.tf = tf;
   }
 } catch (err) {
   console.warn('[TF] Could not patch faceapi.tf:', err);
