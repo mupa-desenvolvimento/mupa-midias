@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Package } from "lucide-react";
+import { useProductTheme } from "@/hooks/useProductTheme";
 
 interface ProductNormalViewProps {
   name: string;
@@ -25,6 +26,7 @@ export const ProductNormalView = ({
 }: ProductNormalViewProps) => {
   const { int, dec } = formatPrice(price);
   const src = preloadedSrc || imageUrl;
+  const theme = useProductTheme(src);
 
   return (
     <motion.div
@@ -41,6 +43,7 @@ export const ProductNormalView = ({
             src={src}
             alt={name}
             onLoad={onImageLoad}
+            crossOrigin="anonymous"
             className="max-h-full max-w-full object-contain drop-shadow-xl"
           />
         ) : (
@@ -48,29 +51,29 @@ export const ProductNormalView = ({
         )}
       </div>
 
-      {/* Brown card */}
+      {/* Card */}
       <motion.div
         initial={{ y: 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
         className="relative mx-4 mb-4 rounded-3xl overflow-hidden shadow-2xl"
-        style={{ backgroundColor: "#8B3A1F" }}
+        style={{ backgroundColor: theme.cardBg }}
       >
-        {/* Yellow header band */}
+        {/* Header band (extracted) */}
         <div
           className="px-6 py-5 text-center"
-          style={{ backgroundColor: "#FFD60A" }}
+          style={{ backgroundColor: theme.bandBg }}
         >
           <h1
             className="text-3xl md:text-5xl font-black uppercase leading-tight tracking-tight"
-            style={{ color: "#8B3A1F", fontFamily: "'Impact', 'Anton', sans-serif" }}
+            style={{ color: theme.bandText, fontFamily: "'Impact', 'Anton', sans-serif" }}
           >
             {name}
           </h1>
           {unit && (
             <p
               className="text-xl md:text-2xl font-bold mt-1"
-              style={{ color: "#8B3A1F" }}
+              style={{ color: theme.bandText }}
             >
               {unit}
             </p>
@@ -81,21 +84,21 @@ export const ProductNormalView = ({
         <div className="flex items-center justify-center py-10 px-6">
           <div
             className="rounded-2xl px-8 py-4 shadow-lg"
-            style={{ backgroundColor: "#FFD60A" }}
+            style={{ backgroundColor: theme.priceBg }}
           >
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl md:text-5xl font-black" style={{ color: "#111" }}>
+              <span className="text-3xl md:text-5xl font-black" style={{ color: theme.priceText }}>
                 R$
               </span>
               <span
                 className="text-7xl md:text-9xl font-black leading-none tracking-tight"
-                style={{ color: "#111" }}
+                style={{ color: theme.priceText }}
               >
                 {int}
               </span>
               <span
                 className="text-4xl md:text-6xl font-black"
-                style={{ color: "#111" }}
+                style={{ color: theme.priceText }}
               >
                 ,{dec}
               </span>
