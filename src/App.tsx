@@ -21,8 +21,8 @@ import DeviceDetector from "./pages/DeviceDetector";
 import OfflinePlayer from "./pages/OfflinePlayer";
 import WebViewPlayer from "./pages/WebViewPlayer";
 import CameraFullscreen from "./pages/CameraFullscreen";
-// LiveMonitoring removed — DemoFace now uses DeviceDemo page
 import DeviceDemo from "./pages/DeviceDemo";
+import MonitoringPage from "./pages/admin/Monitoring";
 import MobileDemo from "./pages/MobileDemo";
 import Auth from "./pages/Auth";
 import CanvaCallback from "./pages/admin/CanvaCallback";
@@ -202,7 +202,7 @@ function AppContent() {
                         <Route path="auto-content/instagram" element={<InstagramFeedManager />} />
                         <Route path="instagram/callback" element={<InstagramCallback />} />
                         <Route path="auto-content/:moduleType" element={<AutoContentModulePage />} />
-                        <Route path="monitoring" element={<DeviceDemo />} />
+                        <Route path="monitoring" element={<MonitoringPage />} />
                         <Route path="tenants" element={<Tenants />} />
                         <Route path="companies" element={<Companies />} />
                         <Route path="companies/:companyId/display-config" element={<ProductDisplayConfig />} />
