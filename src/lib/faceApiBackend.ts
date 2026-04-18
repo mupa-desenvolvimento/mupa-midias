@@ -1,11 +1,43 @@
 import * as faceapi from 'face-api.js';
 
-const FACE_API_BACKEND_ERROR_PATTERN = /backend|moveData|runWebGLProgram|webgl|context lost/i;
+const FACE_API_BACKEND_ERROR_PATTERN = /backend|moveData|runWebGLProgram|webgl|context lost|texture/i;
 
 export const isFaceApiBackendError = (error: unknown) => {
   if (!(error instanceof Error)) return false;
   const text = `${error.name} ${error.message} ${error.stack ?? ''}`;
   return FACE_API_BACKEND_ERROR_PATTERN.test(text);
+};
+
+/**
+ * Verifica se o backend do TF está realmente disponível (não undefined).
+ * Útil como guard ANTES de chamar faceapi.detectAllFaces().
+ */
+export const isBackendReady = (): boolean => {
+  const tf = getTf();
+  try {
+    if (!tf?.engine) return false;
+    const engine = tf.engine();
+    // .backend pode ser undefined mesmo com backendName setado se inicialização falhou
+    return !!engine?.backend && !!tf.getBackend?.();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Garante que o backend está pronto. Se não estiver, tenta reinicializar.
+ * Retorna true se ficou pronto, false se falhou.
+ */
+export const ensureBackendReady = async (): Promise<boolean> => {
+  if (isBackendReady()) return true;
+  try {
+    initPromise = null; // força nova inicialização
+    await initTensorFlow();
+    return isBackendReady();
+  } catch (err) {
+    console.error('[TF] ensureBackendReady failed:', err);
+    return false;
+  }
 };
 
 const getTf = (): any => (faceapi as any).tf;
