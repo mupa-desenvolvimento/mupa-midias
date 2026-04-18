@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
+import { ensureBackendReady, isBackendReady, isFaceApiBackendError } from "@/lib/faceApiBackend";
 import type { DetectedFace, Emotion, Gender } from "./types";
 
 interface Options {
@@ -42,6 +43,14 @@ export const useFaceDetectionLoop = ({
       }
 
       try {
+        if (!isBackendReady()) {
+          const ok = await ensureBackendReady();
+          if (!ok) {
+            timer = window.setTimeout(tick, intervalMs);
+            return;
+          }
+        }
+
         const results = await faceapi
           .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
           .withFaceLandmarks()
@@ -68,6 +77,9 @@ export const useFaceDetectionLoop = ({
         if (runningRef.current) setFaces(mapped);
       } catch (err) {
         console.warn("[Monitoring] detection error", err);
+        if (isFaceApiBackendError(err)) {
+          await ensureBackendReady();
+        }
       } finally {
         if (runningRef.current) timer = window.setTimeout(tick, intervalMs);
       }
