@@ -91,9 +91,9 @@ export const ensureBackendReady = async (): Promise<boolean> => {
   }
 };
 
-export const initializeFaceApiBackend = async (): Promise<string> => initTensorFlow();
+export const initializeFaceApiBackend = async (_faceapi?: unknown): Promise<string> => initTensorFlow();
 
-export const switchFaceApiToCpu = async (): Promise<string> => {
+export const switchFaceApiToCpu = async (_faceapi?: unknown): Promise<string> => {
   await trySetBackend('cpu');
   initPromise = Promise.resolve('cpu');
   console.warn('[TF] 🔁 Switched to CPU backend');
