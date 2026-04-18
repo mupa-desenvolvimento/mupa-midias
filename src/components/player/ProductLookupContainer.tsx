@@ -2,6 +2,9 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { AlertCircle, Package, Loader2 } from "lucide-react";
 import { preloadImage, extractColorsFromElement, getDefaultColors, rgbToString, rgbToRgba, type ExtractedColors } from "@/lib/colorExtractor";
 import { ProductDisplay } from "./ProductDisplay";
+import { ProductNormalView } from "./ProductNormalView";
+import { ProductOfferView } from "./ProductOfferView";
+import { AnimatePresence } from "framer-motion";
 import type { ProductDisplaySettings } from "@/hooks/useProductDisplaySettings";
 
 interface ProductData {
@@ -193,18 +196,36 @@ export const ProductLookupContainer = ({
 
   // Product found
   if (product) {
+    const isOffer =
+      product.is_offer &&
+      typeof product.original_price === "number" &&
+      product.original_price > product.current_price;
+
     return (
-      <ProductDisplay
-        product={product}
-        colors={colors}
-        countdown={countdown}
-        timeout={timeout}
-        onImageLoad={() => setImageLoaded(true)}
-        imageLoaded={imageLoaded}
-        settings={displaySettings}
-        preloadedSrc={preloadedSrc}
-        playerIsPortrait={isPortrait}
-      />
+      <AnimatePresence mode="wait">
+        {isOffer ? (
+          <ProductOfferView
+            key={`offer-${product.ean}`}
+            name={product.name}
+            unit={product.unit}
+            currentPrice={product.current_price}
+            originalPrice={product.original_price as number}
+            imageUrl={product.image_url}
+            preloadedSrc={preloadedSrc}
+            onImageLoad={() => setImageLoaded(true)}
+          />
+        ) : (
+          <ProductNormalView
+            key={`normal-${product.ean}`}
+            name={product.name}
+            unit={product.unit}
+            price={product.current_price}
+            imageUrl={product.image_url}
+            preloadedSrc={preloadedSrc}
+            onImageLoad={() => setImageLoaded(true)}
+          />
+        )}
+      </AnimatePresence>
     );
   }
 
