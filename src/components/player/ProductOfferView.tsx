@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Package } from "lucide-react";
+import { useProductTheme } from "@/hooks/useProductTheme";
 
 interface ProductOfferViewProps {
   name: string;
@@ -28,6 +29,7 @@ export const ProductOfferView = ({
   const orig = formatPrice(originalPrice);
   const curr = formatPrice(currentPrice);
   const src = preloadedSrc || imageUrl;
+  const theme = useProductTheme(src);
 
   return (
     <motion.div
@@ -37,7 +39,7 @@ export const ProductOfferView = ({
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="absolute inset-0 flex flex-col bg-white overflow-hidden"
     >
-      {/* Red diagonal "PRODUTO EM OFERTA" ribbon */}
+      {/* "PRODUTO EM OFERTA" diagonal ribbon */}
       <motion.div
         initial={{ x: -40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -51,8 +53,8 @@ export const ProductOfferView = ({
         <div
           className="text-center py-2 shadow-lg"
           style={{
-            background: "linear-gradient(180deg, #E63946 0%, #B71C1C 100%)",
-            color: "#fff",
+            background: `linear-gradient(180deg, ${theme.offerBg} 0%, #B71C1C 100%)`,
+            color: theme.offerText,
           }}
         >
           <span className="text-base md:text-lg font-black uppercase tracking-wider">
@@ -68,6 +70,7 @@ export const ProductOfferView = ({
             src={src}
             alt={name}
             onLoad={onImageLoad}
+            crossOrigin="anonymous"
             className="max-h-full max-w-full object-contain drop-shadow-xl"
           />
         ) : (
@@ -75,29 +78,29 @@ export const ProductOfferView = ({
         )}
       </div>
 
-      {/* Brown card */}
+      {/* Card */}
       <motion.div
         initial={{ y: 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
         className="relative mx-4 mb-4 rounded-3xl overflow-hidden shadow-2xl"
-        style={{ backgroundColor: "#8B3A1F" }}
+        style={{ backgroundColor: theme.cardBg }}
       >
-        {/* Yellow header band */}
+        {/* Header band */}
         <div
           className="px-6 py-5 text-center"
-          style={{ backgroundColor: "#FFD60A" }}
+          style={{ backgroundColor: theme.bandBg }}
         >
           <h1
             className="text-3xl md:text-5xl font-black uppercase leading-tight tracking-tight"
-            style={{ color: "#8B3A1F", fontFamily: "'Impact', 'Anton', sans-serif" }}
+            style={{ color: theme.bandText, fontFamily: "'Impact', 'Anton', sans-serif" }}
           >
             {name}
           </h1>
           {unit && (
             <p
               className="text-xl md:text-2xl font-bold mt-1"
-              style={{ color: "#8B3A1F" }}
+              style={{ color: theme.bandText }}
             >
               {unit}
             </p>
@@ -110,19 +113,20 @@ export const ProductOfferView = ({
           <div className="flex items-center gap-3">
             <div
               className="rounded-lg px-3 py-1 shadow"
-              style={{ backgroundColor: "#E63946" }}
+              style={{ backgroundColor: theme.offerBg }}
             >
-              <span className="text-white font-black text-lg md:text-xl">DE:</span>
+              <span className="font-black text-lg md:text-xl" style={{ color: theme.offerText }}>
+                DE:
+              </span>
             </div>
             <div className="relative inline-flex items-baseline gap-1">
-              <span className="text-2xl md:text-4xl font-black text-white">R$</span>
-              <span className="text-3xl md:text-5xl font-black text-white">
+              <span className="text-2xl md:text-4xl font-black" style={{ color: theme.cardText }}>R$</span>
+              <span className="text-3xl md:text-5xl font-black" style={{ color: theme.cardText }}>
                 {orig.int},{orig.dec}
               </span>
-              {/* Diagonal red strike */}
               <span
                 className="absolute left-0 right-0 top-1/2 h-[4px] md:h-[6px] -rotate-6"
-                style={{ backgroundColor: "#E63946" }}
+                style={{ backgroundColor: theme.strikeColor }}
               />
             </div>
           </div>
@@ -131,29 +135,29 @@ export const ProductOfferView = ({
           <div className="flex items-center gap-3">
             <div
               className="rounded-lg px-3 py-1 shadow"
-              style={{ backgroundColor: "#FFD60A" }}
+              style={{ backgroundColor: theme.priceBg }}
             >
-              <span className="font-black text-lg md:text-xl" style={{ color: "#111" }}>
+              <span className="font-black text-lg md:text-xl" style={{ color: theme.priceText }}>
                 POR:
               </span>
             </div>
             <div
               className="rounded-2xl px-5 py-2 shadow-lg"
-              style={{ backgroundColor: "#FFD60A" }}
+              style={{ backgroundColor: theme.priceBg }}
             >
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl md:text-5xl font-black" style={{ color: "#111" }}>
+                <span className="text-3xl md:text-5xl font-black" style={{ color: theme.priceText }}>
                   R$
                 </span>
                 <span
                   className="text-7xl md:text-9xl font-black leading-none tracking-tight"
-                  style={{ color: "#111" }}
+                  style={{ color: theme.priceText }}
                 >
                   {curr.int}
                 </span>
                 <span
                   className="text-4xl md:text-6xl font-black"
-                  style={{ color: "#111" }}
+                  style={{ color: theme.priceText }}
                 >
                   ,{curr.dec}
                 </span>
