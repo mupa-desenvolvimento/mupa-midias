@@ -7,12 +7,13 @@ import * as tfNs from '@tensorflow/tfjs';
 // inside moveData/runWebGLProgram. The fix: force CPU backend on BOTH the
 // modern tfjs we imported AND on face-api's internal tf instance.
 const tf: any = tfNs;
-const faceapiTf: any = (faceapi as any).tf;
+const faceapiAny: any = faceapi;
+const faceapiTf: any = faceapiAny.tf;
 
 // Expose modern tf to face-api (best-effort; some bundles still use internal tf)
 try {
   if (faceapiTf !== tf) {
-    (faceapi as any).tf = tf;
+    faceapiAny.tf = tf;
   }
 } catch (err) {
   console.warn('[TF] Could not patch faceapi.tf:', err);
