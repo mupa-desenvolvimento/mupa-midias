@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 import { supabase } from '@/integrations/supabase/client';
-import { initializeFaceApiBackend, initTensorFlow, isFaceApiBackendError, switchFaceApiToCpu } from '@/lib/faceApiBackend';
+import { initializeFaceApiBackend, initTensorFlow, isFaceApiBackendError, switchFaceApiToCpu, isBackendReady, ensureBackendReady } from '@/lib/faceApiBackend';
 
 export interface DetectedFace {
   trackId: string;
@@ -303,6 +303,15 @@ export const usePlayerFaceDetection = (
     
     const video = videoRef.current;
     if (video.videoWidth === 0 || video.videoHeight === 0 || video.readyState < 2) return;
+
+    // Guard: backend pode estar undefined após context loss
+    if (!isBackendReady()) {
+      const ok = await ensureBackendReady();
+      if (!ok) {
+        try { await switchFaceApiToCpu(faceapi); } catch { /* noop */ }
+        return;
+      }
+    }
 
     isDetectingRef.current = true;
 
