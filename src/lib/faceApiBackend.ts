@@ -1,13 +1,13 @@
-// face-api.js@0.20 imports `@tensorflow/tfjs-core` directly. We must use the
-// SAME tfjs-core instance and register a backend on IT, otherwise
-// `engine().backend` is undefined and kernels crash with
-// "Cannot read properties of undefined (reading 'backend')".
-import * as tfCore from '@tensorflow/tfjs-core';
-// Importing these packages auto-registers the backends on tfCore.
-import '@tensorflow/tfjs-backend-cpu';
-import '@tensorflow/tfjs-backend-webgl';
+// face-api.js@0.20 bundles its OWN copy of @tensorflow/tfjs-core. Importing
+// a separate @tensorflow/tfjs-core (or backends) creates a DIFFERENT engine,
+// and any backend we register goes to the wrong instance — face-api ends up
+// with `engine().backend === undefined` and crashes on moveData/runWebGLProgram.
+//
+// Solution: use ONLY the `tf` instance that face-api ships with (`faceapi.tf`).
+// face-api includes the CPU backend by default, so it just works.
+import * as faceapi from 'face-api.js';
 
-const tf: any = tfCore;
+const tf: any = (faceapi as any).tf;
 
 const FACE_API_BACKEND_ERROR_PATTERN =
   /backend|moveData|runWebGLProgram|webgl|context lost|texture/i;
@@ -20,6 +20,7 @@ export const isFaceApiBackendError = (error: unknown) => {
 
 export const isBackendReady = (): boolean => {
   try {
+    if (!tf?.engine) return false;
     const engine = tf.engine();
     return !!engine?.backend && !!tf.getBackend();
   } catch {
@@ -45,16 +46,25 @@ export const initTensorFlow = async (): Promise<string> => {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    console.log('[TF] Available backends:', Object.keys((tf as any).engine().registryFactory ?? {}));
+    if (!tf) {
+      throw new Error('face-api.js did not expose its bundled tf instance');
+    }
 
-    // Try WebGL first, fallback to CPU
+    const registry = (tf as any).engine().registryFactory ?? {};
+    const available = Object.keys(registry);
+    console.log('[TF] face-api bundled backends available:', available);
+
+    // Try webgl first if available, fallback to cpu (always present in face-api).
     let active = '';
-    if (await trySetBackend('webgl')) {
+    if (available.includes('webgl') && (await trySetBackend('webgl'))) {
       active = 'webgl';
     } else if (await trySetBackend('cpu')) {
       active = 'cpu';
     } else {
-      throw new Error('Failed to initialize any TF backend (webgl/cpu)');
+      // Last resort — wait for tf to be ready and use whatever backend it has
+      await tf.ready();
+      active = tf.getBackend() || '';
+      if (!active) throw new Error('No TF backend could be initialized');
     }
 
     // Warmup
@@ -63,13 +73,11 @@ export const initTensorFlow = async (): Promise<string> => {
       await t.data();
       t.dispose();
     } catch (err) {
-      console.warn('[TF] Warmup failed, falling back to CPU:', err);
-      if (active !== 'cpu' && (await trySetBackend('cpu'))) {
-        active = 'cpu';
-      }
+      console.warn('[TF] Warmup failed, retrying CPU:', err);
+      if (active !== 'cpu' && (await trySetBackend('cpu'))) active = 'cpu';
     }
 
-    console.log(`[TF] ✅ Backend ready: ${active}`);
+    console.log(`[TF] ✅ face-api backend ready: ${active}`);
     return active;
   })();
 
@@ -96,6 +104,6 @@ export const initializeFaceApiBackend = async (_faceapi?: unknown): Promise<stri
 export const switchFaceApiToCpu = async (_faceapi?: unknown): Promise<string> => {
   await trySetBackend('cpu');
   initPromise = Promise.resolve('cpu');
-  console.warn('[TF] 🔁 Switched to CPU backend');
+  console.warn('[TF] 🔁 Switched face-api to CPU backend');
   return 'cpu';
 };
