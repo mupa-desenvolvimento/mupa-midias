@@ -1,10 +1,7 @@
-// face-api.js@0.20 bundles its OWN copy of @tensorflow/tfjs-core. Importing
-// a separate @tensorflow/tfjs-core (or backends) creates a DIFFERENT engine,
-// and any backend we register goes to the wrong instance — face-api ends up
-// with `engine().backend === undefined` and crashes on moveData/runWebGLProgram.
-//
-// Solution: use ONLY the `tf` instance that face-api ships with (`faceapi.tf`).
-// face-api includes the CPU backend by default, so it just works.
+// face-api.js@0.20 ships with its OWN nested @tensorflow/tfjs-core@1.0.3
+// which bundles CPU + WebGL backends and auto-registers them.
+// We must NOT install separate tfjs packages (that creates a duplicate engine).
+// We just expose the bundled `tf` and call `tf.ready()`.
 import * as faceapi from 'face-api.js';
 
 const tf: any = (faceapi as any).tf;
@@ -18,22 +15,22 @@ export const isFaceApiBackendError = (error: unknown) => {
   return FACE_API_BACKEND_ERROR_PATTERN.test(text);
 };
 
-export const isBackendReady = (): boolean => {
+const safeGetBackend = (): string => {
   try {
-    if (!tf?.engine) return false;
-    const engine = tf.engine();
-    return !!engine?.backend && !!tf.getBackend();
+    return typeof tf?.getBackend === 'function' ? tf.getBackend() || '' : '';
   } catch {
-    return false;
+    return '';
   }
 };
 
+export const isBackendReady = (): boolean => !!safeGetBackend();
+
 const trySetBackend = async (name: string): Promise<boolean> => {
   try {
-    const ok = await tf.setBackend(name);
-    if (!ok) return false;
-    await tf.ready();
-    return tf.getBackend() === name;
+    if (typeof tf?.setBackend !== 'function') return false;
+    await tf.setBackend(name);
+    if (typeof tf.ready === 'function') await tf.ready();
+    return safeGetBackend() === name;
   } catch (err) {
     console.warn(`[TF] setBackend(${name}) failed:`, err);
     return false;
@@ -50,21 +47,22 @@ export const initTensorFlow = async (): Promise<string> => {
       throw new Error('face-api.js did not expose its bundled tf instance');
     }
 
-    const registry = (tf as any).engine().registryFactory ?? {};
-    const available = Object.keys(registry);
-    console.log('[TF] face-api bundled backends available:', available);
-
-    // Try webgl first if available, fallback to cpu (always present in face-api).
-    let active = '';
-    if (available.includes('webgl') && (await trySetBackend('webgl'))) {
-      active = 'webgl';
-    } else if (await trySetBackend('cpu')) {
-      active = 'cpu';
-    } else {
-      // Last resort — wait for tf to be ready and use whatever backend it has
+    // tfjs-core 1.0.3 (bundled with face-api) auto-registers CPU + WebGL.
+    // Just wait for it to be ready.
+    if (typeof tf.ready === 'function') {
       await tf.ready();
-      active = tf.getBackend() || '';
-      if (!active) throw new Error('No TF backend could be initialized');
+    }
+
+    let active = safeGetBackend();
+
+    // If no backend yet, try webgl then cpu explicitly.
+    if (!active) {
+      if (await trySetBackend('webgl')) active = 'webgl';
+      else if (await trySetBackend('cpu')) active = 'cpu';
+    }
+
+    if (!active) {
+      throw new Error('No TF backend could be initialized');
     }
 
     // Warmup
