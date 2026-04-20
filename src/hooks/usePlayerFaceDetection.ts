@@ -34,11 +34,11 @@ interface CurrentContent {
   playlistId: string;
 }
 
-const FACE_MATCH_THRESHOLD = 0.45;
+const FACE_MATCH_THRESHOLD = 0.5; // Slightly more relaxed for player mode
 const FACE_TIMEOUT_MS = 2500;
-const DETECTION_INTERVAL_MS = 1000; // 1s for lighter CPU load
-const MIN_ATTENTION_DURATION = 1;
-const BATCH_SEND_INTERVAL_MS = 10_000; // Send logs every 10s
+const DETECTION_INTERVAL_MS = 1000;
+const MIN_ATTENTION_DURATION = 0.5; // Reduced from 1 to capture more short looks
+const BATCH_SEND_INTERVAL_MS = 5_000; // More frequent (5s instead of 10s) to avoid data loss
 const MAX_PENDING_LOGS = 50;
 
 const getAgeGroup = (age: number): string => {
@@ -332,8 +332,8 @@ export const usePlayerFaceDetection = (
       for (let index = 0; index < detections.length; index++) {
         const detection = detections[index];
         
-        // Skip faces not looking at camera
-        if (!isFacingCamera(detection.landmarks)) continue;
+        // Allow detection even if not looking perfectly (for impressions)
+        const isLooking = isFacingCamera(detection.landmarks);
 
         const rawAge = detection.age;
         const genderResult = getGender(detection.gender, detection.genderProbability);
@@ -372,6 +372,8 @@ export const usePlayerFaceDetection = (
             existingTracked.emotions.shift();
           }
           existingTracked.confidence = confidence;
+          // Keep highest "looking" confidence
+          if (isLooking) (existingTracked as any).isLooking = true;
         } else {
           // Create new tracked face
           trackId = `track_${now.getTime()}_${index}`;
@@ -385,7 +387,9 @@ export const usePlayerFaceDetection = (
             ageEstimates: [rawAge],
             emotions: [{ expression: dominantExpression[0], probability: dominantExpression[1] as number }],
             confidence,
-            loggedToServer: false
+            loggedToServer: false,
+            // Custom field to track if they ever looked at camera
+            ...( { isLooking } as any)
           });
         }
       }
@@ -451,7 +455,7 @@ export const usePlayerFaceDetection = (
             const content = currentContentRef.current;
             pendingLogsRef.current.push({
               confidence: tracked.confidence,
-              is_facing_camera: true,
+              is_facing_camera: (tracked as any).isLooking ?? false,
               detected_at: tracked.firstSeenAt.toISOString(),
               age: avgAge,
               age_group: getAgeGroup(avgAge),
@@ -462,6 +466,8 @@ export const usePlayerFaceDetection = (
               content_id: content?.contentId || null,
               content_name: content?.contentName || null,
               playlist_id: content?.playlistId || null,
+              // Convert descriptor (Float32Array) to basic array for JSON
+              face_descriptor: Array.from(tracked.descriptor || []),
               metadata: {
                 track_id: trackId,
                 session_end: tracked.lastSeenAt.toISOString()
