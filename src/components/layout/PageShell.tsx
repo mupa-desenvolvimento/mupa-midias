@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface PageShellProps {
-  header: ReactNode;
+  header?: ReactNode;
   controls?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -18,9 +18,11 @@ export const PageShell = ({
 }: PageShellProps) => {
   return (
     <div className={cn("flex flex-col flex-1 min-h-0 gap-4", className)}>
-      <div className="animate-fade-in shrink-0">
-        {header}
-      </div>
+      {header && (
+        <div className="animate-fade-in shrink-0">
+          {header}
+        </div>
+      )}
       {controls && (
         <div className="shrink-0">
           {controls}
