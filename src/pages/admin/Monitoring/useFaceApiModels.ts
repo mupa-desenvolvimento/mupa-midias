@@ -9,14 +9,22 @@ let loadPromise: Promise<void> | null = null;
 const loadAll = async () => {
   console.log('[FaceAPI] Initializing TF backend...');
   await initTensorFlow();
-  console.log('[FaceAPI] Loading models from', MODELS_URL);
-  await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
-    faceapi.nets.faceExpressionNet.loadFromUri(MODELS_URL),
-    faceapi.nets.ageGenderNet.loadFromUri(MODELS_URL),
-  ]);
-  console.log('[FaceAPI] ✅ All models loaded');
+  
+  const nets = faceapi.nets as any;
+  const loaders: Promise<unknown>[] = [];
+  
+  if (!nets.tinyFaceDetector?.params) loaders.push(nets.tinyFaceDetector.loadFromUri(MODELS_URL));
+  if (!nets.faceLandmark68Net?.params) loaders.push(nets.faceLandmark68Net.loadFromUri(MODELS_URL));
+  if (!nets.faceExpressionNet?.params) loaders.push(nets.faceExpressionNet.loadFromUri(MODELS_URL));
+  if (!nets.ageGenderNet?.params) loaders.push(nets.ageGenderNet.loadFromUri(MODELS_URL));
+
+  if (loaders.length > 0) {
+    console.log(`[FaceAPI] Loading ${loaders.length} models from ${MODELS_URL}`);
+    await Promise.all(loaders);
+    console.log('[FaceAPI] ✅ Models loaded');
+  } else {
+    console.log('[FaceAPI] ✅ Models already loaded');
+  }
 };
 
 export const useFaceApiModels = () => {

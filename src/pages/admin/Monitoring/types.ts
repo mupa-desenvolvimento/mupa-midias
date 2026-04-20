@@ -34,3 +34,24 @@ export type CameraStatus =
   | "denied"
   | "no-camera"
   | "error";
+
+export interface AudienceSession {
+  personId: string;
+  startTime: number;
+  lastSeen: number;
+  durationMs: number;
+  gender: Gender;
+  age: number;
+  dominantEmotion: Emotion;
+  longSession: boolean;
+  isLooking: boolean;
+  isCurrentlyVisible: boolean;
+}
+
+export interface AudienceMetrics {
+  totalUniquePeople: number;
+  averageAttentionTimeMs: number;
+  totalAudienceTimeMs: number;
+  genderDistribution: { male: number; female: number };
+  dominantEmotion: Emotion | "none";
+}

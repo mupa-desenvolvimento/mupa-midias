@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import type { DetectedFace } from "./types";
+import type { AudienceSession } from "./types";
+import * as faceapi from "face-api.js";
 
 const EMOTION_LABEL: Record<string, string> = {
   neutral: "Neutro",
@@ -14,10 +15,10 @@ const EMOTION_LABEL: Record<string, string> = {
 interface Props {
   videoRef: React.RefObject<HTMLVideoElement>;
   canvasRef: React.RefObject<HTMLCanvasElement>;
-  faces: DetectedFace[];
+  sessions: AudienceSession[];
 }
 
-export const FaceDetectionOverlay = ({ videoRef, canvasRef, faces }: Props) => {
+export const FaceDetectionOverlay = ({ videoRef, canvasRef, sessions }: Props) => {
   useEffect(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -34,25 +35,43 @@ export const FaceDetectionOverlay = ({ videoRef, canvasRef, faces }: Props) => {
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
 
-    faces.forEach((f) => {
-      const { x, y, width, height } = f.box;
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "hsl(160 84% 50%)";
-      ctx.strokeRect(x, y, width, height);
+    sessions.forEach((s) => {
+      if (!s.box) return;
+      const { x, y, width, height } = s.box;
+      
+      const isLooking = s.isLooking;
+      const color = isLooking ? "hsl(142 76% 45%)" : "hsl(0 0% 63%)";
+      const id = s.personId.split('_').pop();
 
-      const label = `${f.gender === "male" ? "M" : "F"} · ${f.age}a · ${
-        EMOTION_LABEL[f.emotion] ?? f.emotion
+      ctx.lineWidth = 2;
+      ctx.setLineDash(isLooking ? [] : [5, 5]);
+      ctx.strokeStyle = color;
+      ctx.strokeRect(x, y, width, height);
+      ctx.setLineDash([]); // Reset dash
+
+      const label = `${id} · ${s.gender === "male" ? "M" : "F"} · ${s.age}a · ${
+        isLooking ? "Olhando" : "Desatento"
       }`;
-      ctx.font = "600 18px system-ui, sans-serif";
+      
+      ctx.font = "600 14px Inter, system-ui, sans-serif";
       const padding = 6;
       const textW = ctx.measureText(label).width + padding * 2;
-      const textH = 26;
-      ctx.fillStyle = "hsl(160 84% 35% / 0.9)";
+      const textH = 22;
+      
+      ctx.fillStyle = color;
       ctx.fillRect(x, Math.max(0, y - textH), textW, textH);
+      
       ctx.fillStyle = "white";
-      ctx.fillText(label, x + padding, Math.max(textH - 8, y - 8));
+      ctx.fillText(label, x + padding, Math.max(textH - 6, y - 6));
+      
+      if (s.durationMs > 0) {
+        const timeLabel = `${(s.durationMs/1000).toFixed(1)}s`;
+        ctx.fillStyle = "black";
+        ctx.fillText(timeLabel, x + width - ctx.measureText(timeLabel).width - 4, y + height - 4);
+      }
     });
-  }, [faces, videoRef, canvasRef]);
+  }, [sessions, videoRef, canvasRef]);
 
   return null;
 };
+

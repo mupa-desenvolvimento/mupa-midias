@@ -37,25 +37,47 @@ export const useFaceDetectionLoop = ({
     const tick = async () => {
       if (!runningRef.current) return;
       const video = videoRef.current;
-      if (!video || video.readyState < 2 || !visibleRef.current) {
+      
+      if (!video) {
+        console.log('[Monitoring] No video ref');
         timer = window.setTimeout(tick, intervalMs);
         return;
       }
 
+      if (video.readyState < 2) {
+        console.log('[Monitoring] Video not ready (readyState)', video.readyState);
+        timer = window.setTimeout(tick, intervalMs);
+        return;
+      }
+
+      if (!visibleRef.current) {
+//        console.log('[Monitoring] Document hidden, skipping detection');
+//        timer = window.setTimeout(tick, intervalMs);
+//        return;
+      }
+
       try {
         if (!isBackendReady()) {
+          console.log('[Monitoring] Backend not ready, ensuring...');
           const ok = await ensureBackendReady();
           if (!ok) {
+            console.log('[Monitoring] Failed to ensure backend');
             timer = window.setTimeout(tick, intervalMs);
             return;
           }
         }
+        
+        console.log('[Monitoring] Running detectAllFaces...');
 
         const results = await faceapi
-          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.3 }))
           .withFaceLandmarks()
           .withFaceExpressions()
           .withAgeAndGender();
+
+        if (results.length > 0) {
+          console.log(`[Monitoring] ✅ Detected ${results.length} face(s)`);
+        }
 
         const mapped: DetectedFace[] = results.map((r, idx) => {
           const expr = r.expressions as unknown as Record<Emotion, number>;
@@ -85,7 +107,13 @@ export const useFaceDetectionLoop = ({
       }
     };
 
-    tick();
+    tick().catch(err => {
+      console.error("[Monitoring] Fatal tick crash:", err);
+      // Restart loop after a delay if it crashes completely
+      if (runningRef.current) {
+        timer = window.setTimeout(tick, 2000);
+      }
+    });
 
     return () => {
       runningRef.current = false;

@@ -12,7 +12,8 @@ const FACE_API_BACKEND_ERROR_PATTERN =
 export const isFaceApiBackendError = (error: unknown) => {
   if (!(error instanceof Error)) return false;
   const text = `${error.name} ${error.message} ${error.stack ?? ''}`;
-  return FACE_API_BACKEND_ERROR_PATTERN.test(text);
+  // Catch the "moveData" / "backend" reading undefined error specifically
+  return FACE_API_BACKEND_ERROR_PATTERN.test(text) || text.includes('backend');
 };
 
 const safeGetBackend = (): string => {
@@ -28,9 +29,12 @@ export const isBackendReady = (): boolean => !!safeGetBackend();
 const trySetBackend = async (name: string): Promise<boolean> => {
   try {
     if (typeof tf?.setBackend !== 'function') return false;
+    console.log(`[TF] Attempting setBackend('${name}')...`);
     await tf.setBackend(name);
     if (typeof tf.ready === 'function') await tf.ready();
-    return safeGetBackend() === name;
+    const active = safeGetBackend();
+    console.log(`[TF] Current backend: ${active}`);
+    return active === name;
   } catch (err) {
     console.warn(`[TF] setBackend(${name}) failed:`, err);
     return false;
@@ -47,35 +51,21 @@ export const initTensorFlow = async (): Promise<string> => {
       throw new Error('face-api.js did not expose its bundled tf instance');
     }
 
-    // tfjs-core 1.0.3 (bundled with face-api) auto-registers CPU + WebGL.
-    // Just wait for it to be ready.
+    // Force CPU backend for stability if WebGL is crashing
+    console.log('[TF] 🛡️ Prioritizing CPU backend for stability...');
+    
+    if (await trySetBackend('cpu')) {
+      console.log('[TF] ✅ Stable CPU backend initialized');
+      return 'cpu';
+    }
+
+    // Fallback to whatever is available if CPU fails (unlikely)
     if (typeof tf.ready === 'function') {
       await tf.ready();
     }
 
-    let active = safeGetBackend();
-
-    // If no backend yet, try webgl then cpu explicitly.
-    if (!active) {
-      if (await trySetBackend('webgl')) active = 'webgl';
-      else if (await trySetBackend('cpu')) active = 'cpu';
-    }
-
-    if (!active) {
-      throw new Error('No TF backend could be initialized');
-    }
-
-    // Warmup
-    try {
-      const t = tf.tensor1d([1, 2, 3]);
-      await t.data();
-      t.dispose();
-    } catch (err) {
-      console.warn('[TF] Warmup failed, retrying CPU:', err);
-      if (active !== 'cpu' && (await trySetBackend('cpu'))) active = 'cpu';
-    }
-
-    console.log(`[TF] ✅ face-api backend ready: ${active}`);
+    const active = safeGetBackend();
+    console.log(`[TF] ⚠️ Falling back to ${active} backend`);
     return active;
   })();
 
@@ -100,8 +90,6 @@ export const ensureBackendReady = async (): Promise<boolean> => {
 export const initializeFaceApiBackend = async (_faceapi?: unknown): Promise<string> => initTensorFlow();
 
 export const switchFaceApiToCpu = async (_faceapi?: unknown): Promise<string> => {
-  await trySetBackend('cpu');
-  initPromise = Promise.resolve('cpu');
-  console.warn('[TF] 🔁 Switched face-api to CPU backend');
+  // Already defaulting to CPU in this version
   return 'cpu';
 };

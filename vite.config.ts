@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     target: "es2017",
   },
+  optimizeDeps: {
+    include: ["face-api.js"],
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
@@ -110,6 +113,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "face-api.js": path.resolve(__dirname, "node_modules/face-api.js/dist/face-api.min.js"),
       "virtual:pwa-register/react": path.resolve(
         __dirname,
         "./src/pwa/register-sw-react-stub.ts",

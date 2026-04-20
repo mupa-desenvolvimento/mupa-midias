@@ -15,7 +15,9 @@ import { DetectionStats } from "./DetectionStats";
 import { DetectionLogger } from "./DetectionLogger";
 import { useFaceApiModels } from "./useFaceApiModels";
 import { useCamera } from "./useCamera";
-import { useFaceDetectionLoop } from "./useFaceDetectionLoop";
+import { useAudienceIntelligence } from "@/hooks/useAudienceIntelligence";
+import { AudienceStats } from "./AudienceStats";
+import { DetectionLogger } from "./DetectionLogger";
 import type { DetectionLogEntry } from "./types";
 
 const MAX_LOG = 200;
@@ -28,104 +30,127 @@ const MonitoringPage = () => {
   const { status, devices, deviceId, start, setDeviceId } = useCamera(videoRef);
 
   const detecting = modelsReady && status === "active";
-  const faces = useFaceDetectionLoop({
+  
+  const { activeSessions: sessions, metrics } = useAudienceIntelligence({
     videoRef,
     enabled: detecting,
-    intervalMs: 200,
+    intervalMs: 500,
   });
 
   const [log, setLog] = useState<DetectionLogEntry[]>([]);
   const lastLogTimeRef = useRef(0);
 
-  // Throttle log entries (1 entry per face per second max)
+  // Throttle log entries (1 entry per unique session per second max)
   useEffect(() => {
-    if (faces.length === 0) return;
+    if (sessions.length === 0) return;
     const now = Date.now();
     if (now - lastLogTimeRef.current < 1000) return;
     lastLogTimeRef.current = now;
 
-    const entries: DetectionLogEntry[] = faces.map((f) => ({
+    const entries: DetectionLogEntry[] = sessions.map((s) => ({
       timestamp: new Date().toISOString(),
-      age: f.age,
-      gender: f.gender,
-      emotion: f.emotion,
+      age: s.age,
+      gender: s.gender,
+      emotion: s.dominantEmotion,
     }));
     setLog((prev) => [...prev, ...entries].slice(-MAX_LOG));
-  }, [faces]);
+  }, [sessions]);
 
   const handleStart = () => start(deviceId);
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6 max-w-7xl mx-auto px-4 py-8">
+      <header className="flex flex-wrap items-center justify-between gap-6 pb-2 border-b">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Activity className="w-6 h-6 text-primary" />
-            Monitoramento Inteligente
+          <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight">
+            <Activity className="w-8 h-8 text-primary animate-pulse" />
+            Audience Intelligence Hub
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Detecção facial em tempo real · idade · gênero · emoção
+          <p className="text-muted-foreground mt-2 max-w-lg">
+            Monitoramento inteligente em tempo real com rastreamento leve de sessões e análise de tempo de atenção.
           </p>
         </div>
         <StatusBadge status={status} modelsReady={modelsReady} />
       </header>
 
       {modelsError && (
-        <Card className="border-destructive">
-          <CardContent className="p-4 flex items-center gap-2 text-sm text-destructive">
-            <AlertCircle className="w-4 h-4" /> Erro ao carregar modelos: {modelsError}
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="p-4 flex items-center gap-2 text-sm text-destructive font-medium">
+            <AlertCircle className="w-5 h-5" /> Erro ao carregar modelos: {modelsError}
           </CardContent>
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-        <div className="space-y-4">
-          <CameraFeed ref={videoRef} canvasRef={canvasRef} />
-          <FaceDetectionOverlay videoRef={videoRef} canvasRef={canvasRef} faces={faces} />
+      {/* Advanced Metrics Dashboard */}
+      {detecting && <AudienceStats metrics={metrics} />}
 
-          <div className="flex flex-wrap items-center gap-2">
-            {devices.length > 1 && (
-              <Select
-                value={deviceId}
-                onValueChange={(v) => {
-                  setDeviceId(v);
-                  start(v);
-                }}
-              >
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Selecione câmera" />
-                </SelectTrigger>
-                <SelectContent>
-                  {devices.map((d) => (
-                    <SelectItem key={d.deviceId} value={d.deviceId}>
-                      {d.label || `Câmera ${d.deviceId.slice(0, 6)}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-6">
+          <div className="relative rounded-3xl overflow-hidden glassmorphism shadow-2xl bg-black aspect-video border border-white/10">
+            <CameraFeed ref={videoRef} canvasRef={canvasRef} />
+            <FaceDetectionOverlay videoRef={videoRef} canvasRef={canvasRef} sessions={sessions} />
+            
+            {!detecting && (
+               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/60 backdrop-blur-sm">
+                  <Camera className="w-16 h-16 text-muted-foreground/40" />
+                  <p className="text-white/60 font-medium">Transmissão Inativa</p>
+               </div>
             )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between p-4 bg-muted/30 rounded-2xl gap-4">
+            <div className="flex items-center gap-4">
+              {devices.length > 0 && (
+                <Select
+                  value={deviceId}
+                  onValueChange={(v) => {
+                    setDeviceId(v);
+                    start(v);
+                  }}
+                >
+                  <SelectTrigger className="w-64 bg-background/50 border-none shadow-sm h-11">
+                    <SelectValue placeholder="Selecione câmera" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {devices.map((d) => (
+                      <SelectItem key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Câmera ${d.deviceId.slice(0, 6)}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
             {status !== "active" && (
-              <Button onClick={handleStart} disabled={!modelsReady}>
+              <Button 
+                onClick={handleStart} 
+                disabled={!modelsReady}
+                size="lg"
+                className="rounded-xl px-8 h-11 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+              >
                 {!modelsReady ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Carregando modelos...
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Preparando IA...
                   </>
                 ) : (
                   <>
-                    <Camera className="w-4 h-4 mr-2" /> Iniciar câmera
+                    <Camera className="w-4 h-4 mr-2" /> Ativar Monitoramento
                   </>
                 )}
               </Button>
             )}
           </div>
 
-          <StateMessage status={status} faces={faces.length} modelsReady={modelsReady} />
+          <StateMessage status={status} faces={sessions.length} modelsReady={modelsReady} />
         </div>
 
-        <aside className="space-y-4">
-          <DetectionStats faces={faces} />
-          <DetectionLogger log={log} onClear={() => setLog([])} />
+        <aside className="lg:col-span-4 space-y-6">
+          <Card className="rounded-3xl border-none bg-muted/20 pb-4">
+            <CardContent className="p-0">
+               <DetectionLogger log={log} onClear={() => setLog([])} />
+            </CardContent>
+          </Card>
         </aside>
       </div>
     </div>
