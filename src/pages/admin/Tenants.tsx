@@ -32,30 +32,19 @@ interface TenantFilters {
 }
 
 const Tenants = () => {
+  const navigate = useNavigate();
   const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant, getTenantLicense } = useTenants();
   const { isSuperAdmin, isLoading: isCheckingAdmin } = useSuperAdmin();
-  
-  const [companyCodes, setCompanyCodes] = useState<Record<string, string>>({});
-  
-  useEffect(() => {
-    const fetchCodes = async () => {
-      const { data } = await supabase
-        .from('companies')
-        .select('tenant_id, code')
-        .not('code', 'is', null);
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach((c) => { if (c.tenant_id && c.code) map[c.tenant_id] = c.code; });
-        setCompanyCodes(map);
-      }
-    };
-    fetchCodes();
-  }, [tenants]);
+
+  const tenantIds = useMemo(() => tenants.map((t) => t.id), [tenants]);
+  const { overview } = useTenantOverview(tenantIds);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
+  const [isIntegrationOpen, setIsIntegrationOpen] = useState(false);
+  const [integrationCompany, setIntegrationCompany] = useState<{ id: string; name: string } | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState({
     name: '',
