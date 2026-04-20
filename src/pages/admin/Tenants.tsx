@@ -286,69 +286,7 @@ const Tenants = () => {
             </div>
 
             <TabsContent value="clientes" className="mt-0 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="relative overflow-hidden border-l-4 border-l-primary">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Total de Clientes
-                    </CardTitle>
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <Building2 className="h-4 w-4 text-primary" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{tenants.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Empresas cadastradas</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="relative overflow-hidden border-l-4 border-l-emerald-500">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Ativos
-                    </CardTitle>
-                    <div className="rounded-full bg-emerald-500/10 p-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{totalActive}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {tenants.length > 0 ? Math.round((totalActive / tenants.length) * 100) : 0}% do total
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="relative overflow-hidden border-l-4 border-l-rose-500">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Inativos
-                    </CardTitle>
-                    <div className="rounded-full bg-rose-500/10 p-2">
-                      <XCircle className="h-4 w-4 text-rose-500" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">{totalInactive}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Suspensos ou desativados</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="relative overflow-hidden border-l-4 border-l-violet-500">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Schemas Ativos
-                    </CardTitle>
-                    <div className="rounded-full bg-violet-500/10 p-2">
-                      <Shield className="h-4 w-4 text-violet-500" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{totalSchemas}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Migrados e prontos</p>
-                  </CardContent>
-                </Card>
-              </div>
+              <div className="mt-0">
 
               <div className="mt-4">
                 <ListControls
