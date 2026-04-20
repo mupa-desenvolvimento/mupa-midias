@@ -371,31 +371,24 @@ const Devices = () => {
   return (
     <PageShell
       className="animate-fade-in"
-      header={
-        <div className="flex items-center justify-between gap-4 py-4">
-          <div>
-            <p className="text-muted-foreground">
-              Gerencie todos os displays conectados
-            </p>
-            {activeFilterCount > 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {totalDevices} de {devices.length} dispositivos
-              </p>
-            )}
-          </div>
-          <Button className="gradient-primary text-white" onClick={handleAddDevice}>
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar Dispositivo
-          </Button>
-        </div>
-      }
       controls={
         <div className="space-y-2 py-2">
+          {activeFilterCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {totalDevices} de {devices.length} dispositivos
+            </p>
+          )}
           <ListControls
             state={state}
             onSearchChange={setSearch}
             onViewChange={setView}
             onClearFilters={() => { reset(); clearSelection(); }}
+            actions={
+              <Button className="gradient-primary text-white" onClick={handleAddDevice}>
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Dispositivo
+              </Button>
+            }
           >
             <Select
               value={state.filters.status}
