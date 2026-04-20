@@ -46,6 +46,7 @@ export interface AudienceSession {
   longSession: boolean;
   isLooking: boolean;
   isCurrentlyVisible: boolean;
+  box?: { x: number; y: number; width: number; height: number };
 }
 
 export interface AudienceMetrics {

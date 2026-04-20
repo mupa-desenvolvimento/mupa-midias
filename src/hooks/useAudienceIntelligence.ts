@@ -1,28 +1,11 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import * as faceapi from "face-api.js";
-import { Gender, Emotion } from "../pages/admin/Monitoring/types";
-
-export interface AudienceSession {
-  personId: string;
-  startTime: number;
-  lastSeen: number;
-  durationMs: number;
-  gender: Gender;
-  age: number;
-  dominantEmotion: Emotion;
-  longSession: boolean;
-  isLooking: boolean;
-  isCurrentlyVisible: boolean;
-  box?: { x: number; y: number; width: number; height: number };
-}
-
-export interface AudienceMetrics {
-  totalUniquePeople: number;
-  averageAttentionTimeMs: number;
-  totalAudienceTimeMs: number;
-  genderDistribution: { male: number; female: number };
-  dominantEmotion: Emotion | "none";
-}
+import type {
+  AudienceMetrics,
+  AudienceSession,
+  Emotion,
+  Gender,
+} from "../pages/admin/Monitoring/types";
 
 interface useAudienceIntelligenceProps {
   videoRef: React.RefObject<HTMLVideoElement>;
