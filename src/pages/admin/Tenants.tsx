@@ -245,14 +245,34 @@ const Tenants = () => {
     );
   }
 
+  // Helpers for richer cards
+  const getInitials = (name: string) =>
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join('') || '?';
+
+  const usagePercent = (used: number, max: number) => {
+    if (!max || max <= 0) return 0;
+    return Math.min(100, Math.round((used / max) * 100));
+  };
+
+  const totalActive = tenants.filter((t) => t.is_active !== false).length;
+  const totalInactive = tenants.filter((t) => t.is_active === false).length;
+  const totalSchemas = tenants.filter((t) => (t.migration_version || 0) > 0).length;
+
   return (
     <PageShell
       className="space-y-6 p-6"
       header={
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-2">
-          <p className="text-muted-foreground">
-            Gerenciamento de clientes multi-tenant
-          </p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
+            <p className="text-sm text-muted-foreground">
+              Gerencie tenants, usuários, integrações e licenças do sistema
+            </p>
+          </div>
         </div>
       }
       controls={
@@ -269,68 +289,73 @@ const Tenants = () => {
                   Usuários
                 </TabsTrigger>
               </TabsList>
-              <Button onClick={() => setIsCreateOpen(true)}>
+              <Button onClick={() => setIsCreateOpen(true)} className="shadow-sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Cliente
               </Button>
             </div>
 
             <TabsContent value="clientes" className="mt-0 space-y-4">
-              <div className="grid gap-4 md:grid-cols-4">
-                <Card>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="relative overflow-hidden border-l-4 border-l-primary">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
+                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Total de Clientes
                     </CardTitle>
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      {tenants.length}
-                    </div>
+                    <div className="text-3xl font-bold">{tenants.length}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Empresas cadastradas</p>
                   </CardContent>
                 </Card>
-                <Card>
+
+                <Card className="relative overflow-hidden border-l-4 border-l-emerald-500">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
+                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Ativos
                     </CardTitle>
-                    <Power className="h-4 w-4 text-green-500" />
+                    <div className="rounded-full bg-emerald-500/10 p-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
-                      {tenants.filter((t) => t.is_active !== false).length}
-                    </div>
+                    <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{totalActive}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {tenants.length > 0 ? Math.round((totalActive / tenants.length) * 100) : 0}% do total
+                    </p>
                   </CardContent>
                 </Card>
-                <Card>
+
+                <Card className="relative overflow-hidden border-l-4 border-l-rose-500">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
+                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Inativos
                     </CardTitle>
-                    <PowerOff className="h-4 w-4 text-red-500" />
+                    <div className="rounded-full bg-rose-500/10 p-2">
+                      <XCircle className="h-4 w-4 text-rose-500" />
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      {tenants.filter((t) => t.is_active === false).length}
-                    </div>
+                    <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">{totalInactive}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Suspensos ou desativados</p>
                   </CardContent>
                 </Card>
-                <Card>
+
+                <Card className="relative overflow-hidden border-l-4 border-l-violet-500">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
+                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Schemas Ativos
                     </CardTitle>
-                    <Shield className="h-4 w-4 text-primary" />
+                    <div className="rounded-full bg-violet-500/10 p-2">
+                      <Shield className="h-4 w-4 text-violet-500" />
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      {
-                        tenants.filter(
-                          (t) => (t.migration_version || 0) > 0,
-                        ).length
-                      }
-                    </div>
+                    <div className="text-3xl font-bold">{totalSchemas}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Migrados e prontos</p>
                   </CardContent>
                 </Card>
               </div>
