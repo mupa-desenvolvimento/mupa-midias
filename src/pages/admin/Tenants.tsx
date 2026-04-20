@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown, Plug2, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,8 +18,10 @@ import { UniversalPagination } from '@/components/list/UniversalPagination';
 import { useListState } from '@/hooks/useListState';
 import { useTenants, Tenant } from '@/hooks/useTenants';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useTenantOverview } from '@/hooks/useTenantOverview';
 import { TenantUsersDialog } from '@/components/admin/TenantUsersDialog';
 import { TenantUsersList } from '@/components/admin/TenantUsersList';
+import { CompanyIntegrationsDialog } from '@/components/admin/CompanyIntegrationsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
