@@ -34,11 +34,11 @@ interface CurrentContent {
   playlistId: string;
 }
 
-const FACE_MATCH_THRESHOLD = 0.45;
+const FACE_MATCH_THRESHOLD = 0.5; // Slightly more relaxed for player mode
 const FACE_TIMEOUT_MS = 2500;
-const DETECTION_INTERVAL_MS = 1000; // 1s for lighter CPU load
-const MIN_ATTENTION_DURATION = 1;
-const BATCH_SEND_INTERVAL_MS = 10_000; // Send logs every 10s
+const DETECTION_INTERVAL_MS = 1000;
+const MIN_ATTENTION_DURATION = 0.5; // Reduced from 1 to capture more short looks
+const BATCH_SEND_INTERVAL_MS = 5_000; // More frequent (5s instead of 10s) to avoid data loss
 const MAX_PENDING_LOGS = 50;
 
 const getAgeGroup = (age: number): string => {
