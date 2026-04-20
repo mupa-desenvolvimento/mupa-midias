@@ -120,6 +120,14 @@ export function useTenants() {
         toast.error('Cliente criado, mas houve erro ao criar a licença');
       }
 
+      // Auto-generate company code if not provided (3 digits + 3 letters)
+      const generateCode = () => {
+        const letters = data.name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase().padEnd(3, 'A');
+        const digits = String(Math.floor(100 + Math.random() * 900));
+        return digits + letters;
+      };
+      const finalCode = data.company_code || generateCode();
+
       // Create default company for this tenant
       const { data: company, error: companyError } = await supabase
         .from('companies')
@@ -128,7 +136,7 @@ export function useTenants() {
           slug: data.slug.toLowerCase().replace(/\s+/g, '-'),
           tenant_id: tenant.id,
           is_active: true,
-          ...(data.company_code ? { code: data.company_code } : {}),
+          code: finalCode,
         })
         .select()
         .single();
