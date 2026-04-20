@@ -455,7 +455,7 @@ export const usePlayerFaceDetection = (
             const content = currentContentRef.current;
             pendingLogsRef.current.push({
               confidence: tracked.confidence,
-              is_facing_camera: true,
+              is_facing_camera: (tracked as any).isLooking ?? false,
               detected_at: tracked.firstSeenAt.toISOString(),
               age: avgAge,
               age_group: getAgeGroup(avgAge),
@@ -466,6 +466,8 @@ export const usePlayerFaceDetection = (
               content_id: content?.contentId || null,
               content_name: content?.contentName || null,
               playlist_id: content?.playlistId || null,
+              // Convert descriptor (Float32Array) to basic array for JSON
+              face_descriptor: Array.from(tracked.descriptor || []),
               metadata: {
                 track_id: trackId,
                 session_end: tracked.lastSeenAt.toISOString()
