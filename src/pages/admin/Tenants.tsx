@@ -417,211 +417,376 @@ const Tenants = () => {
         />
       }
     >
-      <ListViewport
-        contentClassName={
-          state.view === 'grid'
-            ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'
-            : 'flex flex-col gap-4'
-        }
-      >
-        {totalTenants === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Building2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-2 text-lg font-medium">
-                Nenhum cliente encontrado
-              </h3>
-              <p className="text-muted-foreground">
-                {state.search
-                  ? 'Nenhum cliente corresponde à sua busca.'
-                  : 'Crie seu primeiro cliente para começar.'}
-              </p>
-              {!state.search && (
-                <Button
-                  className="mt-4"
-                  onClick={() => setIsCreateOpen(true)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar Primeiro Cliente
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          paginatedTenants.map((tenant) => {
-            const ov = overview[tenant.id];
-            return (
-            <Card
-              key={tenant.id}
-              className={`transition-all ${tenant.is_active === false ? 'opacity-60' : ''}`}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">
-                    {tenant.name}
-                  </CardTitle>
-                  <Badge
-                    variant={
-                      tenant.is_active !== false ? 'default' : 'secondary'
-                    }
-                  >
-                    {tenant.is_active !== false ? 'Ativo' : 'Inativo'}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm text-muted-foreground font-mono">
-                    {tenant.slug}
-                  </p>
-                  {ov?.companyCode && (
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {ov.companyCode}
-                    </Badge>
-                  )}
-                  {ov?.cnpj && (
-                    <Badge variant="secondary" className="font-mono text-xs">
-                      CNPJ {ov.cnpj}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Live counters: real usage / max */}
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm font-medium">
-                      {ov?.usersCount ?? 0}
+      <TooltipProvider delayDuration={200}>
+      {totalTenants === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="rounded-full bg-muted p-4 mb-4">
+              <Building2 className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold">Nenhum cliente encontrado</h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-4 text-center max-w-sm">
+              {state.search
+                ? 'Nenhum cliente corresponde à sua busca. Tente ajustar os filtros.'
+                : 'Crie seu primeiro cliente para começar a gerenciar tenants.'}
+            </p>
+            {!state.search && (
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeiro Cliente
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : state.view === 'list' ? (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="w-[280px]">Cliente</TableHead>
+                <TableHead>Identificadores</TableHead>
+                <TableHead className="text-center">Usuários</TableHead>
+                <TableHead className="text-center">Dispositivos</TableHead>
+                <TableHead className="text-center">Lojas</TableHead>
+                <TableHead className="text-center">Integrações</TableHead>
+                <TableHead>Criado em</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right w-[80px]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedTenants.map((tenant) => {
+                const ov = overview[tenant.id];
+                const isActive = tenant.is_active !== false;
+                return (
+                  <TableRow key={tenant.id} className={cn(!isActive && 'opacity-60')}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary font-semibold text-sm">
+                          {getInitials(tenant.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{tenant.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{tenant.slug}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {ov?.companyCode && (
+                          <Badge variant="outline" className="font-mono text-xs">{ov.companyCode}</Badge>
+                        )}
+                        {ov?.cnpj && (
+                          <Badge variant="secondary" className="font-mono text-xs">{ov.cnpj}</Badge>
+                        )}
+                        {!ov?.companyCode && !ov?.cnpj && (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-medium">
+                      <span>{ov?.usersCount ?? 0}</span>
                       <span className="text-xs text-muted-foreground"> / {tenant.max_users || 50}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">Usuários</p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center">
-                      <Monitor className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm font-medium">
-                      {ov?.devicesCount ?? 0}
+                    </TableCell>
+                    <TableCell className="text-center font-medium">
+                      <span>{ov?.devicesCount ?? 0}</span>
                       <span className="text-xs text-muted-foreground"> / {tenant.max_devices || 100}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">Dispositivos</p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center">
-                      <StoreIcon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm font-medium">
-                      {ov?.storesCount ?? 0}
+                    </TableCell>
+                    <TableCell className="text-center font-medium">
+                      <span>{ov?.storesCount ?? 0}</span>
                       <span className="text-xs text-muted-foreground"> / {tenant.max_stores || 500}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">Lojas</p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center">
-                      <Plug2 className="h-4 w-4 text-muted-foreground" />
+                    </TableCell>
+                    <TableCell className="text-center font-medium">{ov?.integrationsCount ?? 0}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {tenant.created_at
+                        ? format(new Date(tenant.created_at), 'dd/MM/yyyy', { locale: ptBR })
+                        : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={isActive ? 'default' : 'secondary'}
+                        className={cn(
+                          isActive
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                        )}
+                      >
+                        <span className={cn('mr-1.5 h-1.5 w-1.5 rounded-full', isActive ? 'bg-emerald-500' : 'bg-rose-500')} />
+                        {isActive ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleEdit(tenant)}>
+                            <Edit className="h-4 w-4 mr-2" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { setSelectedTenant(tenant); setIsUsersOpen(true); }}
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" /> Usuários
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!ov?.companyId}
+                            onClick={() => {
+                              if (!ov?.companyId) return;
+                              setIntegrationCompany({ id: ov.companyId, name: ov.companyName || tenant.name });
+                              setIsIntegrationOpen(true);
+                            }}
+                          >
+                            <Plug2 className="h-4 w-4 mr-2" /> Integração
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!ov?.companyId}
+                            onClick={() => ov?.companyId && navigate(`/admin/companies/${ov.companyId}/display-config`)}
+                          >
+                            <Palette className="h-4 w-4 mr-2" /> Configurar Tela
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => toggleTenantStatus(tenant.id, !isActive)}
+                          >
+                            {isActive ? <PowerOff className="h-4 w-4 mr-2" /> : <Power className="h-4 w-4 mr-2" />}
+                            {isActive ? 'Desativar' : 'Ativar'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => { setSelectedTenant(tenant); setIsDeleteOpen(true); }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {paginatedTenants.map((tenant) => {
+            const ov = overview[tenant.id];
+            const isActive = tenant.is_active !== false;
+            const usersPct = usagePercent(ov?.usersCount ?? 0, tenant.max_users || 50);
+            const devicesPct = usagePercent(ov?.devicesCount ?? 0, tenant.max_devices || 100);
+            const storesPct = usagePercent(ov?.storesCount ?? 0, tenant.max_stores || 500);
+            return (
+              <Card
+                key={tenant.id}
+                className={cn(
+                  'group relative overflow-hidden transition-all hover:shadow-lg hover:border-primary/40',
+                  !isActive && 'opacity-70'
+                )}
+              >
+                {/* Top accent bar */}
+                <div className={cn(
+                  'absolute inset-x-0 top-0 h-1',
+                  isActive ? 'bg-gradient-to-r from-primary via-primary/70 to-primary/40' : 'bg-muted'
+                )} />
+
+                <CardHeader className="pb-3 pt-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={cn(
+                        'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-bold shadow-sm',
+                        isActive ? 'bg-gradient-to-br from-primary/20 to-primary/5 text-primary' : 'bg-muted text-muted-foreground'
+                      )}>
+                        {getInitials(tenant.name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base font-semibold truncate">
+                          {tenant.name}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                          {tenant.slug}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm font-medium">{ov?.integrationsCount ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Integrações</p>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Ações rápidas</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => toggleTenantStatus(tenant.id, !isActive)}>
+                          {isActive ? <PowerOff className="h-4 w-4 mr-2" /> : <Power className="h-4 w-4 mr-2" />}
+                          {isActive ? 'Desativar' : 'Ativar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => { setSelectedTenant(tenant); setIsDeleteOpen(true); }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </div>
 
-                <div className="text-xs text-muted-foreground">
-                  <p>
-                    Criado:{' '}
-                    {tenant.created_at
-                      ? format(
-                          new Date(tenant.created_at),
-                          "dd/MM/yyyy 'às' HH:mm",
-                          { locale: ptBR },
-                        )
-                      : '-'}
-                  </p>
-                </div>
-
-                {/* Quick actions: company integrations + display config */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1"
-                    disabled={!ov?.companyId}
-                    onClick={() => {
-                      if (!ov?.companyId) return;
-                      setIntegrationCompany({ id: ov.companyId, name: ov.companyName || tenant.name });
-                      setIsIntegrationOpen(true);
-                    }}
-                  >
-                    <Plug2 className="h-4 w-4 mr-1" />
-                    Integração
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1"
-                    disabled={!ov?.companyId}
-                    onClick={() => ov?.companyId && navigate(`/admin/companies/${ov.companyId}/display-config`)}
-                  >
-                    <Palette className="h-4 w-4 mr-1" />
-                    Tela
-                  </Button>
-                </div>
-
-                <div className="flex gap-2 pt-2 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleEdit(tenant)}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedTenant(tenant);
-                      setIsUsersOpen(true);
-                    }}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={
-                      tenant.is_active !== false ? 'outline' : 'default'
-                    }
-                    size="sm"
-                    onClick={() =>
-                      toggleTenantStatus(
-                        tenant.id,
-                        tenant.is_active === false,
-                      )
-                    }
-                  >
-                    {tenant.is_active !== false ? (
-                      <PowerOff className="h-4 w-4" />
-                    ) : (
-                      <Power className="h-4 w-4" />
+                  {/* Identifier badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-xs',
+                        isActive
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                          : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30'
+                      )}
+                    >
+                      <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', isActive ? 'bg-emerald-500' : 'bg-rose-500')} />
+                      {isActive ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                    {ov?.companyCode && (
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {ov.companyCode}
+                      </Badge>
                     )}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedTenant(tenant);
-                      setIsDeleteOpen(true);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    {ov?.cnpj && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="font-mono text-xs cursor-default">
+                            CNPJ
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>{ov.cnpj}</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Usage bars */}
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Users className="h-3.5 w-3.5" />
+                          <span>Usuários</span>
+                        </div>
+                        <span className="font-medium tabular-nums">
+                          {ov?.usersCount ?? 0}
+                          <span className="text-muted-foreground"> / {tenant.max_users || 50}</span>
+                        </span>
+                      </div>
+                      <Progress value={usersPct} className="h-1.5" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Monitor className="h-3.5 w-3.5" />
+                          <span>Dispositivos</span>
+                        </div>
+                        <span className="font-medium tabular-nums">
+                          {ov?.devicesCount ?? 0}
+                          <span className="text-muted-foreground"> / {tenant.max_devices || 100}</span>
+                        </span>
+                      </div>
+                      <Progress value={devicesPct} className="h-1.5" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <StoreIcon className="h-3.5 w-3.5" />
+                          <span>Lojas</span>
+                        </div>
+                        <span className="font-medium tabular-nums">
+                          {ov?.storesCount ?? 0}
+                          <span className="text-muted-foreground"> / {tenant.max_stores || 500}</span>
+                        </span>
+                      </div>
+                      <Progress value={storesPct} className="h-1.5" />
+                    </div>
+                  </div>
+
+                  {/* Meta row */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
+                    <div className="flex items-center gap-1.5">
+                      <Plug2 className="h-3.5 w-3.5" />
+                      <span><strong className="text-foreground tabular-nums">{ov?.integrationsCount ?? 0}</strong> integrações</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>
+                        {tenant.created_at
+                          ? format(new Date(tenant.created_at), 'dd/MM/yyyy', { locale: ptBR })
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={!ov?.companyId}
+                      onClick={() => {
+                        if (!ov?.companyId) return;
+                        setIntegrationCompany({ id: ov.companyId, name: ov.companyName || tenant.name });
+                        setIsIntegrationOpen(true);
+                      }}
+                    >
+                      <Plug2 className="h-3.5 w-3.5 mr-1.5" />
+                      Integração
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={!ov?.companyId}
+                      onClick={() => ov?.companyId && navigate(`/admin/companies/${ov.companyId}/display-config`)}
+                    >
+                      <Palette className="h-3.5 w-3.5 mr-1.5" />
+                      Tela
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(tenant)}>
+                      <Edit className="h-3.5 w-3.5 mr-1.5" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setSelectedTenant(tenant); setIsUsersOpen(true); }}
+                    >
+                      <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                      Usuários
+                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleTenantStatus(tenant.id, !isActive)}
+                        >
+                          {isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{isActive ? 'Desativar cliente' : 'Ativar cliente'}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </CardContent>
+              </Card>
             );
-          })
-        )}
-      </ListViewport>
+          })}
+        </div>
+      )}
+      </TooltipProvider>
 
       {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
