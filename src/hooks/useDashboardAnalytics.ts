@@ -202,7 +202,10 @@ export const useDashboardAnalytics = () => {
 
       const genderCounts: Record<string, number> = { masculino: 0, feminino: 0, indefinido: 0 };
       data.forEach(d => {
-        if (d.gender) genderCounts[d.gender] = (genderCounts[d.gender] || 0) + 1;
+        const gender = d.gender?.toLowerCase();
+        if (gender === 'male' || gender === 'masculino') genderCounts.masculino++;
+        else if (gender === 'female' || gender === 'feminino') genderCounts.feminino++;
+        else genderCounts.indefinido++;
       });
       
       const total = Object.values(genderCounts).reduce((a, b) => a + b, 0);
@@ -214,7 +217,16 @@ export const useDashboardAnalytics = () => {
 
       const ageCounts: Record<string, number> = { '0-12': 0, '13-18': 0, '19-25': 0, '26-35': 0, '36-50': 0, '51+': 0 };
       data.forEach(d => {
-        if (d.age_group && ageCounts[d.age_group] !== undefined) ageCounts[d.age_group]++;
+        const ageGroup = d.age_group;
+        if (!ageGroup) return;
+
+        // Map database values to dashboard categories
+        if (ageGroup === 'child' || ageGroup === '0-12') ageCounts['0-12']++;
+        else if (ageGroup === 'teen' || ageGroup === '13-18') ageCounts['13-18']++;
+        else if (ageGroup === 'young_adult' || ageGroup === '19-25') ageCounts['19-25']++;
+        else if (ageGroup === 'adult' || ageGroup === '26-35') ageCounts['26-35']++;
+        else if (ageGroup === '36-50') ageCounts['36-50']++;
+        else if (ageGroup === 'senior' || ageGroup === '51+') ageCounts['51+']++;
       });
       setAgeDistribution(Object.entries(ageCounts).map(([range, count]) => ({ range, count })));
 
