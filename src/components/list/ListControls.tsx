@@ -12,6 +12,7 @@ interface ListControlsProps<F> {
   onViewChange: (view: ViewMode) => void;
   onClearFilters: () => void;
   children?: ReactNode;
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ export const ListControls = <F,>({
   onViewChange,
   onClearFilters,
   children,
+  actions,
   className,
 }: ListControlsProps<F>) => {
   return (
@@ -48,7 +50,8 @@ export const ListControls = <F,>({
           Limpar filtros
         </Button>
       </div>
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        {actions}
         <ToggleGroup
           type="single"
           value={state.view}
