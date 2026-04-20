@@ -372,6 +372,8 @@ export const usePlayerFaceDetection = (
             existingTracked.emotions.shift();
           }
           existingTracked.confidence = confidence;
+          // Keep highest "looking" confidence
+          if (isLooking) (existingTracked as any).isLooking = true;
         } else {
           // Create new tracked face
           trackId = `track_${now.getTime()}_${index}`;
@@ -385,7 +387,9 @@ export const usePlayerFaceDetection = (
             ageEstimates: [rawAge],
             emotions: [{ expression: dominantExpression[0], probability: dominantExpression[1] as number }],
             confidence,
-            loggedToServer: false
+            loggedToServer: false,
+            // Custom field to track if they ever looked at camera
+            ...( { isLooking } as any)
           });
         }
       }
