@@ -12,6 +12,7 @@ interface ListControlsProps<F> {
   onViewChange: (view: ViewMode) => void;
   onClearFilters: () => void;
   children?: ReactNode;
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ export const ListControls = <F,>({
   onViewChange,
   onClearFilters,
   children,
+  actions,
   className,
 }: ListControlsProps<F>) => {
   return (
