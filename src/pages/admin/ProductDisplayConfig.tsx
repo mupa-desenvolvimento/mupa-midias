@@ -77,7 +77,7 @@ const ProductDisplayConfig = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => navigate("/admin/companies")} className="shrink-0">
+            <Button variant="outline" size="icon" onClick={() => navigate("/admin/tenants")} className="shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="space-y-1">

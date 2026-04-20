@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown, Plug2, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,8 +18,10 @@ import { UniversalPagination } from '@/components/list/UniversalPagination';
 import { useListState } from '@/hooks/useListState';
 import { useTenants, Tenant } from '@/hooks/useTenants';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useTenantOverview } from '@/hooks/useTenantOverview';
 import { TenantUsersDialog } from '@/components/admin/TenantUsersDialog';
 import { TenantUsersList } from '@/components/admin/TenantUsersList';
+import { CompanyIntegrationsDialog } from '@/components/admin/CompanyIntegrationsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -30,30 +32,19 @@ interface TenantFilters {
 }
 
 const Tenants = () => {
+  const navigate = useNavigate();
   const { tenants, isLoading, createTenant, updateTenant, toggleTenantStatus, deleteTenant, getTenantLicense } = useTenants();
   const { isSuperAdmin, isLoading: isCheckingAdmin } = useSuperAdmin();
-  
-  const [companyCodes, setCompanyCodes] = useState<Record<string, string>>({});
-  
-  useEffect(() => {
-    const fetchCodes = async () => {
-      const { data } = await supabase
-        .from('companies')
-        .select('tenant_id, code')
-        .not('code', 'is', null);
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach((c) => { if (c.tenant_id && c.code) map[c.tenant_id] = c.code; });
-        setCompanyCodes(map);
-      }
-    };
-    fetchCodes();
-  }, [tenants]);
+
+  const tenantIds = useMemo(() => tenants.map((t) => t.id), [tenants]);
+  const { overview } = useTenantOverview(tenantIds);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
+  const [isIntegrationOpen, setIsIntegrationOpen] = useState(false);
+  const [integrationCompany, setIntegrationCompany] = useState<{ id: string; name: string } | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -427,7 +418,9 @@ const Tenants = () => {
             </CardContent>
           </Card>
         ) : (
-          paginatedTenants.map((tenant) => (
+          paginatedTenants.map((tenant) => {
+            const ov = overview[tenant.id];
+            return (
             <Card
               key={tenant.id}
               className={`transition-all ${tenant.is_active === false ? 'opacity-60' : ''}`}
@@ -445,59 +438,65 @@ const Tenants = () => {
                     {tenant.is_active !== false ? 'Ativo' : 'Inativo'}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground font-mono">
-                  {tenant.slug}
-                </p>
-                {companyCodes[tenant.id] && (
-                  <Badge variant="outline" className="font-mono text-xs w-fit">
-                    {companyCodes[tenant.id]}
-                  </Badge>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-muted-foreground font-mono">
+                    {tenant.slug}
+                  </p>
+                  {ov?.companyCode && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {ov.companyCode}
+                    </Badge>
+                  )}
+                  {ov?.cnpj && (
+                    <Badge variant="secondary" className="font-mono text-xs">
+                      CNPJ {ov.cnpj}
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-2 text-center">
+                {/* Live counters: real usage / max */}
+                <div className="grid grid-cols-4 gap-2 text-center">
                   <div className="space-y-1">
                     <div className="flex items-center justify-center">
                       <Users className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <p className="text-sm font-medium">
-                      {tenant.max_users || 50}
+                      {ov?.usersCount ?? 0}
+                      <span className="text-xs text-muted-foreground"> / {tenant.max_users || 50}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Usuários
-                    </p>
+                    <p className="text-xs text-muted-foreground">Usuários</p>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center justify-center">
                       <Monitor className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <p className="text-sm font-medium">
-                      {tenant.max_devices || 100}
+                      {ov?.devicesCount ?? 0}
+                      <span className="text-xs text-muted-foreground"> / {tenant.max_devices || 100}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Dispositivos
-                    </p>
+                    <p className="text-xs text-muted-foreground">Dispositivos</p>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center justify-center">
                       <StoreIcon className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <p className="text-sm font-medium">
-                      {tenant.max_stores || 500}
+                      {ov?.storesCount ?? 0}
+                      <span className="text-xs text-muted-foreground"> / {tenant.max_stores || 500}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Lojas
-                    </p>
+                    <p className="text-xs text-muted-foreground">Lojas</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center">
+                      <Plug2 className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">{ov?.integrationsCount ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">Integrações</p>
                   </div>
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  <p>
-                    Schema:{' '}
-                    <span className="font-mono">
-                      {tenant.schema_name}
-                    </span>
-                  </p>
                   <p>
                     Criado:{' '}
                     {tenant.created_at
@@ -510,7 +509,35 @@ const Tenants = () => {
                   </p>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                {/* Quick actions: company integrations + display config */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    disabled={!ov?.companyId}
+                    onClick={() => {
+                      if (!ov?.companyId) return;
+                      setIntegrationCompany({ id: ov.companyId, name: ov.companyName || tenant.name });
+                      setIsIntegrationOpen(true);
+                    }}
+                  >
+                    <Plug2 className="h-4 w-4 mr-1" />
+                    Integração
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    disabled={!ov?.companyId}
+                    onClick={() => ov?.companyId && navigate(`/admin/companies/${ov.companyId}/display-config`)}
+                  >
+                    <Palette className="h-4 w-4 mr-1" />
+                    Tela
+                  </Button>
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t">
                   <Button
                     variant="outline"
                     size="sm"
@@ -561,7 +588,8 @@ const Tenants = () => {
                 </div>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </ListViewport>
 
@@ -815,6 +843,17 @@ const Tenants = () => {
           setIsUsersOpen(open);
           if (!open) setSelectedTenant(null);
         }}
+      />
+
+      {/* Company Integrations Dialog */}
+      <CompanyIntegrationsDialog
+        open={isIntegrationOpen}
+        onOpenChange={(open) => {
+          setIsIntegrationOpen(open);
+          if (!open) setIntegrationCompany(null);
+        }}
+        companyId={integrationCompany?.id ?? null}
+        companyName={integrationCompany?.name ?? null}
       />
     </PageShell>
   );
