@@ -332,8 +332,8 @@ export const usePlayerFaceDetection = (
       for (let index = 0; index < detections.length; index++) {
         const detection = detections[index];
         
-        // Skip faces not looking at camera
-        if (!isFacingCamera(detection.landmarks)) continue;
+        // Allow detection even if not looking perfectly (for impressions)
+        const isLooking = isFacingCamera(detection.landmarks);
 
         const rawAge = detection.age;
         const genderResult = getGender(detection.gender, detection.genderProbability);
