@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown, Plug2, Palette, MoreHorizontal, Calendar, TrendingUp, CheckCircle2, XCircle } from 'lucide-react';
+import { Building2, Plus, Power, PowerOff, Trash2, Edit, Users, Monitor, Store as StoreIcon, Shield, UserPlus, Crown, Plug2, Palette, MoreHorizontal, Calendar, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
