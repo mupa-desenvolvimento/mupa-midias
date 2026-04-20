@@ -265,18 +265,8 @@ const Tenants = () => {
   return (
     <PageShell
       className="space-y-6 p-6"
-      header={
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-2">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
-            <p className="text-sm text-muted-foreground">
-              Gerencie tenants, usuários, integrações e licenças do sistema
-            </p>
-          </div>
-        </div>
-      }
       controls={
-        <div className="flex items-center justify-between gap-4 py-2">
+        <div className="flex items-center justify-between gap-4">
           <Tabs defaultValue="clientes" className="w-full">
             <div className="flex items-center justify-between gap-4 mb-4">
               <TabsList>
