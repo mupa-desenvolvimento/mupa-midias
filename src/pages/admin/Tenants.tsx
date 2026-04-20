@@ -844,6 +844,17 @@ const Tenants = () => {
           if (!open) setSelectedTenant(null);
         }}
       />
+
+      {/* Company Integrations Dialog */}
+      <CompanyIntegrationsDialog
+        open={isIntegrationOpen}
+        onOpenChange={(open) => {
+          setIsIntegrationOpen(open);
+          if (!open) setIntegrationCompany(null);
+        }}
+        companyId={integrationCompany?.id ?? null}
+        companyName={integrationCompany?.name ?? null}
+      />
     </PageShell>
   );
 };
