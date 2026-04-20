@@ -5,6 +5,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { useDashboardAnalytics } from "@/hooks/useDashboardAnalytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { LivePlayerFeed } from "@/components/dashboard/LivePlayerFeed";
 
 const EMOTION_COLORS: Record<string, string> = {
   'Neutro': '#94a3b8',
@@ -124,6 +125,9 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Feed ao vivo dos players */}
+      <LivePlayerFeed />
 
       {/* Gráficos principais */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
