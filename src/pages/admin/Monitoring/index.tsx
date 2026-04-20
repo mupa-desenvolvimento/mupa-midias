@@ -17,7 +17,6 @@ import { useFaceApiModels } from "./useFaceApiModels";
 import { useCamera } from "./useCamera";
 import { useAudienceIntelligence } from "@/hooks/useAudienceIntelligence";
 import { AudienceStats } from "./AudienceStats";
-import { DetectionLogger } from "./DetectionLogger";
 import type { DetectionLogEntry } from "./types";
 
 const MAX_LOG = 200;
