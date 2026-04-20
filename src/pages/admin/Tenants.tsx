@@ -286,9 +286,8 @@ const Tenants = () => {
             </div>
 
             <TabsContent value="clientes" className="mt-0 space-y-4">
-              <div className="mt-0">
+              <div>
 
-              <div className="mt-4">
                 <ListControls
                   state={state}
                   onSearchChange={setSearch}
