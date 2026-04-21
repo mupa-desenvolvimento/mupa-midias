@@ -1082,7 +1082,7 @@ const GroupsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </PageShell>
+      </div>
     </div>
   );
 };
