@@ -685,8 +685,9 @@ const DeviceGroupsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </PageShell>
-  );
-};
-
-export default DeviceGroupsPage;
+        </PageShell>
+      </DndContext>
+    );
+  };
+  
+  export default DeviceGroupsPage;
