@@ -172,10 +172,10 @@ export const useDeviceGroups = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["device-groups"] });
       queryClient.invalidateQueries({ queryKey: ["device-group-channels"] });
-      toast({ title: "Canal atribuído ao grupo" });
+      toast({ title: "Campanha atribuída ao grupo" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao atribuir canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao atribuir campanha", description: error.message, variant: "destructive" });
     },
   });
 
@@ -192,10 +192,10 @@ export const useDeviceGroups = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["device-groups"] });
       queryClient.invalidateQueries({ queryKey: ["device-group-channels"] });
-      toast({ title: "Canal removido do grupo" });
+      toast({ title: "Campanha removida do grupo" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao remover canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao remover campanha", description: error.message, variant: "destructive" });
     },
   });
 

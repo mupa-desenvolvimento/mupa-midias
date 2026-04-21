@@ -474,7 +474,7 @@ export const ChannelsList = ({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Configurar canal (ordem, horários e comportamento)</p>
+                            <p>Configurar campanha (ordem, horários e comportamento)</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -495,7 +495,7 @@ export const ChannelsList = ({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Excluir canal</p>
+                            <p>Excluir campanha</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -588,13 +588,13 @@ export const ChannelsList = ({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingChannel ? "Editar Canal" : "Novo Canal"}
+              {editingChannel ? "Editar Campanha" : "Nova Campanha"}
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Nome do Canal *</Label>
+              <Label>Nome da Campanha *</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -607,7 +607,7 @@ export const ChannelsList = ({
               <Textarea
                 value={formData.description || ""}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Descrição opcional do canal"
+                placeholder="Descrição opcional da campanha"
                 rows={2}
               />
             </div>
@@ -745,7 +745,7 @@ export const ChannelsList = ({
               Cancelar
             </Button>
             <Button onClick={handleSubmit} disabled={!formData.name.trim() || !!dateValidationError}>
-              {editingChannel ? "Salvar" : "Criar Canal"}
+              {editingChannel ? "Salvar" : "Criar Campanha"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -755,9 +755,9 @@ export const ChannelsList = ({
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Canal</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Campanha</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este canal? Todas as mídias associadas serão removidas.
+              Tem certeza que deseja excluir esta campanha? Todas as mídias associadas serão removidas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

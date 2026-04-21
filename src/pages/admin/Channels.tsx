@@ -479,9 +479,9 @@ const ChannelsPage = () => {
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Canal</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Campanha</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este canal? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

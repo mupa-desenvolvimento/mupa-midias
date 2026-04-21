@@ -297,7 +297,7 @@ const DeviceGroupsPage = () => {
                 onClick={() => setChannelDialogGroup(group)}
               >
                 <Link2 className="w-4 h-4 mr-2" />
-                Gerenciar Canais
+                Gerenciar Campanhas
               </Button>
 
               <div className="flex justify-end space-x-2 pt-2 border-t">
@@ -359,7 +359,7 @@ const DeviceGroupsPage = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setChannelDialogGroup(group)} title="Gerenciar Canais">
+                      <Button variant="ghost" size="icon" onClick={() => setChannelDialogGroup(group)} title="Gerenciar Campanhas">
                         <Link2 className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(group)} title="Editar">
@@ -385,7 +385,7 @@ const DeviceGroupsPage = () => {
       header={
         <div className="flex items-center justify-between gap-4 py-4">
           <p className="text-muted-foreground">
-            Organize dispositivos e atribua canais
+            Organize dispositivos e atribua campanhas
           </p>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
@@ -490,13 +490,13 @@ const DeviceGroupsPage = () => {
       <Dialog open={!!channelDialogGroup} onOpenChange={(open) => !open && setChannelDialogGroup(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Canais do Grupo: {channelDialogGroup?.name}</DialogTitle>
+            <DialogTitle>Campanhas do Grupo: {channelDialogGroup?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex gap-2">
               <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione um canal" />
+                  <SelectValue placeholder="Selecione uma campanha" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableChannels.map((channel) => (
@@ -514,7 +514,7 @@ const DeviceGroupsPage = () => {
             {groupChannels.length === 0 ? (
               <div className="text-center py-4 text-muted-foreground text-sm">
                 <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
-                Nenhum canal atribuído a este grupo
+                Nenhuma campanha atribuída a este grupo
               </div>
             ) : (
               <div className="space-y-2">

@@ -551,7 +551,7 @@ const PlaylistsPage = () => {
                   <CardContent className="flex-1 space-y-2 text-sm">
                     {playlist.channel && (
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs">Canal</span>
+                        <span className="text-muted-foreground text-xs">Campanha</span>
                         <Badge variant="outline" className="text-xs">{playlist.channel.name}</Badge>
                       </div>
                     )}
