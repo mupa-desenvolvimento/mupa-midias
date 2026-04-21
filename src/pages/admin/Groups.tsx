@@ -214,7 +214,7 @@ const GroupItem = ({
             size="icon"
             onClick={() => setExpanded(!expanded)}
             className={cn(
-              "h-7 w-7 shrink-0 bg-transparent hover:bg-transparent transition-all duration-200 shadow-sm hover:shadow-md",
+              "h-7 w-7 shrink-0 bg-transparent hover:bg-foreground hover:text-background transition-all duration-200 shadow-sm hover:shadow-md",
               !hasContent && "invisible pointer-events-none"
             )}
             aria-label={expanded ? "Recolher" : "Expandir"}
