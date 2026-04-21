@@ -422,7 +422,7 @@ const DeviceGroupsPage = () => {
         ) : state.view === "list" ? (
           renderListView()
         ) : (
-          renderGridView()
+          renderTreeView()
         )}
       </ListViewport>
 
