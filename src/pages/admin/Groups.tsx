@@ -555,18 +555,29 @@ const GroupsPage = () => {
 
   const handleOpenCreate = (parentId?: string) => {
     setEditingGroup(null);
-    setFormData({ name: "", parent_id: parentId || "none", playlist_id: "none", inherit_playlist: true });
+    setFormData({ name: "", parent_id: parentId || "none", playlist_id: "none", inherit_playlist: true, color: "auto" });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (group: GroupWithDetails) => {
     setEditingGroup(group);
-    setFormData({ name: group.name, parent_id: group.parent_id || "none", playlist_id: group.playlist_id || "none", inherit_playlist: !group.playlist_id });
+    setFormData({ 
+      name: group.name, 
+      parent_id: group.parent_id || "none", 
+      playlist_id: group.playlist_id || "none", 
+      inherit_playlist: !group.playlist_id,
+      color: (group as GroupWithDetails & { color?: string | null }).color || "auto",
+    });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = () => {
-    const data = { name: formData.name, parent_id: formData.parent_id === "none" ? null : formData.parent_id, playlist_id: formData.inherit_playlist ? null : (formData.playlist_id === "none" ? null : formData.playlist_id) };
+    const data = { 
+      name: formData.name, 
+      parent_id: formData.parent_id === "none" ? null : formData.parent_id, 
+      playlist_id: formData.inherit_playlist ? null : (formData.playlist_id === "none" ? null : formData.playlist_id),
+      color: formData.color === "auto" ? null : formData.color,
+    };
     if (editingGroup) {
       updateGroup.mutate({ id: editingGroup.id, ...data }, { onSuccess: () => setIsDialogOpen(false) });
     } else {
