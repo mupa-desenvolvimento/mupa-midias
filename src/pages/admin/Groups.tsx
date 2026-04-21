@@ -39,7 +39,8 @@ interface GroupItemProps {
 }
 
 const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup, onLinkDevice, onLinkInternalGroups, getDevicesForGroup, onUnlinkDevice, getStoresForGroup, onUnlinkStore }: GroupItemProps) => {
-  const [expanded, setExpanded] = useState(true);
+  // Lazy: only root nodes are open by default
+  const [expanded, setExpanded] = useState(level === 0);
   const children = allGroups.filter(g => g.parent_id === group.id);
   const hasChildren = children.length > 0;
   const linkedDevices = getDevicesForGroup(group.id);
@@ -55,92 +56,224 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
   };
 
   const { name: effectivePlaylistName, isInherited } = getEffectivePlaylist(group);
+  const totalDevices = linkedDevices.length;
   const hasContent = hasChildren || linkedDevices.length > 0 || linkedStores.length > 0;
 
+  // Visual identity per level
+  const isRoot = level === 0;
+  const NodeIcon = isRoot ? Network : level === 1 ? Folder : Globe;
+
   return (
-    <div className="w-full">
-      <div className={cn("flex flex-col gap-3 p-4 rounded-xl border bg-card hover:shadow-md transition-all mb-3", level > 0 && "ml-4 sm:ml-8")}>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <button onClick={() => setExpanded(!expanded)} className={cn("p-1.5 hover:bg-accent rounded-full transition-all flex items-center justify-center", !hasContent && "invisible")}>
-              {expanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-            </button>
-            <div className="p-2 bg-muted/50 rounded-lg">
-              <Globe className="w-5 h-5 text-primary shrink-0" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-base truncate">{group.name}</span>
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                Playlist: <span className="font-medium text-foreground/80">{effectivePlaylistName}</span>
-                {isInherited && <Badge variant="secondary" className="text-[10px] py-0 px-1 font-normal ml-1">Herdado</Badge>}
-              </span>
-            </div>
+    <div className="w-full group/node">
+      <Card
+        className={cn(
+          "overflow-hidden transition-all hover:shadow-sm",
+          isRoot ? "border-l-4 border-l-primary/70" : "border-l-2 border-l-muted-foreground/20"
+        )}
+      >
+        {/* === NODE HEADER === */}
+        <div className="flex items-center gap-3 p-3 sm:p-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setExpanded(!expanded)}
+            className={cn("h-7 w-7 shrink-0", !hasContent && "invisible pointer-events-none")}
+            aria-label={expanded ? "Recolher" : "Expandir"}
+          >
+            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
+
+          <div
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+              isRoot ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            )}
+          >
+            <NodeIcon className="h-4 w-4" />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 ml-auto">
-            {linkedDevices.length > 0 && (
-              <Badge variant="outline" className="gap-1 text-xs"><Monitor className="w-3 h-3" />{linkedDevices.length} disp.</Badge>
+          <div className="min-w-0 flex-1">
+            <TruncatedText
+              text={group.name}
+              as="h3"
+              className={cn("font-semibold leading-tight", isRoot ? "text-base" : "text-sm")}
+            />
+            <p className="text-xs text-muted-foreground truncate">
+              Playlist: <span className="font-medium text-foreground/80">{effectivePlaylistName}</span>
+              {isInherited && (
+                <Badge variant="secondary" className="ml-1.5 px-1 py-0 text-[10px] font-normal">
+                  Herdado
+                </Badge>
+              )}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {totalDevices > 0 && (
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <Monitor className="h-3 w-3" />
+                {totalDevices} {totalDevices === 1 ? "disp" : "disps"}
+              </Badge>
             )}
             {linkedStores.length > 0 && (
-              <Badge variant="outline" className="gap-1 text-xs border-primary/30 text-primary"><Store className="w-3 h-3" />{linkedStores.length} loja(s)</Badge>
+              <Badge variant="outline" className="gap-1 text-xs border-primary/30 text-primary">
+                <Store className="h-3 w-3" />
+                {linkedStores.length}
+              </Badge>
             )}
-            <Button variant="secondary" size="sm" onClick={() => onCreateSubgroup(group.id)} className="gap-2 h-9 px-4">
-              <Plus className="w-4 h-4" /><span className="hidden md:inline font-medium">Subgrupo</span>
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2 h-9 px-4" onClick={() => onLinkInternalGroups(group.id)}>
-              <Package className="w-4 h-4" /><span className="hidden md:inline font-medium">Lojas</span>
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2 h-9 px-4" onClick={() => onLinkDevice(group.id)}>
-              <Link2 className="w-4 h-4" /><span className="hidden md:inline font-medium">Dispositivos</span>
-            </Button>
-            <div className="flex items-center gap-1 ml-1 border-l pl-3">
-              <Button variant="ghost" size="icon" onClick={() => onEdit(group)} className="h-9 w-9 hover:bg-primary/10 hover:text-primary"><Edit className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="icon" onClick={() => onDelete(group.id)} className="h-9 w-9 text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
-            </div>
+            {hasChildren && (
+              <Badge variant="outline" className="gap-1 text-xs">
+                <Folder className="h-3 w-3" />
+                {children.length}
+              </Badge>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => onCreateSubgroup(group.id)}>
+                  <Plus className="mr-2 h-4 w-4" /> Criar subgrupo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onLinkInternalGroups(group.id)}>
+                  <Package className="mr-2 h-4 w-4" /> Vincular lojas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onLinkDevice(group.id)}>
+                  <Link2 className="mr-2 h-4 w-4" /> Vincular dispositivos
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onEdit(group)}>
+                  <Edit className="mr-2 h-4 w-4" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onDelete(group.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        {/* Lojas vinculadas */}
-        {expanded && linkedStores.length > 0 && (
-          <div className="ml-12 pt-2 border-t border-dashed space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lojas vinculadas</span>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {linkedStores.map(ls => (
-                <div key={ls.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-sm">
-                  <Store className="w-3.5 h-3.5 text-primary" />
-                  <span className="font-medium">{ls.store?.name}</span>
-                  <span className="text-xs text-muted-foreground">({ls.store?.code})</span>
-                  <button onClick={() => onUnlinkStore(group.id, ls.store_id)} className="ml-1 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+        {/* === NODE CHILDREN === */}
+        {expanded && (linkedStores.length > 0 || linkedDevices.length > 0) && (
+          <div className="border-t bg-muted/20 px-3 py-3 sm:px-4">
+            {/* Linked stores */}
+            {linkedStores.length > 0 && (
+              <div className="relative pl-6">
+                <span className="absolute left-2 top-0 h-full w-px bg-border" aria-hidden />
+                <span className="absolute left-2 top-4 h-px w-3 bg-border" aria-hidden />
+                <div className="mb-2 flex items-center gap-2">
+                  <Store className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Lojas vinculadas
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Direct devices */}
-        {expanded && linkedDevices.length > 0 && (
-          <div className="flex flex-wrap gap-2 ml-12 pt-1 border-t border-dashed">
-            {linkedDevices.map(gd => (
-              <div key={gd.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border text-sm">
-                <Monitor className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="font-medium">{gd.device?.name || 'Dispositivo'}</span>
-                <span className="text-xs text-muted-foreground">({gd.device?.device_code})</span>
-                <Badge variant={gd.device?.status === 'active' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1.5">{gd.device?.status || 'pending'}</Badge>
-                <button onClick={() => onUnlinkDevice(group.id, gd.device_id)} className="ml-1 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {linkedStores.map(ls => (
+                    <div
+                      key={ls.id}
+                      className="flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 transition-colors hover:border-primary/40"
+                    >
+                      <Store className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                      <div className="min-w-0 flex-1">
+                        <TruncatedText
+                          text={ls.store?.name || "—"}
+                          className="text-xs font-medium leading-tight"
+                        />
+                        <TruncatedText
+                          text={ls.store?.code || ""}
+                          className="text-[10px] text-muted-foreground leading-tight"
+                        />
+                      </div>
+                      <button
+                        onClick={() => onUnlinkStore(group.id, ls.store_id)}
+                        className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="Desvincular loja"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Linked devices */}
+            {linkedDevices.length > 0 && (
+              <div className={cn("relative pl-6", linkedStores.length > 0 && "mt-4")}>
+                <span className="absolute left-2 top-0 h-full w-px bg-border" aria-hidden />
+                <span className="absolute left-2 top-4 h-px w-3 bg-border" aria-hidden />
+                <div className="mb-2 flex items-center gap-2">
+                  <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Dispositivos
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {linkedDevices.map(gd => (
+                    <div
+                      key={gd.id}
+                      className="flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 transition-colors hover:border-primary/40"
+                    >
+                      <Monitor className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <TruncatedText
+                          text={gd.device?.name || "Dispositivo"}
+                          className="text-xs font-medium leading-tight"
+                        />
+                        <TruncatedText
+                          text={gd.device?.device_code || ""}
+                          className="text-[10px] text-muted-foreground leading-tight"
+                        />
+                      </div>
+                      <CircleDot
+                        className={cn(
+                          "h-3 w-3 shrink-0",
+                          gd.device?.status === "active" || gd.device?.status === "online"
+                            ? "text-emerald-500"
+                            : "text-muted-foreground/40"
+                        )}
+                      />
+                      <button
+                        onClick={() => onUnlinkDevice(group.id, gd.device_id)}
+                        className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="Desvincular dispositivo"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
-      </div>
+      </Card>
 
+      {/* === CHILD GROUPS (recursive) === */}
       {expanded && hasChildren && (
-        <div className="border-l-2 border-muted/20 ml-6 sm:ml-10 pl-2 sm:pl-4 transition-all">
+        <div className="relative ml-5 mt-2 space-y-2 border-l border-dashed border-border pl-4 sm:ml-7 sm:pl-5">
           {children.map(child => (
-            <GroupItem key={child.id} group={child} level={level + 1} allGroups={allGroups} onEdit={onEdit} onDelete={onDelete} onCreateSubgroup={onCreateSubgroup} onLinkDevice={onLinkDevice} onLinkInternalGroups={onLinkInternalGroups} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={onUnlinkDevice} getStoresForGroup={getStoresForGroup} onUnlinkStore={onUnlinkStore} />
+            <GroupItem
+              key={child.id}
+              group={child}
+              level={level + 1}
+              allGroups={allGroups}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onCreateSubgroup={onCreateSubgroup}
+              onLinkDevice={onLinkDevice}
+              onLinkInternalGroups={onLinkInternalGroups}
+              getDevicesForGroup={getDevicesForGroup}
+              onUnlinkDevice={onUnlinkDevice}
+              getStoresForGroup={getStoresForGroup}
+              onUnlinkStore={onUnlinkStore}
+            />
           ))}
         </div>
       )}
