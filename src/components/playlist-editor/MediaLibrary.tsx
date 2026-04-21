@@ -105,7 +105,8 @@ export const MediaLibrary = ({ onDragStart, onSelect }: MediaLibraryProps) => {
                 key={media.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, media)}
-                className="group flex items-center gap-3 p-2 rounded-lg border border-transparent hover:border-border hover:bg-accent/50 cursor-grab active:cursor-grabbing transition-all"
+                onClick={() => onSelect?.(media)}
+                className="group flex items-center gap-3 p-2 rounded-lg border border-transparent hover:border-border hover:bg-accent/50 cursor-pointer transition-all"
               >
                 <div className="flex-shrink-0 w-12 h-12 rounded-md bg-muted overflow-hidden relative">
                   {media.file_url ? (
