@@ -315,7 +315,6 @@ export const EditorCanvas = ({
           )}
         </div>
       </div>
-
     </div>
   );
 };
