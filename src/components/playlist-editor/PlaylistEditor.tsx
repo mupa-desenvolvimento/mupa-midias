@@ -13,6 +13,7 @@ import { EditorHeader } from "./EditorHeader";
 import { EditorPropertiesPanel } from "./EditorPropertiesPanel";
 import { ChannelsList } from "./ChannelsList";
 import { ChannelEditor } from "./ChannelEditor";
+import { CampaignDrawer } from "./CampaignDrawer";
 import { ChannelsTimeline } from "./ChannelsTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
