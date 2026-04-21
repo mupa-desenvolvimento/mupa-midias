@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useDeviceGroups, DeviceGroupWithDetails, DeviceGroupInsert, DeviceGroupChannel } from "@/hooks/useDeviceGroups";
 import { useChannels } from "@/hooks/useChannels";
 import { useStores } from "@/hooks/useStores";
+import { useDevices } from "@/hooks/useDevices";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Layers, Edit, Trash2, Monitor, Tv, AlertTriangle, Link2, Loader2, Star } from "lucide-react";
+import { Plus, Layers, Edit, Trash2, Monitor, Tv, AlertTriangle, Link2, Loader2, Star, GripVertical, CheckSquare, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,11 @@ import { ListControls } from "@/components/list/ListControls";
 import { UniversalPagination } from "@/components/list/UniversalPagination";
 import { useListState } from "@/hooks/useListState";
 import { DeviceGroupsTree } from "@/components/devices/DeviceGroupsTree";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { DeviceAvailablePanel } from "@/components/devices/management/DeviceAvailablePanel";
+import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, defaultDropAnimationSideEffects } from "@dnd-kit/core";
+import { useToast } from "@/hooks/use-toast";
+import { DeviceDraggableItem } from "@/components/devices/management/DeviceDraggableItem";
 
 const SCREEN_TYPES = [
   { value: "tv", label: "TV", icon: Tv },
