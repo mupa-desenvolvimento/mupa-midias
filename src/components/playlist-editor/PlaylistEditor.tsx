@@ -479,7 +479,7 @@ export const PlaylistEditor = () => {
                 <ChannelsList
                   channels={playlistChannels}
                   activeChannelId={null}
-                  onSelectChannel={setSelectedChannel}
+                  onSelectChannel={handleSelectChannel}
                   onCreateChannel={handleCreateChannel}
                   onUpdateChannel={handleUpdateChannel}
                   onDeleteChannel={handleDeleteChannel}
