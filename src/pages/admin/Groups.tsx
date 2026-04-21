@@ -40,9 +40,24 @@ interface GroupItemProps {
   isLast?: boolean;
 }
 
-const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup, onLinkDevice, onLinkInternalGroups, getDevicesForGroup, onUnlinkDevice, getStoresForGroup, onUnlinkStore }: GroupItemProps) => {
-  // Lazy: only root nodes are open by default
+const GroupItem = ({ 
+  group, 
+  level, 
+  allGroups, 
+  onEdit, 
+  onDelete, 
+  onCreateSubgroup, 
+  onLinkDevice, 
+  onLinkInternalGroups, 
+  getDevicesForGroup, 
+  onUnlinkDevice, 
+  getStoresForGroup, 
+  onUnlinkStore,
+  viewMode,
+  isLast = false
+}: GroupItemProps) => {
   const [expanded, setExpanded] = useState(level === 0);
+  const [isHovered, setIsHovered] = useState(false);
   const children = allGroups.filter(g => g.parent_id === group.id);
   const hasChildren = children.length > 0;
   const linkedDevices = getDevicesForGroup(group.id);
@@ -61,16 +76,52 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
   const totalDevices = linkedDevices.length;
   const hasContent = hasChildren || linkedDevices.length > 0 || linkedStores.length > 0;
 
-  // Visual identity per level
   const isRoot = level === 0;
+  const isMap = viewMode === 'map';
   const NodeIcon = isRoot ? Network : level === 1 ? Folder : Globe;
 
   return (
-    <div className="w-full group/node">
+    <div 
+      className={cn(
+        "w-full group/node relative transition-all duration-200",
+        isMap && level > 0 && "pl-6 sm:pl-10 mt-2",
+        isHovered && "z-10"
+      )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* === VISUAL CONNECTORS (MAP MODE) === */}
+      {isMap && level > 0 && (
+        <>
+          {/* Vertical line from parent node */}
+          <div 
+            className={cn(
+              "absolute left-[10px] sm:left-[18px] top-[-12px] w-[1.5px] bg-border transition-colors duration-300",
+              isLast ? "h-[32px]" : "h-[calc(100%+12px)]",
+              isHovered && "bg-primary/50 w-[2px]"
+            )} 
+          />
+          {/* Horizontal line to this card */}
+          <div 
+            className={cn(
+              "absolute left-[10px] sm:left-[18px] top-[20px] h-[1.5px] w-4 sm:w-8 bg-border transition-colors duration-300",
+              isHovered && "bg-primary/50 h-[2px]"
+            )} 
+          />
+        </>
+      )}
+
       <Card
         className={cn(
-          "overflow-hidden transition-all hover:shadow-sm",
-          isRoot ? "border-l-4 border-l-primary/70" : "border-l-2 border-l-muted-foreground/20"
+          "overflow-hidden transition-all duration-300",
+          isMap ? (
+            isRoot 
+              ? "border-2 border-primary/20 bg-card shadow-sm" 
+              : "border border-border/60 bg-card/40 backdrop-blur-sm"
+          ) : (
+            isRoot ? "border-l-4 border-l-primary/70" : "border-l-2 border-l-muted-foreground/20"
+          ),
+          isHovered && (isMap ? "border-primary/40 shadow-md translate-x-1" : "shadow-sm border-primary/30")
         )}
       >
         {/* === NODE HEADER === */}
@@ -79,7 +130,11 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
             variant="ghost"
             size="icon"
             onClick={() => setExpanded(!expanded)}
-            className={cn("h-7 w-7 shrink-0", !hasContent && "invisible pointer-events-none")}
+            className={cn(
+              "h-7 w-7 shrink-0 transition-transform duration-200", 
+              !hasContent && "invisible pointer-events-none",
+              expanded && "bg-accent"
+            )}
             aria-label={expanded ? "Recolher" : "Expandir"}
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -87,43 +142,59 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
 
           <div
             className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-              isRoot ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
+              isRoot ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+              isHovered && isRoot && "bg-primary text-primary-foreground",
+              isHovered && !isRoot && "bg-primary/20 text-primary"
             )}
           >
             <NodeIcon className="h-4 w-4" />
           </div>
 
           <div className="min-w-0 flex-1">
-            <TruncatedText
-              text={group.name}
-              as="h3"
-              className={cn("font-semibold leading-tight", isRoot ? "text-base" : "text-sm")}
-            />
-            <p className="text-xs text-muted-foreground truncate">
-              Playlist: <span className="font-medium text-foreground/80">{effectivePlaylistName}</span>
+            <div className="flex items-center gap-2">
+              <TruncatedText
+                text={group.name}
+                as="h3"
+                className={cn(
+                  "font-semibold leading-tight tracking-tight", 
+                  isRoot ? "text-base" : "text-sm",
+                  isHovered && "text-primary"
+                )}
+              />
+              {isMap && totalDevices > 0 && (
+                <span className="inline-flex items-center justify-center h-5 px-1.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                  {totalDevices}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+              <span>Playlist: <span className="font-medium text-foreground/80">{effectivePlaylistName}</span></span>
               {isInherited && (
-                <Badge variant="secondary" className="ml-1.5 px-1 py-0 text-[10px] font-normal">
+                <Badge variant="secondary" className="px-1 py-0 text-[9px] font-normal leading-none h-3.5 bg-muted/50">
                   Herdado
                 </Badge>
               )}
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
-            {totalDevices > 0 && (
+          <div className={cn(
+            "flex shrink-0 items-center gap-1.5 transition-opacity duration-200",
+            isMap && !isHovered && "opacity-60"
+          )}>
+            {!isMap && totalDevices > 0 && (
               <Badge variant="secondary" className="gap-1 text-xs">
                 <Monitor className="h-3 w-3" />
-                {totalDevices} {totalDevices === 1 ? "disp" : "disps"}
+                {totalDevices}
               </Badge>
             )}
             {linkedStores.length > 0 && (
-              <Badge variant="outline" className="gap-1 text-xs border-primary/30 text-primary">
+              <Badge variant="outline" className="gap-1 text-xs border-primary/30 text-primary bg-primary/5">
                 <Store className="h-3 w-3" />
                 {linkedStores.length}
               </Badge>
             )}
-            {hasChildren && (
+            {hasChildren && !isMap && (
               <Badge variant="outline" className="gap-1 text-xs">
                 <Folder className="h-3 w-3" />
                 {children.length}
@@ -132,7 +203,15 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn(
+                    "h-8 w-8 transition-all",
+                    isMap && !isHovered && "opacity-0 scale-90",
+                    isHovered && "bg-accent"
+                  )}
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -161,25 +240,31 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
           </div>
         </div>
 
-        {/* === NODE CHILDREN === */}
+        {/* === NODE CHILDREN (STORES/DEVICES) === */}
         {expanded && (linkedStores.length > 0 || linkedDevices.length > 0) && (
-          <div className="border-t bg-muted/20 px-3 py-3 sm:px-4">
+          <div className={cn(
+            "border-t px-3 py-3 sm:px-4 space-y-4",
+            isMap ? "bg-muted/10" : "bg-muted/20"
+          )}>
             {/* Linked stores */}
             {linkedStores.length > 0 && (
               <div className="relative pl-6">
-                <span className="absolute left-2 top-0 h-full w-px bg-border" aria-hidden />
-                <span className="absolute left-2 top-4 h-px w-3 bg-border" aria-hidden />
+                <span className="absolute left-2 top-0 h-full w-px bg-border/60" aria-hidden />
+                <span className="absolute left-2 top-4 h-px w-3 bg-border/60" aria-hidden />
                 <div className="mb-2 flex items-center gap-2">
                   <Store className="h-3.5 w-3.5 text-primary/70" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
                     Lojas vinculadas
                   </span>
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className={cn(
+                  "grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3",
+                  isMap && "p-2 rounded-lg bg-card/40 border border-dashed border-border/50"
+                )}>
                   {linkedStores.map(ls => (
                     <div
                       key={ls.id}
-                      className="flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 transition-colors hover:border-primary/40"
+                      className="flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 transition-all hover:border-primary/40 hover:shadow-sm"
                     >
                       <Store className="h-3.5 w-3.5 shrink-0 text-primary/70" />
                       <div className="min-w-0 flex-1">
@@ -207,20 +292,26 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
 
             {/* Linked devices */}
             {linkedDevices.length > 0 && (
-              <div className={cn("relative pl-6", linkedStores.length > 0 && "mt-4")}>
-                <span className="absolute left-2 top-0 h-full w-px bg-border" aria-hidden />
-                <span className="absolute left-2 top-4 h-px w-3 bg-border" aria-hidden />
+              <div className="relative pl-6">
+                <span className="absolute left-2 top-0 h-full w-px bg-border/60" aria-hidden />
+                <span className="absolute left-2 top-4 h-px w-3 bg-border/60" aria-hidden />
                 <div className="mb-2 flex items-center gap-2">
-                  <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Monitor className={cn("h-3.5 w-3.5", isMap ? "text-primary/70" : "text-muted-foreground")} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
                     Dispositivos
                   </span>
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className={cn(
+                  "grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3",
+                  isMap && "p-2 rounded-lg bg-primary/5 border border-dashed border-primary/20"
+                )}>
                   {linkedDevices.map(gd => (
                     <div
                       key={gd.id}
-                      className="flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 transition-colors hover:border-primary/40"
+                      className={cn(
+                        "flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 transition-all hover:border-primary/40 hover:shadow-sm",
+                        isMap && "hover:bg-primary/[0.02]"
+                      )}
                     >
                       <Monitor className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
@@ -237,7 +328,7 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
                         className={cn(
                           "h-3 w-3 shrink-0",
                           gd.device?.status === "active" || gd.device?.status === "online"
-                            ? "text-emerald-500"
+                            ? "text-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.2)]"
                             : "text-muted-foreground/40"
                         )}
                       />
@@ -259,8 +350,19 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
 
       {/* === CHILD GROUPS (recursive) === */}
       {expanded && hasChildren && (
-        <div className="relative ml-5 mt-2 space-y-2 border-l border-dashed border-border pl-4 sm:ml-7 sm:pl-5">
-          {children.map(child => (
+        <div className={cn(
+          "relative space-y-2 mt-2",
+          isMap ? "ml-0" : "ml-5 pl-4 border-l border-dashed border-border sm:ml-7 sm:pl-5"
+        )}>
+          {/* Continuous guide line in map mode */}
+          {isMap && (
+            <div className={cn(
+              "absolute left-[10px] sm:left-[18px] top-0 bottom-0 w-[1.5px] bg-border/50",
+              isHovered && "bg-primary/30"
+            )} />
+          )}
+          
+          {children.map((child, index) => (
             <GroupItem
               key={child.id}
               group={child}
@@ -275,6 +377,8 @@ const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup
               onUnlinkDevice={onUnlinkDevice}
               getStoresForGroup={getStoresForGroup}
               onUnlinkStore={onUnlinkStore}
+              viewMode={viewMode}
+              isLast={index === children.length - 1}
             />
           ))}
         </div>
