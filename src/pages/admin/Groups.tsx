@@ -610,9 +610,13 @@ const GroupsPage = () => {
 
   if (isLoading) {
     return (
-      <PageShell header={<div><h1 className="text-2xl font-bold">Grupos</h1><p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p></div>}>
-        <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-      </PageShell>
+      <div className="h-full w-full overflow-y-auto custom-scrollbar">
+        <div className="px-4 sm:px-6 pt-[15px] pb-6">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -621,16 +625,8 @@ const GroupsPage = () => {
 
   return (
     <div className="h-full w-full overflow-y-auto custom-scrollbar">
-      <PageShell
-        header={
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Grupos</h1>
-              <p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p>
-            </div>
-          </div>
-        }
-      >
+      <div className="px-4 sm:px-6 pt-[15px] pb-6 max-w-[1600px] mx-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
