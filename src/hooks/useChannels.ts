@@ -58,10 +58,10 @@ export const useChannels = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["distribution-channels"] });
-      toast({ title: "Canal criado com sucesso" });
+      toast({ title: "Campanha criada com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao criar canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao criar campanha", description: error.message, variant: "destructive" });
     },
   });
 
@@ -79,10 +79,10 @@ export const useChannels = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["distribution-channels"] });
-      toast({ title: "Canal atualizado com sucesso" });
+      toast({ title: "Campanha atualizada com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao atualizar canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao atualizar campanha", description: error.message, variant: "destructive" });
     },
   });
 
@@ -93,10 +93,10 @@ export const useChannels = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["distribution-channels"] });
-      toast({ title: "Canal excluído com sucesso" });
+      toast({ title: "Campanha excluída com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao excluir canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir campanha", description: error.message, variant: "destructive" });
     },
   });
 

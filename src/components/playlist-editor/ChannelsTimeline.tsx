@@ -215,7 +215,7 @@ export const ChannelsTimeline = ({
               </TabsTrigger>
               <TabsTrigger value="channels" className="text-xs gap-1.5 h-7 px-3">
                 <LayoutList className="w-3.5 h-3.5" />
-                Por Canal
+                Por Campanha
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -260,7 +260,7 @@ export const ChannelsTimeline = ({
           <div className="w-48 shrink-0 border-r bg-muted/20 flex flex-col">
             {/* Hour header spacer */}
             <div className="h-10 border-b flex items-center justify-center text-xs text-muted-foreground font-medium shrink-0">
-              Canais
+              Campanhas
             </div>
             
             {/* Channel labels - scrollable */}
@@ -364,7 +364,7 @@ export const ChannelsTimeline = ({
               {/* Empty state spacer */}
               {channels.length === 0 && (
                 <div className="h-24 flex items-center justify-center text-xs text-muted-foreground">
-                  Sem canais
+                  Sem campanhas
                 </div>
               )}
             </ScrollArea>

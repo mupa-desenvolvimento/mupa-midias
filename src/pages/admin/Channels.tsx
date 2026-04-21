@@ -51,7 +51,7 @@ const ChannelForm = ({ formData, setFormData, onSubmit, submitLabel }: ChannelFo
       <Input
         value={formData.name}
         onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-        placeholder="Nome do canal"
+        placeholder="Nome da campanha"
       />
     </div>
     <div className="space-y-2">
@@ -59,7 +59,7 @@ const ChannelForm = ({ formData, setFormData, onSubmit, submitLabel }: ChannelFo
       <Textarea
         value={formData.description || ""}
         onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-        placeholder="Descrição do canal"
+        placeholder="Descrição da campanha"
       />
     </div>
     <div className="grid grid-cols-2 gap-4">
@@ -90,7 +90,7 @@ const ChannelForm = ({ formData, setFormData, onSubmit, submitLabel }: ChannelFo
         checked={formData.is_active}
         onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
       />
-      <Label>Canal ativo</Label>
+      <Label>Campanha ativa</Label>
     </div>
     <DialogFooter>
       <Button onClick={onSubmit} disabled={!formData.name}>{submitLabel}</Button>
@@ -295,7 +295,7 @@ const ChannelsPage = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Canal</TableHead>
+              <TableHead>Campanha</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Prioridade</TableHead>
               <TableHead>Playlists</TableHead>
@@ -365,18 +365,18 @@ const ChannelsPage = () => {
       header={
         <div className="flex items-center justify-between gap-4 py-4">
           <p className="text-muted-foreground">
-            Gerencie os canais de conteúdo
+            Gerencie as campanhas de conteúdo
           </p>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
                 <Plus className="w-4 h-4 mr-2" />
-                Novo Canal
+                Nova Campanha
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Criar Canal</DialogTitle>
+                <DialogTitle>Criar Campanha</DialogTitle>
               </DialogHeader>
               <ChannelForm formData={formData} setFormData={setFormData} onSubmit={handleCreate} submitLabel="Criar" />
             </DialogContent>
@@ -444,16 +444,16 @@ const ChannelsPage = () => {
           <Card className="col-span-full">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Tv className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhum canal encontrado</h3>
+              <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
               <p className="text-muted-foreground text-center">
                 {state.search
-                  ? "Nenhum canal corresponde à sua busca."
-                  : "Crie seu primeiro canal para organizar conteúdo."}
+                  ? "Nenhuma campanha corresponde à sua busca."
+                  : "Crie sua primeira campanha para organizar conteúdo."}
               </p>
               {!state.search && (
                 <Button className="mt-4" onClick={() => setIsCreateOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Criar Primeiro Canal
+                  Criar Primeira Campanha
                 </Button>
               )}
             </CardContent>
@@ -469,7 +469,7 @@ const ChannelsPage = () => {
       <Dialog open={!!editingChannel} onOpenChange={(open) => !open && setEditingChannel(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Canal</DialogTitle>
+            <DialogTitle>Editar Campanha</DialogTitle>
           </DialogHeader>
           <ChannelForm formData={formData} setFormData={setFormData} onSubmit={handleUpdate} submitLabel="Salvar" />
         </DialogContent>
@@ -479,9 +479,9 @@ const ChannelsPage = () => {
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Canal</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Campanha</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este canal? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -4,7 +4,7 @@
 
 Implementar um sistema inteligente de autocadastro de dispositivos e uma engine de distribuição escalável baseada na hierarquia:
 
-Empresa → Região → Loja → Grupo → Canal → Playlist → Dispositivo
+Empresa → Região → Loja → Grupo → Campanha → Playlist → Dispositivo
 
 O dispositivo deve ser passivo e herdar automaticamente sua configuração.
 
@@ -18,7 +18,7 @@ Empresa
 → Região
 → Loja
 → Grupo
-→ Canal
+→ Campanha
 → Playlist
 → Dispositivo
 

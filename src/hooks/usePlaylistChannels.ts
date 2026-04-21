@@ -172,10 +172,10 @@ export const usePlaylistChannels = (playlistId: string | null) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlist-channels", playlistId] });
-      toast({ title: "Canal criado com sucesso" });
+      toast({ title: "Campanha criada com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao criar canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao criar campanha", description: error.message, variant: "destructive" });
     },
   });
 
@@ -193,10 +193,10 @@ export const usePlaylistChannels = (playlistId: string | null) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlist-channels", playlistId] });
-      toast({ title: "Canal atualizado com sucesso" });
+      toast({ title: "Campanha atualizada com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao atualizar canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao atualizar campanha", description: error.message, variant: "destructive" });
     },
   });
 
@@ -207,10 +207,10 @@ export const usePlaylistChannels = (playlistId: string | null) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlist-channels", playlistId] });
-      toast({ title: "Canal excluído com sucesso" });
+      toast({ title: "Campanha excluída com sucesso" });
     },
     onError: (error) => {
-      toast({ title: "Erro ao excluir canal", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir campanha", description: error.message, variant: "destructive" });
     },
   });
 
@@ -225,7 +225,7 @@ export const usePlaylistChannels = (playlistId: string | null) => {
       queryClient.invalidateQueries({ queryKey: ["playlist-channels", playlistId] });
     },
     onError: (error) => {
-      toast({ title: "Erro ao reordenar canais", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao reordenar campanhas", description: error.message, variant: "destructive" });
     },
   });
 
@@ -403,7 +403,7 @@ export const usePlaylistChannelItems = (channelId: string | null) => {
       queryClient.invalidateQueries({ queryKey: ["playlist-channel-items", channelId] });
       queryClient.invalidateQueries({ queryKey: ["playlist-channels"] });
       queryClient.invalidateQueries({ queryKey: ["playlist-channels-with-items"] });
-      toast({ title: "Mídia adicionada ao canal" });
+      toast({ title: "Mídia adicionada à campanha" });
     },
     onError: (error) => {
       toast({ title: "Erro ao adicionar mídia", description: error.message, variant: "destructive" });
@@ -439,7 +439,7 @@ export const usePlaylistChannelItems = (channelId: string | null) => {
       queryClient.invalidateQueries({ queryKey: ["playlist-channel-items", channelId] });
       queryClient.invalidateQueries({ queryKey: ["playlist-channels"] });
       queryClient.invalidateQueries({ queryKey: ["playlist-channels-with-items"] });
-      toast({ title: "Mídia removida do canal" });
+      toast({ title: "Mídia removida da campanha" });
     },
     onError: (error) => {
       toast({ title: "Erro ao remover mídia", description: error.message, variant: "destructive" });

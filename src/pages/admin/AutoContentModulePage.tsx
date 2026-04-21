@@ -39,7 +39,7 @@ const AUTO_CONTENT_TYPES: AutoContentType[] = [
 
 const MODULE_CONFIG: Record<AutoContentType, { title: string; description: string }> = {
   weather: { title: "Clima", description: "Exibe cards de clima atual e previsão rápida para a loja selecionada." },
-  news: { title: "Notícias", description: "Lista manchetes e chamadas rápidas de notícias para compor o canal." },
+  news: { title: "Notícias", description: "Lista manchetes e chamadas rápidas de notícias para compor a campanha." },
   quote: { title: "Frases Motivacionais", description: "Mostra frases curtas para motivar clientes e equipe durante o dia." },
   curiosity: { title: "Curiosidades", description: "Apresenta curiosidades rápidas para manter a programação dinâmica." },
   birthday: { title: "Aniversariantes", description: "Gerencie a base de aniversariantes e visualize os layouts para exibição nas TVs." },

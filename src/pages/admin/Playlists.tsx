@@ -85,13 +85,13 @@ const PlaylistForm = ({ formData, setFormData, channels, onSubmit, submitLabel }
       </div>
 
       <div className="space-y-2">
-        <Label>Canal</Label>
+        <Label>Campanha</Label>
         <Select
           value={formData.channel_id || "none"}
           onValueChange={(v) => setFormData((prev) => ({ ...prev, channel_id: v === "none" ? null : v }))}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Selecione um canal" />
+            <SelectValue placeholder="Selecione uma campanha" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Nenhum</SelectItem>
@@ -443,7 +443,7 @@ const PlaylistsPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Canal</TableHead>
+                <TableHead>Campanha</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Horário</TableHead>
                 <TableHead>Dias</TableHead>
@@ -551,7 +551,7 @@ const PlaylistsPage = () => {
                   <CardContent className="flex-1 space-y-2 text-sm">
                     {playlist.channel && (
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs">Canal</span>
+                        <span className="text-muted-foreground text-xs">Campanha</span>
                         <Badge variant="outline" className="text-xs">{playlist.channel.name}</Badge>
                       </div>
                     )}
