@@ -173,8 +173,9 @@ const GroupItem = ({
   const isRoot = level === 0;
   const isMap = viewMode === 'map';
   const NodeIcon = isRoot ? Network : level === 1 ? Folder : Globe;
-  // Per-group color identity (only applied to root groups for visual hierarchy)
-  const color = getGroupColor(isRoot ? group.id : (allGroups.find(g => g.id === group.parent_id)?.id || group.id));
+  // Per-group color identity: prefer stored color, then inherit from parent root, else deterministic
+  const rootForColor = isRoot ? group : (allGroups.find(g => g.id === group.parent_id) || group);
+  const color = getGroupColor(rootForColor.id, (rootForColor as GroupWithDetails & { color?: string | null }).color);
 
   return (
     <div 
