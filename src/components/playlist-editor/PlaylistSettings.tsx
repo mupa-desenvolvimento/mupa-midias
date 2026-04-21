@@ -198,7 +198,7 @@ export const PlaylistSettings = ({
               <Label>Campanha</Label>
               <Select
                 value={playlist.channel_id || "none"}
-...
+                onValueChange={(value) => onUpdate({ channel_id: value === "none" ? null : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma campanha" />
