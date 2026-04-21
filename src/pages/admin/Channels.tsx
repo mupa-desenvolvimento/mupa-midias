@@ -51,7 +51,7 @@ const ChannelForm = ({ formData, setFormData, onSubmit, submitLabel }: ChannelFo
       <Input
         value={formData.name}
         onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-        placeholder="Nome do canal"
+        placeholder="Nome da campanha"
       />
     </div>
     <div className="space-y-2">
@@ -59,7 +59,7 @@ const ChannelForm = ({ formData, setFormData, onSubmit, submitLabel }: ChannelFo
       <Textarea
         value={formData.description || ""}
         onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-        placeholder="Descrição do canal"
+        placeholder="Descrição da campanha"
       />
     </div>
     <div className="grid grid-cols-2 gap-4">
@@ -90,7 +90,7 @@ const ChannelForm = ({ formData, setFormData, onSubmit, submitLabel }: ChannelFo
         checked={formData.is_active}
         onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
       />
-      <Label>Canal ativo</Label>
+      <Label>Campanha ativa</Label>
     </div>
     <DialogFooter>
       <Button onClick={onSubmit} disabled={!formData.name}>{submitLabel}</Button>
