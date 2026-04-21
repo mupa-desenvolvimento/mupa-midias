@@ -8,6 +8,7 @@ import { MEDIA_FILTER_OPTIONS } from "@/constants/contentTypes";
 
 interface MediaLibraryProps {
   onDragStart: (media: MediaItem) => void;
+  onSelect?: (media: MediaItem) => void;
 }
 
 const getMediaIcon = (type: string) => {
