@@ -190,7 +190,99 @@ const DeviceGroupsPage = () => {
     );
   };
 
-  const resetForm = () => {
+  const handleDragStart = (event: any) => {
+    const { active } = event;
+    if (active.data.current?.type === "device") {
+      setActiveDevice(active.data.current.device);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDevice(null);
+
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    if (!activeData || activeData.type !== "device") return;
+
+    const deviceIds = selectedDeviceIds.includes(activeData.device.id)
+      ? selectedDeviceIds
+      : [activeData.device.id];
+
+    try {
+      if (overData?.type === "group" || overData?.type === "store-bucket") {
+        const targetGroupId = overData.groupId;
+        const targetStoreId = overData.storeId;
+
+        // Update group membership for all selected devices
+        for (const deviceId of deviceIds) {
+          // 1. Remove from all groups (as per requirement: no duplication)
+          await supabase
+            .from("device_group_members")
+            .delete()
+            .eq("device_id", deviceId);
+
+          // 2. Add to the target group
+          await supabase
+            .from("device_group_members")
+            .insert({
+              device_id: deviceId,
+              group_id: targetGroupId,
+            });
+
+          // 3. Update device table (store_id and legacy group_id)
+          const updates: any = { group_id: targetGroupId };
+          if (targetStoreId && targetStoreId !== "__no_store__") {
+            updates.store_id = targetStoreId;
+          }
+          
+          await supabase
+            .from("devices")
+            .update(updates)
+            .eq("id", deviceId);
+        }
+
+        toast({
+          title: "Dispositivos movidos",
+          description: `${deviceIds.length} dispositivo(s) movido(s) para o grupo com sucesso.`,
+        });
+      } else if (overData?.type === "available") {
+        // Remove from all groups
+        for (const deviceId of deviceIds) {
+          await supabase
+            .from("device_group_members")
+            .delete()
+            .eq("device_id", deviceId);
+          
+          await supabase
+            .from("devices")
+            .update({ group_id: null })
+            .eq("id", deviceId);
+        }
+
+        toast({
+          title: "Dispositivos removidos",
+          description: `${deviceIds.length} dispositivo(s) removido(s) do grupo.`,
+        });
+      }
+
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ["device-group-members-tree"] });
+      queryClient.invalidateQueries({ queryKey: ["devices"] });
+      setSelectedDeviceIds([]);
+    } catch (error: any) {
+      console.error("Error moving devices:", error);
+      toast({
+        title: "Erro ao mover dispositivos",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
     setFormData({
       name: "",
       description: null,
