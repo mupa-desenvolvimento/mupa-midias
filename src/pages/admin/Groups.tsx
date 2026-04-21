@@ -240,12 +240,14 @@ const GroupItem = ({
                 as="h3"
                 className={cn(
                   "font-semibold leading-tight tracking-tight", 
-                  isRoot ? "text-base" : "text-sm",
-                  isHovered && "text-primary"
+                  isRoot ? "text-base" : "text-sm"
                 )}
               />
               {isMap && totalDevices > 0 && (
-                <span className="inline-flex items-center justify-center h-5 px-1.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                <span className={cn(
+                  "inline-flex items-center justify-center h-5 px-1.5 rounded-full text-[10px] font-bold",
+                  color.badge
+                )}>
                   {totalDevices}
                 </span>
               )}
