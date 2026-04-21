@@ -402,6 +402,7 @@ const GroupsPage = () => {
   } = useStoreInternalGroups();
 
   const [activeTab, setActiveTab] = useState("global");
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingGroup, setEditingGroup] = useState<GroupWithDetails | null>(null);
