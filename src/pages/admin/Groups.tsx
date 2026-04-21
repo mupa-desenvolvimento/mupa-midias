@@ -149,6 +149,8 @@ const GroupItem = ({
   const isRoot = level === 0;
   const isMap = viewMode === 'map';
   const NodeIcon = isRoot ? Network : level === 1 ? Folder : Globe;
+  // Per-group color identity (only applied to root groups for visual hierarchy)
+  const color = getGroupColor(isRoot ? group.id : (allGroups.find(g => g.id === group.parent_id)?.id || group.id));
 
   return (
     <div 
@@ -168,14 +170,14 @@ const GroupItem = ({
             className={cn(
               "absolute left-[10px] sm:left-[18px] top-[-12px] w-[1.5px] bg-border transition-colors duration-300",
               isLast ? "h-[32px]" : "h-[calc(100%+12px)]",
-              isHovered && "bg-primary/50 w-[2px]"
+              isHovered && color.line
             )} 
           />
           {/* Horizontal line to this card */}
           <div 
             className={cn(
               "absolute left-[10px] sm:left-[18px] top-[20px] h-[1.5px] w-4 sm:w-8 bg-border transition-colors duration-300",
-              isHovered && "bg-primary/50 h-[2px]"
+              isHovered && color.line
             )} 
           />
         </>
@@ -183,19 +185,30 @@ const GroupItem = ({
 
       <Card
         className={cn(
-          "overflow-hidden transition-all duration-300",
+          "overflow-hidden transition-all duration-300 relative",
           isMap ? (
             isRoot 
-              ? "border-2 border-primary/20 bg-card shadow-sm" 
-              : "border border-border/60 bg-card/40 backdrop-blur-sm"
+              ? "border border-border/50 bg-card shadow-sm" 
+              : "border border-border/40 bg-card/50"
           ) : (
-            isRoot ? "border-l-4 border-l-primary/70" : "border-l-2 border-l-muted-foreground/20"
+            isRoot ? "border border-border/50" : "border border-border/40"
           ),
-          isHovered && (isMap ? "border-primary/40 shadow-md translate-x-1" : "shadow-sm border-primary/30")
+          isHovered && "shadow-md border-border/80"
         )}
       >
+        {/* === COLORED ACCENT BAR (left side) === */}
+        <div
+          aria-hidden
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-1 transition-all",
+            color.bar,
+            !isRoot && "opacity-50",
+            isHovered && "w-1.5"
+          )}
+        />
+
         {/* === NODE HEADER === */}
-        <div className="flex items-center gap-3 p-3 sm:p-4">
+        <div className="flex items-center gap-3 p-3 sm:p-4 pl-4 sm:pl-5">
           <Button
             variant="ghost"
             size="icon"
@@ -213,9 +226,8 @@ const GroupItem = ({
           <div
             className={cn(
               "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
-              isRoot ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-              isHovered && isRoot && "bg-primary text-primary-foreground",
-              isHovered && !isRoot && "bg-primary/20 text-primary"
+              color.iconBg,
+              color.iconHover
             )}
           >
             <NodeIcon className="h-4 w-4" />
