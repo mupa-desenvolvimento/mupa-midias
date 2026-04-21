@@ -154,7 +154,7 @@ export const DeviceGroupsTree = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {tree.map(({ group, deviceCount, stores }) => {
         const isOpen = expandedGroups.has(group.id);
         const ScreenIcon = SCREEN_ICONS[group.screen_type] || Monitor;
@@ -165,10 +165,23 @@ export const DeviceGroupsTree = ({
             ? "Totem"
             : "Terminal";
 
+        // Group drop zone
+        const { setNodeRef, isOver } = useDroppable({
+          id: `group-${group.id}`,
+          data: {
+            type: "group",
+            groupId: group.id,
+          },
+        });
+
         return (
           <Card
             key={group.id}
-            className="overflow-hidden border-l-4 border-l-primary/60 transition-colors hover:border-l-primary"
+            ref={setNodeRef}
+            className={cn(
+              "overflow-hidden border-l-4 transition-all",
+              isOver ? "border-l-primary scale-[1.01] shadow-lg ring-2 ring-primary/20 bg-primary/5" : "border-l-primary/60 hover:border-l-primary"
+            )}
           >
             {/* GROUP NODE */}
             <div className="flex items-center gap-3 p-4">
