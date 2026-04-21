@@ -195,13 +195,13 @@ export const PlaylistSettings = ({
             </div>
 
             <div className="space-y-2">
-              <Label>Canal</Label>
+              <Label>Campanha</Label>
               <Select
                 value={playlist.channel_id || "none"}
-                onValueChange={(v) => onChange({ channel_id: v === "none" ? null : v })}
+...
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um canal" />
+                  <SelectValue placeholder="Selecione uma campanha" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>
