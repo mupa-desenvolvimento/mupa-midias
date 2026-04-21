@@ -327,9 +327,9 @@ export const INITIAL_SLIDES: Slide[] = [
       {
         title: "Distribuição e Gestão",
         items: [
-          "Motor hierárquico (Canal → Região → Loja → Grupo → Dispositivo)",
-          "Playlists por canal",
-          "Múltiplos canais por dispositivo",
+          "Motor hierárquico (Campanha → Região → Loja → Grupo → Dispositivo)",
+          "Playlists por campanha",
+          "Múltiplas campanhas por dispositivo",
           "Agendamento de campanhas",
           "Upload de imagens e vídeos otimizados",
           "Links únicos por dispositivo",
