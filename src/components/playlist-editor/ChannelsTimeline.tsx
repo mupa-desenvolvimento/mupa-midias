@@ -204,43 +204,19 @@ export const ChannelsTimeline = ({
 
   return (
     <div className="bg-card border rounded-lg overflow-hidden flex flex-col h-full">
-      {/* Header with View Mode Toggle */}
-      <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "channels" | "all-media")}>
-            <TabsList className="h-8">
-              <TabsTrigger value="all-media" className="text-xs gap-1.5 h-7 px-3">
-                <Layers className="w-3.5 h-3.5" />
-                Todas Mídias
-              </TabsTrigger>
-              <TabsTrigger value="channels" className="text-xs gap-1.5 h-7 px-3">
-                <LayoutList className="w-3.5 h-3.5" />
-                Por Campanha
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+      {/* Sequential Timeline Header */}
+      <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <Layers className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-semibold">Linha do Tempo (Sequencial)</h3>
         </div>
-
-        {viewMode === "channels" && (
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-green-500" />
-              <span>Ao Vivo</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-blue-500" />
-              <span>Programado</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-yellow-500" />
-              <span>Fallback</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-muted border" />
-              <span>Inativo</span>
-            </div>
-          </div>
-        )}
+        
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            Execução baseada em ordem global
+          </span>
+        </div>
       </div>
 
       {/* All Media Timeline View */}
