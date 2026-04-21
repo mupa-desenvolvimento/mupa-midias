@@ -394,19 +394,16 @@ export const PlaylistEditor = () => {
             )}
             
             {activeSidebarTab === "settings" && (
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-6">
-                   <div>
-                    <h3 className="text-lg font-semibold mb-1">Configurações do Projeto</h3>
-                    <p className="text-xs text-muted-foreground">Ajuste as propriedades globais da playlist.</p>
-                  </div>
-                  <PlaylistSettings
-                    formData={formData}
-                    channels={distributionChannels}
-                    onFormChange={handleFormChange}
-                  />
-                </div>
-              </ScrollArea>
+              <div className="flex-1 overflow-hidden">
+                <PlaylistSettings
+                  playlist={formData}
+                  channels={distributionChannels}
+                  itemCount={channelItems.length}
+                  totalDuration={totalDuration}
+                  onChange={handleFormChange}
+                  connectedDevicesCount={connectedDevices.length}
+                />
+              </div>
             )}
           </div>
         )}
