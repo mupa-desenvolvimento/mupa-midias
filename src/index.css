@@ -293,6 +293,16 @@
     background: transparent;
   }
 
+  /* Global title truncation utility — single line + ellipsis */
+  .truncate-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    display: block;
+    min-width: 0;
+  }
+
   video::-webkit-media-controls-panel {
     display: none !important;
     -webkit-appearance: none;
