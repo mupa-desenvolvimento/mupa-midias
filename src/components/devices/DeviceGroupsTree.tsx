@@ -29,6 +29,8 @@ import {
   CircleDot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDroppable } from "@dnd-kit/core";
+import { DeviceDraggableItem } from "./management/DeviceDraggableItem";
 
 const SCREEN_ICONS: Record<string, typeof Monitor> = {
   tv: Tv,
@@ -55,13 +57,268 @@ interface DeviceGroupsTreeProps {
   onEdit: (group: DeviceGroupWithDetails) => void;
   onDelete: (groupId: string) => void;
   onManageChannels: (group: DeviceGroupWithDetails) => void;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
 }
+
+// Sub-component for a Group
+const GroupNode = ({
+  group,
+  deviceCount,
+  stores,
+  expandedGroups,
+  toggleGroup,
+  expandedStores,
+  toggleStore,
+  onEdit,
+  onDelete,
+  onManageChannels,
+  selectedIds,
+  onToggleSelect,
+}: {
+  group: DeviceGroupWithDetails;
+  deviceCount: number;
+  stores: any[];
+  expandedGroups: Set<string>;
+  toggleGroup: (id: string) => void;
+  expandedStores: Set<string>;
+  toggleStore: (id: string) => void;
+  onEdit: (group: DeviceGroupWithDetails) => void;
+  onDelete: (groupId: string) => void;
+  onManageChannels: (group: DeviceGroupWithDetails) => void;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
+}) => {
+  const isOpen = expandedGroups.has(group.id);
+  const ScreenIcon = SCREEN_ICONS[group.screen_type] || Monitor;
+  const screenLabel =
+    group.screen_type === "tv"
+      ? "TV"
+      : group.screen_type === "totem"
+      ? "Totem"
+      : "Terminal";
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: `group-${group.id}`,
+    data: {
+      type: "group",
+      groupId: group.id,
+      storeId: group.store_id,
+    },
+  });
+
+  return (
+    <Card
+      ref={setNodeRef}
+      className={cn(
+        "overflow-hidden border-l-4 transition-all",
+        isOver
+          ? "border-l-primary scale-[1.01] shadow-lg ring-2 ring-primary/20 bg-primary/5"
+          : "border-l-primary/60 hover:border-l-primary"
+      )}
+    >
+      <div className="flex items-center gap-3 p-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={() => toggleGroup(group.id)}
+          aria-label={isOpen ? "Recolher" : "Expandir"}
+        >
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </Button>
+
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Layers className="h-5 w-5" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <TruncatedText
+              text={group.name}
+              as="h3"
+              className="text-base font-semibold"
+            />
+            {group.is_default && (
+              <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />
+            )}
+          </div>
+          {group.description && (
+            <TruncatedText
+              text={group.description}
+              as="p"
+              className="text-xs text-muted-foreground"
+            />
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant="outline" className="gap-1">
+            <ScreenIcon className="h-3 w-3" />
+            {screenLabel}
+          </Badge>
+          <Badge variant="secondary" className="gap-1">
+            <Monitor className="h-3 w-3" />
+            {deviceCount} {deviceCount === 1 ? "disp" : "disps"}
+          </Badge>
+          {!group.store && (
+            <Badge variant="outline" className="gap-1">
+              <Globe className="h-3 w-3" />
+              Global
+            </Badge>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onManageChannels(group)}>
+                <Link2 className="mr-2 h-4 w-4" />
+                Gerenciar campanhas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(group)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete(group.id)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="border-t bg-muted/20 px-4 py-3">
+          {stores.length === 0 ? (
+            <div className="py-3 pl-12 text-sm text-muted-foreground">
+              Nenhum dispositivo neste grupo.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {stores.map((bucket) => (
+                <StoreBucketNode
+                  key={`${group.id}:${bucket.storeId ?? "none"}`}
+                  group={group}
+                  bucket={bucket}
+                  expandedStores={expandedStores}
+                  toggleStore={toggleStore}
+                  storesCount={stores.length}
+                  selectedIds={selectedIds}
+                  onToggleSelect={onToggleSelect}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+};
+
+// Sub-component for a Store Bucket
+const StoreBucketNode = ({
+  group,
+  bucket,
+  expandedStores,
+  toggleStore,
+  storesCount,
+  selectedIds,
+  onToggleSelect,
+}: {
+  group: DeviceGroupWithDetails;
+  bucket: any;
+  expandedStores: Set<string>;
+  toggleStore: (id: string) => void;
+  storesCount: number;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
+}) => {
+  const storeKey = `${group.id}:${bucket.storeId ?? "none"}`;
+  const storeOpen = expandedStores.has(storeKey) || storesCount === 1;
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: `store-bucket-${storeKey}`,
+    data: {
+      type: "store-bucket",
+      groupId: group.id,
+      storeId: bucket.storeId,
+    },
+  });
+
+  return (
+    <div ref={setNodeRef} className="relative pl-6">
+      <span className="absolute left-2 top-0 h-full w-px bg-border" />
+      <span className="absolute left-2 top-5 h-px w-3 bg-border" />
+
+      <div
+        className={cn(
+          "rounded-md border transition-all",
+          isOver ? "bg-primary/10 ring-2 ring-primary/20 scale-[1.005]" : "bg-background"
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => toggleStore(storeKey)}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted/50"
+        >
+          {storeOpen ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          <StoreIcon className="h-4 w-4 shrink-0 text-amber-500" />
+          <TruncatedText
+            text={bucket.storeName}
+            className="flex-1 text-sm font-medium"
+          />
+          <Badge variant="outline" className="text-xs">
+            {bucket.devices.length}
+          </Badge>
+        </button>
+
+        {storeOpen && (
+          <div className="border-t px-3 py-3">
+            {bucket.devices.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sem dispositivos</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {bucket.devices.map((device: any) => (
+                  <DeviceDraggableItem
+                    key={device.id}
+                    device={device}
+                    isSelected={selectedIds?.includes(device.id)}
+                    onToggleSelect={onToggleSelect}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const DeviceGroupsTree = ({
   groups,
   onEdit,
   onDelete,
   onManageChannels,
+  selectedIds,
+  onToggleSelect,
 }: DeviceGroupsTreeProps) => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedStores, setExpandedStores] = useState<Set<string>>(new Set());
@@ -85,7 +342,6 @@ export const DeviceGroupsTree = ({
     enabled: groupIds.length > 0,
   });
 
-  // Build tree: group -> store -> devices
   const tree = useMemo(() => {
     return groups.map((group) => {
       const groupMembers = members.filter((m) => m.group_id === group.id);
@@ -93,7 +349,6 @@ export const DeviceGroupsTree = ({
         .map((m) => m.device)
         .filter((d): d is NonNullable<typeof d> => Boolean(d));
 
-      // Bucket devices by store_id (fallback to "no-store")
       const buckets = new Map<
         string,
         { storeId: string | null; storeName: string; devices: typeof devices }
@@ -115,7 +370,6 @@ export const DeviceGroupsTree = ({
         buckets.get(sid)!.devices.push(device);
       });
 
-      // If no devices yet, show one empty bucket from the group's own store
       if (buckets.size === 0 && group.store) {
         buckets.set(group.store.id, {
           storeId: group.store.id,
@@ -151,202 +405,24 @@ export const DeviceGroupsTree = ({
   };
 
   return (
-    <div className="space-y-3">
-      {tree.map(({ group, deviceCount, stores }) => {
-        const isOpen = expandedGroups.has(group.id);
-        const ScreenIcon = SCREEN_ICONS[group.screen_type] || Monitor;
-        const screenLabel =
-          group.screen_type === "tv"
-            ? "TV"
-            : group.screen_type === "totem"
-            ? "Totem"
-            : "Terminal";
-
-        return (
-          <Card
-            key={group.id}
-            className="overflow-hidden border-l-4 border-l-primary/60 transition-colors hover:border-l-primary"
-          >
-            {/* GROUP NODE */}
-            <div className="flex items-center gap-3 p-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 shrink-0"
-                onClick={() => toggleGroup(group.id)}
-                aria-label={isOpen ? "Recolher" : "Expandir"}
-              >
-                {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </Button>
-
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Layers className="h-5 w-5" />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <TruncatedText
-                    text={group.name}
-                    as="h3"
-                    className="text-base font-semibold"
-                  />
-                  {group.is_default && (
-                    <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />
-                  )}
-                </div>
-                {group.description && (
-                  <TruncatedText
-                    text={group.description}
-                    as="p"
-                    className="text-xs text-muted-foreground"
-                  />
-                )}
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <Badge variant="outline" className="gap-1">
-                  <ScreenIcon className="h-3 w-3" />
-                  {screenLabel}
-                </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <Monitor className="h-3 w-3" />
-                  {deviceCount} {deviceCount === 1 ? "disp" : "disps"}
-                </Badge>
-                {!group.store && (
-                  <Badge variant="outline" className="gap-1">
-                    <Globe className="h-3 w-3" />
-                    Global
-                  </Badge>
-                )}
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onManageChannels(group)}>
-                      <Link2 className="mr-2 h-4 w-4" />
-                      Gerenciar campanhas
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(group)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onDelete(group.id)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {/* CHILDREN */}
-            {isOpen && (
-              <div className="border-t bg-muted/20 px-4 py-3">
-                {stores.length === 0 ? (
-                  <div className="py-3 pl-12 text-sm text-muted-foreground">
-                    Nenhum dispositivo neste grupo.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {stores.map((bucket) => {
-                      const storeKey = `${group.id}:${bucket.storeId ?? "none"}`;
-                      const storeOpen =
-                        expandedStores.has(storeKey) || stores.length === 1;
-                      return (
-                        <div
-                          key={storeKey}
-                          className="relative pl-6"
-                        >
-                          {/* tree connector */}
-                          <span className="absolute left-2 top-0 h-full w-px bg-border" />
-                          <span className="absolute left-2 top-5 h-px w-3 bg-border" />
-
-                          <div className="rounded-md border bg-background">
-                            <button
-                              type="button"
-                              onClick={() => toggleStore(storeKey)}
-                              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted/50"
-                            >
-                              {storeOpen ? (
-                                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                              ) : (
-                                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                              )}
-                              <StoreIcon className="h-4 w-4 shrink-0 text-amber-500" />
-                              <TruncatedText
-                                text={bucket.storeName}
-                                className="flex-1 text-sm font-medium"
-                              />
-                              <Badge variant="outline" className="text-xs">
-                                {bucket.devices.length}
-                              </Badge>
-                            </button>
-
-                            {storeOpen && (
-                              <div className="border-t px-3 py-3">
-                                {bucket.devices.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground">
-                                    Sem dispositivos
-                                  </p>
-                                ) : (
-                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                    {bucket.devices.map((device) => (
-                                      <div
-                                        key={device.id}
-                                        className={cn(
-                                          "flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5",
-                                          "transition-colors hover:border-primary/40"
-                                        )}
-                                      >
-                                        <Monitor className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                        <div className="min-w-0 flex-1">
-                                          <TruncatedText
-                                            text={device.name}
-                                            className="text-xs font-medium leading-tight"
-                                          />
-                                          <TruncatedText
-                                            text={device.device_code}
-                                            className="text-[10px] text-muted-foreground leading-tight"
-                                          />
-                                        </div>
-                                        <CircleDot
-                                          className={cn(
-                                            "h-3 w-3 shrink-0",
-                                            device.status === "online" &&
-                                              device.is_active
-                                              ? "text-emerald-500"
-                                              : "text-muted-foreground/40"
-                                          )}
-                                        />
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-        );
-      })}
+    <div className="space-y-4">
+      {tree.map(({ group, deviceCount, stores }) => (
+        <GroupNode
+          key={group.id}
+          group={group}
+          deviceCount={deviceCount}
+          stores={stores}
+          expandedGroups={expandedGroups}
+          toggleGroup={toggleGroup}
+          expandedStores={expandedStores}
+          toggleStore={toggleStore}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onManageChannels={onManageChannels}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
+        />
+      ))}
     </div>
   );
 };
