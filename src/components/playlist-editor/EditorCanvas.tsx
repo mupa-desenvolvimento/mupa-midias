@@ -10,7 +10,7 @@ import {
   Grid3X3,
   Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 
 interface EditorCanvasProps {
   currentItem: PlaylistItem | undefined;
