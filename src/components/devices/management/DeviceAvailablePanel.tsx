@@ -69,8 +69,21 @@ export const DeviceAvailablePanel = ({
     onSelectDevices([]);
   };
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: "available-devices",
+    data: {
+      type: "available",
+    },
+  });
+
   return (
-    <Card className="flex flex-col h-full border-none rounded-none bg-muted/30">
+    <Card 
+      ref={setNodeRef}
+      className={cn(
+        "flex flex-col h-full border-none rounded-none transition-colors",
+        isOver ? "bg-primary/10 ring-2 ring-primary/20" : "bg-muted/30"
+      )}
+    >
       <CardHeader className="p-4 pb-2 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
