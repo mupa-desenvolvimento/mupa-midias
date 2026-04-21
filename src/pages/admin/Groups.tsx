@@ -83,13 +83,37 @@ const GROUP_COLOR_PALETTE = [
   },
 ];
 
-// Deterministic color assignment based on group id (so the same group keeps the same color)
-const getGroupColor = (id: string) => {
+// Resolve color: use stored key if valid, otherwise deterministic fallback by id
+const getGroupColor = (id: string, storedKey?: string | null) => {
+  if (storedKey) {
+    const found = GROUP_COLOR_PALETTE.find(c => c.key === storedKey);
+    if (found) return found;
+  }
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
   }
   return GROUP_COLOR_PALETTE[hash % GROUP_COLOR_PALETTE.length];
+};
+
+// Color labels for the picker UI
+const COLOR_LABELS: Record<string, string> = {
+  blue: "Azul",
+  green: "Verde",
+  orange: "Laranja",
+  violet: "Lilás",
+  amber: "Amarelo",
+  rose: "Rosa",
+};
+
+// Solid swatch colors for the picker (visual preview only)
+const COLOR_SWATCHES: Record<string, string> = {
+  blue: "bg-blue-400",
+  green: "bg-emerald-400",
+  orange: "bg-orange-400",
+  violet: "bg-violet-400",
+  amber: "bg-amber-400",
+  rose: "bg-rose-400",
 };
 
 // ===== Global Group Tree Item =====
