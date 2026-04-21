@@ -333,10 +333,10 @@ export const ChannelsList = ({
         <div>
           <h2 className="text-base font-semibold flex items-center gap-2">
             <Radio className="w-4 h-4 text-primary" />
-            Canais
+            Campanhas
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {channels.length} {channels.length === 1 ? "canal" : "canais"}
+            {channels.length} {channels.length === 1 ? "campanha" : "campanhas"}
           </p>
         </div>
         <Button onClick={openNewDialog} size="sm" variant="outline">
