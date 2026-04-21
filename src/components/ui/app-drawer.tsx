@@ -70,7 +70,7 @@ export const AppDrawer = ({
 };
 
 interface AppDrawerHeaderProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   icon?: React.ReactNode;
   /** Conteúdo extra abaixo do título (badges, contadores, etc) */
