@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Folder, Edit, Trash2, Link2, ChevronRight, ChevronDown, Loader2, Monitor, X, Search, Store, Globe, Package, MoreVertical, CircleDot, Network } from "lucide-react";
+import { Plus, Folder, Edit, Trash2, Link2, ChevronRight, ChevronDown, Loader2, Monitor, X, Search, Store, Globe, Package, MoreVertical, CircleDot, Network, LayoutGrid, List } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { cn } from "@/lib/utils";
