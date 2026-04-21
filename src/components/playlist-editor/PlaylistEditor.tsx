@@ -302,8 +302,8 @@ export const PlaylistEditor = () => {
     return channelItems.map(item => ({
       ...item,
       playlist_id: activePlaylistId || "",
-    }));
-  }, [channelItems, activePlaylistId]) as any;
+    })) as any[];
+  }, [channelItems, activePlaylistId]);
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
