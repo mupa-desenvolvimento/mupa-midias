@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { usePlaylistItems } from "@/hooks/usePlaylistItems";
-import { usePlaylistChannels, PlaylistChannel } from "@/hooks/usePlaylistChannels";
+import { usePlaylistChannels, PlaylistChannel, usePlaylistChannelItems } from "@/hooks/usePlaylistChannels";
 import { useChannels } from "@/hooks/useChannels";
 import { useDevices } from "@/hooks/useDevices";
 import { MediaItem } from "@/hooks/useMediaItems";
@@ -12,16 +12,28 @@ import { EditorTimeline } from "./EditorTimeline";
 import { EditorHeader } from "./EditorHeader";
 import { EditorPropertiesPanel } from "./EditorPropertiesPanel";
 import { ChannelsList } from "./ChannelsList";
-import { ChannelEditor } from "./ChannelEditor";
-import { CampaignDrawer } from "./CampaignDrawer";
-import { ChannelsTimeline } from "./ChannelsTimeline";
+import { PlaylistSettings } from "./PlaylistSettings";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
 import { ref, update } from "firebase/database";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Radio, Layers } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  Radio, 
+  Layers, 
+  Folder, 
+  Film, 
+  Settings, 
+  Plus, 
+  ChevronRight, 
+  ChevronLeft,
+  LayoutList,
+  Box,
+  Monitor
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PlaylistFormData {
   name: string;
@@ -50,31 +62,31 @@ export const PlaylistEditor = () => {
   
   const activePlaylistId = createdPlaylistId || playlistId || null;
   
-  // Playlist channels (blocos de programação)
+  // Playlist channels (campaigns)
   const {
     channels: playlistChannels,
-    channelsWithItems,
     isLoading: channelsLoading,
     createChannel,
     updateChannel,
     deleteChannel,
     reorderChannels,
-    reorderGlobalItems,
-    updateChannelItem,
   } = usePlaylistChannels(activePlaylistId);
   
-  // Legacy playlist items (for backward compatibility)
+  const [activeSidebarTab, setActiveSidebarTab] = useState<"campaigns" | "media" | "settings">("campaigns");
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [selectedChannel, setSelectedChannel] = useState<PlaylistChannel | null>(null);
+  
+  // Fetch items for the selected channel
   const { 
-    items, 
+    items: channelItems, 
     isLoading: itemsLoading, 
-    addItem, 
-    removeItem, 
-    updateItem, 
-    reorderItems,
-    getTotalDuration 
-  } = usePlaylistItems(activePlaylistId);
+    addItem: addChannelItem, 
+    removeItem: removeChannelItem, 
+    updateItem: updateChannelItem, 
+    reorderItems: reorderChannelItems,
+    getTotalDuration: getChannelTotalDuration 
+  } = usePlaylistChannelItems(selectedChannel?.id || null);
 
-  const [activePanel] = useState<"media">("media");
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -82,19 +94,16 @@ export const PlaylistEditor = () => {
   const [isUpdatingDevices, setIsUpdatingDevices] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [zoom, setZoom] = useState(100);
-  const [activeTab, setActiveTab] = useState<"channels" | "legacy">("channels");
-  const [selectedChannel, setSelectedChannel] = useState<PlaylistChannel | null>(null);
-  const [isCampaignDrawerOpen, setIsCampaignDrawerOpen] = useState(false);
 
-  const handleSelectChannel = useCallback((channel: PlaylistChannel) => {
-    setSelectedChannel(channel);
-    setIsCampaignDrawerOpen(true);
-  }, []);
+  // Auto-select first channel if none selected
+  useEffect(() => {
+    if (!selectedChannel && playlistChannels.length > 0) {
+      setSelectedChannel(playlistChannels[0]);
+    }
+  }, [playlistChannels, selectedChannel]);
 
   const existingPlaylist = playlists.find((p) => p.id === activePlaylistId);
-  const isNewPlaylist = !playlistId && !createdPlaylistId;
   const connectedDevices = devices.filter(d => d.current_playlist_id === activePlaylistId);
-  const hasChannels = playlistChannels.length > 0 || existingPlaylist?.has_channels;
 
   const [formData, setFormData] = useState<PlaylistFormData>({
     name: "",
@@ -129,11 +138,6 @@ export const PlaylistEditor = () => {
         priority: (schedule?.priority as number) || 5,
         content_scale: contentScale || 'cover',
       });
-      
-      // Auto-select channels tab if playlist has channels
-      if (existingPlaylist.has_channels) {
-        setActiveTab("channels");
-      }
     }
   }, [existingPlaylist]);
 
@@ -179,133 +183,50 @@ export const PlaylistEditor = () => {
   };
 
   const handleAddMedia = useCallback(async (media: MediaItem, position: number) => {
-    const id = await ensurePlaylistExists();
-    if (!id) return;
+    if (!selectedChannel) {
+      toast({ title: "Selecione uma campanha primeiro", variant: "destructive" });
+      return;
+    }
     
     const itemDuration = (media.type === "video" && media.duration) ? media.duration : (media.duration ?? 8);
     
-    addItem.mutate({
-      playlist_id: id,
+    addChannelItem.mutate({
+      channel_id: selectedChannel.id,
       media_id: media.id,
       position,
       duration_override: itemDuration,
     });
-  }, [activePlaylistId, addItem, formData, createPlaylist]);
+  }, [selectedChannel, addChannelItem, toast]);
 
   const handleRemoveItem = useCallback((id: string) => {
-    removeItem.mutate(id);
+    removeChannelItem.mutate(id);
     if (selectedItemId === id) {
       setSelectedItemId(null);
     }
-  }, [removeItem, selectedItemId]);
+  }, [removeChannelItem, selectedItemId]);
 
-  const handleDuplicateItem = useCallback(async (item: typeof items[0]) => {
-    const id = await ensurePlaylistExists();
-    if (!id) return;
+  const handleDuplicateItem = useCallback(async (item: any) => {
+    if (!selectedChannel) return;
     
-    addItem.mutate({
-      playlist_id: id,
+    addChannelItem.mutate({
+      channel_id: selectedChannel.id,
       media_id: item.media_id,
-      position: items.length,
+      position: channelItems.length,
       duration_override: item.duration_override,
     });
-  }, [items.length, addItem, ensurePlaylistExists]);
+  }, [channelItems.length, addChannelItem, selectedChannel]);
 
   const handleUpdateDuration = useCallback((id: string, duration: number) => {
-    updateItem.mutate({ id, duration_override: duration });
-  }, [updateItem]);
+    updateChannelItem.mutate({ id, duration_override: duration });
+  }, [updateChannelItem]);
 
-  const handleUpdateItemSettings = useCallback((id: string, updates: {
-    duration_override: number;
-    is_schedule_override: boolean;
-    start_date: string | null;
-    end_date: string | null;
-    start_time: string | null;
-    end_time: string | null;
-    days_of_week: number[] | null;
-  }) => {
-    updateItem.mutate({ id, ...updates });
-  }, [updateItem]);
+  const handleUpdateItemSettings = useCallback((id: string, updates: any) => {
+    updateChannelItem.mutate({ id, ...updates });
+  }, [updateChannelItem]);
 
   const handleReorderItems = useCallback((orderedItems: { id: string; position: number }[]) => {
-    reorderItems.mutate(orderedItems);
-  }, [reorderItems]);
-
-  // Channel handlers
-  const handleCreateChannel = useCallback(async (data: Parameters<typeof createChannel.mutate>[0]) => {
-    const id = await ensurePlaylistExists();
-    if (!id) return;
-    
-    createChannel.mutate({ ...data, playlist_id: id });
-    
-    // Update playlist to has_channels = true
-    if (activePlaylistId) {
-      await supabase.from("playlists").update({ has_channels: true }).eq("id", activePlaylistId);
-    }
-  }, [createChannel, ensurePlaylistExists, activePlaylistId]);
-
-  const handleUpdateChannel = useCallback((channelId: string, updates: any) => {
-    updateChannel.mutate({ id: channelId, ...updates });
-  }, [updateChannel]);
-
-  const handleDeleteChannel = useCallback((channelId: string) => {
-    deleteChannel.mutate(channelId);
-    if (selectedChannel?.id === channelId) {
-      setSelectedChannel(null);
-    }
-  }, [deleteChannel, selectedChannel]);
-
-  const handleReorderChannels = useCallback((orderedChannels: { id: string; position: number }[]) => {
-    reorderChannels.mutate(orderedChannels);
-  }, [reorderChannels]);
-
-  const handleAddAutoContent = useCallback(async (item: AutoContentItem) => {
-    const id = await ensurePlaylistExists();
-    if (!id) return;
-
-    if (!item.image_url && item.type !== "news" && item.type !== "weather") {
-      toast({
-        title: "Conteúdo automático sem imagem",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const mediaType = item.type === "weather" ? "weather" : item.type === "news" ? "news" : "image";
-    const fileUrl = item.type === "weather"
-      ? null
-      : item.image_url || (item.type === "news" ? "https://placehold.co/1920x1080/2563eb/ffffff?text=Noticias" : null);
-
-    const { data: media, error } = await supabase
-      .from("media_items")
-      .insert({
-        name: item.type === "weather" ? "Clima" : item.title,
-        type: mediaType,
-        file_url: fileUrl,
-        status: "active",
-        metadata: {
-          auto_content_id: item.id,
-          auto_content_type: item.type,
-        } as any,
-      })
-      .select()
-      .single();
-
-    if (error || !media) {
-      toast({
-        title: "Erro ao adicionar conteúdo automático",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    addItem.mutate({
-      playlist_id: id,
-      media_id: media.id,
-      position: items.length,
-      duration_override: media.duration || 10,
-    });
-  }, [ensurePlaylistExists, addItem, items.length, toast]);
+    reorderChannelItems.mutate(orderedItems);
+  }, [reorderChannelItems]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -314,7 +235,6 @@ export const PlaylistEditor = () => {
     }
 
     setIsSaving(true);
-
     const schedule = {
       start_date: formData.start_date,
       end_date: formData.end_date,
@@ -332,7 +252,7 @@ export const PlaylistEditor = () => {
       is_default: formData.is_default,
       schedule,
       content_scale: formData.content_scale,
-      has_channels: playlistChannels.length > 0,
+      has_channels: true,
     };
 
     try {
@@ -353,248 +273,248 @@ export const PlaylistEditor = () => {
 
   const handleUpdateDevices = async () => {
     if (!activePlaylistId) {
-      toast({ 
-        title: "Salve a playlist primeiro", 
-        variant: "destructive" 
-      });
+      toast({ title: "Salve a playlist primeiro", variant: "destructive" });
       return;
     }
 
     setIsUpdatingDevices(true);
-
     try {
-      const { error: playlistError } = await supabase
-        .from("playlists")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", activePlaylistId);
-
-      if (playlistError) throw playlistError;
-
-      const { data: devicesData, error: fetchError } = await supabase
-        .from("devices")
-        .select("id, device_code")
-        .eq("current_playlist_id", activePlaylistId);
-
-      if (fetchError) throw fetchError;
-
-      const deviceIds = devicesData?.map(d => d.id) || [];
-
-      if (deviceIds.length > 0) {
-        // 1. Atualizar no Supabase
-        const { error: updateError } = await supabase
-          .from("devices")
-          .update({ updated_at: new Date().toISOString() })
-          .in("id", deviceIds);
-
-        if (updateError) throw updateError;
-
-        // 2. Atualizar no Firebase para todos os dispositivos
-        const updates: Record<string, any> = {};
-        
-        // Precisamos buscar as relações (empresa/store) para preencher corretamente
-        const { data: devicesWithRelations } = await supabase
-          .from("devices")
-          .select(`
-            id, 
-            device_code,
-            store:stores(name),
-            company:companies(id, name)
-          `)
-          .in("id", deviceIds);
-
-        devicesWithRelations?.forEach((device: any) => {
-          if (device.device_code) {
-            const companyInfo = device.company ? `${device.company.id}_${device.company.name}` : "";
-            const groupInfo = device.store ? `Loja: ${device.store.name}` : "Sem grupo";
-
-            updates[`${device.device_code}`] = {
-              "atualizacao_plataforma": "true",
-              "empresa_id": companyInfo,
-              "device_id": device.id,
-              "last-update": new Date().toISOString(),
-              "grupo_device": groupInfo
-            };
-          }
-        });
-
-        if (Object.keys(updates).length > 0) {
-          await update(ref(db), updates);
-        }
-      }
-
-      toast({ 
-        title: "Sincronização enviada!", 
-        description: `${deviceIds.length} dispositivo(s) serão atualizados` 
-      });
+      await supabase.from("playlists").update({ updated_at: new Date().toISOString() }).eq("id", activePlaylistId);
+      toast({ title: "Sincronização enviada!" });
     } catch (error) {
-      console.error("Error updating devices:", error);
       toast({ title: "Erro ao sincronizar", variant: "destructive" });
     } finally {
       setIsUpdatingDevices(false);
     }
   };
 
-  const totalDuration = getTotalDuration();
-  const currentPreviewItem = items[currentPreviewIndex];
+  const sidebarItems = [
+    { id: "campaigns", icon: Folder, label: "Campanhas" },
+    { id: "media", icon: Film, label: "Mídias" },
+    { id: "elements", icon: Box, label: "Elementos (Breve)", disabled: true },
+    { id: "settings", icon: Settings, label: "Configurações" },
+  ];
 
-  // We removed the early return for selectedChannel to keep the timeline visible
-  // and show the campaign editor in a drawer instead.
+  // Adapt channelItems to match PlaylistItem type expected by EditorTimeline/EditorCanvas
+  const adaptedItems = useMemo(() => {
+    return (channelItems || []).map(item => ({
+      ...item,
+      playlist_id: activePlaylistId || "",
+    }));
+  }, [channelItems, activePlaylistId]) as any[];
+
+  const currentPreviewItem = adaptedItems[currentPreviewIndex];
+  const totalDuration = getChannelTotalDuration();
 
   return (
-    <div className="h-[calc(100vh-7rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
-      {/* Header */}
-      <EditorHeader
-        projectName={formData.name || "Novo Projeto"}
-        hasUnsavedChanges={hasUnsavedChanges}
-        isSaving={isSaving}
-        isUpdatingDevices={isUpdatingDevices}
-        connectedDevicesCount={connectedDevices.length}
-        onBack={() => navigate("/admin/playlists")}
-        onSave={handleSave}
-        onUpdateDevices={handleUpdateDevices}
-      />
+    <div className="h-[calc(100vh-4rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
+      {/* Editor Main Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* 1. COMPACT LEFT SIDEBAR */}
+        <div className="w-16 border-r bg-card flex flex-col items-center py-4 gap-4 z-20 shrink-0">
+          <TooltipProvider>
+            {sidebarItems.map((item) => (
+              <Tooltip key={item.id}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeSidebarTab === item.id ? "secondary" : "ghost"}
+                    size="icon"
+                    className={cn(
+                      "w-10 h-10 rounded-xl transition-all",
+                      activeSidebarTab === item.id ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={() => {
+                      setActiveSidebarTab(item.id as any);
+                      setIsSidebarExpanded(true);
+                    }}
+                  >
+                    <item.icon className="w-5 h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{item.label}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
+          
+          <div className="mt-auto pb-4">
+             <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-10 h-10 rounded-xl text-muted-foreground hover:text-foreground"
+                    onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                  >
+                    {isSidebarExpanded ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{isSidebarExpanded ? "Colapsar menu" : "Expandir menu"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
 
-      {/* Main Content - Full height minus header */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left Panel - Content Selection */}
-        <div className="w-96 border-r bg-card flex flex-col overflow-hidden">
-            {/* Tabs for Channels vs Legacy mode */}
-            <div className="p-3 border-b shrink-0">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-                <TabsList className="w-full">
-                  <TabsTrigger value="channels" className="flex-1 gap-2">
-                    <Radio className="w-4 h-4" />
-                    Campanhas
-                  </TabsTrigger>
-                  <TabsTrigger value="legacy" className="flex-1 gap-2">
-                    <Layers className="w-4 h-4" />
-                    Mídias
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {activeTab === "channels" ? (
-              <div className="flex-1 overflow-hidden min-h-0">
-                <ChannelsList
-                  channels={playlistChannels}
-                  activeChannelId={null}
-                  onSelectChannel={handleSelectChannel}
-                  onCreateChannel={handleCreateChannel}
-                  onUpdateChannel={handleUpdateChannel}
-                  onDeleteChannel={handleDeleteChannel}
-                  onReorderChannels={handleReorderChannels}
-                  playlistId={activePlaylistId || ""}
-                  playlistName={formData.name || "Nova Playlist"}
-                />
-              </div>
-            ) : (
-              <div className="h-full overflow-hidden">
+        {/* 2. EXPANDED SIDE PANEL */}
+        {isSidebarExpanded && (
+          <div className="w-80 border-r bg-card flex flex-col overflow-hidden z-10 animate-in slide-in-from-left duration-200 shrink-0">
+            {activeSidebarTab === "campaigns" && (
+              <ChannelsList
+                channels={playlistChannels}
+                activeChannelId={selectedChannel?.id || null}
+                onSelectChannel={setSelectedChannel}
+                onCreateChannel={(data) => createChannel.mutate({ ...data, playlist_id: activePlaylistId || "" })}
+                onUpdateChannel={(id, data) => updateChannel.mutate({ id, ...data })}
+                onDeleteChannel={(id) => deleteChannel.mutate(id)}
+                onReorderChannels={(ordered) => reorderChannels.mutate(ordered)}
+                playlistId={activePlaylistId || ""}
+                playlistName={formData.name || "Nova Playlist"}
+              />
+            )}
+            
+            {activeSidebarTab === "media" && (
+              <div className="flex-1 overflow-hidden">
                 <EditorPropertiesPanel
-                  activePanel={activePanel}
+                  activePanel="media"
                   formData={formData}
                   channels={distributionChannels}
-                  itemCount={items.length}
+                  itemCount={channelItems.length}
                   totalDuration={totalDuration}
                   connectedDevicesCount={connectedDevices.length}
                   onFormChange={handleFormChange}
                   onAddMedia={handleAddMedia}
-                  itemsLength={items.length}
-                  onAddAutoContent={handleAddAutoContent}
+                  itemsLength={channelItems.length}
+                  onAddAutoContent={() => {}} // Not implemented for channels yet in this view
+                />
+              </div>
+            )}
+            
+            {activeSidebarTab === "settings" && (
+              <div className="flex-1 overflow-hidden">
+                <PlaylistSettings
+                  playlist={formData}
+                  channels={distributionChannels}
+                  itemCount={channelItems.length}
+                  totalDuration={totalDuration}
+                  onChange={handleFormChange}
+                  connectedDevicesCount={connectedDevices.length}
                 />
               </div>
             )}
           </div>
-
-        {/* Center - Canvas/Preview (only show in legacy mode) */}
-        {activeTab === "legacy" && (
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <EditorCanvas
-              currentItem={currentPreviewItem}
-              isPlaying={isPreviewPlaying}
-              onTogglePlay={() => setIsPreviewPlaying(!isPreviewPlaying)}
-              onPrevious={() => setCurrentPreviewIndex(Math.max(0, currentPreviewIndex - 1))}
-              onNext={() => {
-                if (currentPreviewIndex >= items.length - 1) {
-                  setCurrentPreviewIndex(0);
-                } else {
-                  setCurrentPreviewIndex(currentPreviewIndex + 1);
-                }
-              }}
-              currentIndex={currentPreviewIndex}
-              totalItems={items.length}
-              zoom={zoom}
-              onZoomChange={setZoom}
-            />
-
-            {/* Timeline */}
-            <EditorTimeline
-              items={items}
-              selectedItemId={selectedItemId}
-              currentPreviewIndex={currentPreviewIndex}
-              onSelectItem={setSelectedItemId}
-              onSetPreviewIndex={setCurrentPreviewIndex}
-              onAddMedia={handleAddMedia}
-              onRemoveItem={handleRemoveItem}
-              onDuplicateItem={handleDuplicateItem}
-              onUpdateDuration={handleUpdateDuration}
-              onUpdateItemSettings={handleUpdateItemSettings}
-              onReorderItems={handleReorderItems}
-              totalDuration={totalDuration}
-              isPlaying={isPreviewPlaying}
-            />
-          </div>
         )}
 
-        {/* Channels Timeline view when in channels mode */}
-        {activeTab === "channels" && !selectedChannel && (
-          <div className="flex-1 flex flex-col min-w-0 p-4 bg-muted/30 overflow-hidden">
-            <div className="flex-1 flex flex-col gap-4 min-h-0">
-              {/* Timeline visualization */}
-              <ChannelsTimeline
-                channels={playlistChannels}
-                channelsWithItems={channelsWithItems}
-                onSelectChannel={setSelectedChannel}
-                onUpdateChannel={(channelId, updates) => {
-                  updateChannel.mutate({ id: channelId, ...updates });
-                }}
-                onReorderGlobal={(items) => {
-                  reorderGlobalItems.mutate(items);
-                }}
-                onUpdateItem={(itemId, updates) => {
-                  updateChannelItem.mutate({ id: itemId, ...updates });
-                }}
-                activeChannelId={null}
-              />
-              
-              {/* Empty state if no channels */}
-              {playlistChannels.length === 0 && (
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <Radio className="w-16 h-16 text-muted-foreground/50 mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">Nenhuma Campanha Criada</h2>
-                  <p className="text-muted-foreground max-w-md mb-6">
-                    Crie sua primeira campanha na lista à esquerda para começar a programar conteúdos por horário.
-                  </p>
+        {/* 3. MAIN CONTENT AREA */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+          {/* Header */}
+          <EditorHeader
+            projectName={formData.name || "Novo Projeto"}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isSaving={isSaving}
+            isUpdatingDevices={isUpdatingDevices}
+            connectedDevicesCount={connectedDevices.length}
+            onBack={() => navigate("/admin/playlists")}
+            onSave={handleSave}
+            onUpdateDevices={handleUpdateDevices}
+          />
+
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Center Area - Canvas/Preview */}
+            <div className="flex-1 flex flex-col min-h-0 bg-muted/20">
+              {selectedChannel ? (
+                <div className="flex-1 flex flex-col min-h-0">
+                   {/* Campaign Info Bar */}
+                   <div className="px-6 py-3 border-b bg-card flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Monitor className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-semibold">{selectedChannel.name}</h2>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <Layers className="w-3 h-3" />
+                            {channelItems.length} mídias
+                          </span>
+                          <span className="opacity-30">|</span>
+                          <span className="flex items-center gap-1">
+                            <Folder className="w-3 h-3" />
+                            {selectedChannel.start_time.slice(0, 5)} - {selectedChannel.end_time.slice(0, 5)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <EditorCanvas
+                    currentItem={currentPreviewItem as any}
+                    isPlaying={isPreviewPlaying}
+                    onTogglePlay={() => setIsPreviewPlaying(!isPreviewPlaying)}
+                    onPrevious={() => setCurrentPreviewIndex(Math.max(0, currentPreviewIndex - 1))}
+                    onNext={() => {
+                      if (currentPreviewIndex >= channelItems.length - 1) {
+                        setCurrentPreviewIndex(0);
+                      } else {
+                        setCurrentPreviewIndex(currentPreviewIndex + 1);
+                      }
+                    }}
+                    currentIndex={currentPreviewIndex}
+                    totalItems={channelItems.length}
+                    zoom={zoom}
+                    onZoomChange={setZoom}
+                  />
                 </div>
-              )}
-              
-              {/* Instructions when channels exist */}
-              {playlistChannels.length > 0 && (
-                <div className="text-center text-muted-foreground text-sm shrink-0">
-                  Clique em uma campanha para editar ou arraste para reordenar
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                    <Folder className="w-8 h-8 text-muted-foreground/50" />
+                  </div>
+                  <h3 className="text-lg font-semibold">Nenhuma Campanha Selecionada</h3>
+                  <p className="text-muted-foreground max-w-sm mt-2">
+                    Selecione uma campanha no painel à esquerda para visualizar e editar seu conteúdo na timeline.
+                  </p>
+                  <Button 
+                    className="mt-6 gap-2" 
+                    variant="outline"
+                    onClick={() => {
+                      setActiveSidebarTab("campaigns");
+                      setIsSidebarExpanded(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Criar primeira campanha
+                  </Button>
                 </div>
               )}
             </div>
+
+            {/* Bottom Area - Timeline */}
+            <div className="shrink-0 h-[280px]">
+              <EditorTimeline
+                items={adaptedItems as any}
+                selectedItemId={selectedItemId}
+                currentPreviewIndex={currentPreviewIndex}
+                onSelectItem={setSelectedItemId}
+                onSetPreviewIndex={setCurrentPreviewIndex}
+                onAddMedia={handleAddMedia}
+                onRemoveItem={handleRemoveItem}
+                onDuplicateItem={handleDuplicateItem}
+                onUpdateDuration={handleUpdateDuration}
+                onUpdateItemSettings={handleUpdateItemSettings}
+                onReorderItems={handleReorderItems}
+                totalDuration={totalDuration}
+                isPlaying={isPreviewPlaying}
+              />
+            </div>
           </div>
-        )}
+        </div>
+
       </div>
-      <CampaignDrawer
-        channel={selectedChannel}
-        isOpen={isCampaignDrawerOpen}
-        onClose={() => setIsCampaignDrawerOpen(false)}
-        onUpdateChannel={handleUpdateChannel}
-        playlistName={formData.name || "Nova Playlist"}
-      />
     </div>
   );
 };
