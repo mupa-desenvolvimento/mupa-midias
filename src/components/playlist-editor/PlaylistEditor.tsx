@@ -495,7 +495,7 @@ export const PlaylistEditor = () => {
             {/* Bottom Area - Timeline */}
             <div className="shrink-0 h-[280px]">
               <EditorTimeline
-                items={adaptedItems}
+                items={adaptedItems as any}
                 selectedItemId={selectedItemId}
                 currentPreviewIndex={currentPreviewIndex}
                 onSelectItem={setSelectedItemId}
