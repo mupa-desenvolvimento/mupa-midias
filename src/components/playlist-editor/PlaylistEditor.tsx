@@ -294,7 +294,7 @@ export const PlaylistEditor = () => {
     { id: "settings", icon: Settings, label: "Configurações" },
   ];
 
-  const currentPreviewItem = channelItems[currentPreviewIndex];
+  const currentPreviewItem = adaptedItems ? adaptedItems[currentPreviewIndex] : undefined;
   const totalDuration = getChannelTotalDuration();
 
   // Adapt channelItems to match PlaylistItem type expected by EditorTimeline
