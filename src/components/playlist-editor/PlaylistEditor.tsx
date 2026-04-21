@@ -583,7 +583,7 @@ export const PlaylistEditor = () => {
               {/* Instructions when channels exist */}
               {playlistChannels.length > 0 && (
                 <div className="text-center text-muted-foreground text-sm shrink-0">
-                  Clique em um canal para editar ou arraste para reordenar
+                  Clique em uma campanha para editar ou arraste para reordenar
                 </div>
               )}
             </div>
