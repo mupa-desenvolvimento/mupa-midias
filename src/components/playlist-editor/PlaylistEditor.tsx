@@ -302,7 +302,7 @@ export const PlaylistEditor = () => {
     return channelItems.map(item => ({
       ...item,
       playlist_id: activePlaylistId || "",
-    })) as any[];
+    })) as any;
   }, [channelItems, activePlaylistId]);
 
   return (
