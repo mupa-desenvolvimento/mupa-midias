@@ -9,6 +9,7 @@ export interface Group {
   parent_id: string | null;
   playlist_id: string | null;
   tenant_id: string | null;
+  color: string | null;
   created_at: string;
   updated_at: string;
 }
