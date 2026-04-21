@@ -35,7 +35,7 @@ const formatDuration = (seconds: number | null) => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-export const MediaLibrary = ({ onDragStart }: MediaLibraryProps) => {
+export const MediaLibrary = ({ onDragStart, onSelect }: MediaLibraryProps) => {
   const { mediaItems, isLoading } = useMediaItems();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
