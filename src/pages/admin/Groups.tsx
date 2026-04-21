@@ -529,7 +529,7 @@ const GroupsPage = () => {
   const [internalLinkGroupId, setInternalLinkGroupId] = useState<string | null>(null);
   const [internalDeviceSearch, setInternalDeviceSearch] = useState("");
 
-  const [formData, setFormData] = useState({ name: "", parent_id: "none", playlist_id: "none", inherit_playlist: true });
+  const [formData, setFormData] = useState({ name: "", parent_id: "none", playlist_id: "none", inherit_playlist: true, color: "auto" });
 
   const rootGroups = useMemo(() => groups.filter(g => !g.parent_id), [groups]);
 
