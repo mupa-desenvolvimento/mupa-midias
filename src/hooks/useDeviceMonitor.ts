@@ -14,39 +14,59 @@ export const useDeviceMonitor = (
   const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const facesIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const facesRef = useRef<ActiveFace[]>([]);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const subscribedRef = useRef(false);
 
   // Always keep latest faces snapshot for background broadcasting
   useEffect(() => {
     facesRef.current = faces || [];
   }, [faces]);
 
-  // Listen for remote start/stop stream commands (frame video feed)
+  // Single shared channel for all monitor traffic (subscribe/broadcast/listen)
   useEffect(() => {
     if (!deviceCode) return;
 
-    const channel = supabase.channel(`device_monitor:${deviceCode}`)
+    subscribedRef.current = false;
+    const channel = supabase.channel(`device_monitor:${deviceCode}`, {
+      config: { broadcast: { self: false, ack: false } },
+    })
       .on('broadcast', { event: 'start_stream' }, () => {
         setIsMonitoring(true);
-        toast.info("Monitoramento remoto iniciado");
+        console.log('[DeviceMonitor] start_stream received');
+        toast.info('Monitoramento remoto iniciado');
       })
       .on('broadcast', { event: 'stop_stream' }, () => {
         setIsMonitoring(false);
-        toast.info("Monitoramento remoto finalizado");
+        console.log('[DeviceMonitor] stop_stream received');
+        toast.info('Monitoramento remoto finalizado');
       })
-      .subscribe();
+      .on('broadcast', { event: 'request_state' }, () => {
+        // Viewer just opened — immediately push current face stats so UI lights up
+        if (!subscribedRef.current) return;
+        const stats = facesRef.current;
+        channel.send({
+          type: 'broadcast',
+          event: 'faces',
+          payload: {
+            stats,
+            count: stats.length,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      })
+      .subscribe((status) => {
+        console.log(`[DeviceMonitor] channel status for ${deviceCode}:`, status);
+        if (status === 'SUBSCRIBED') {
+          subscribedRef.current = true;
+        }
+      });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [deviceCode]);
+    channelRef.current = channel;
 
-  // Background face stats broadcast — always on, regardless of frame stream.
-  // This feeds the DemoFace (/admin/monitoring) page in real time.
-  useEffect(() => {
-    if (!deviceCode) return;
-
-    const channel = supabase.channel(`device_monitor:${deviceCode}`);
+    // Background face stats broadcast — always on, regardless of frame stream.
+    // This feeds the dashboard / monitoring UI in real time.
     facesIntervalRef.current = setInterval(() => {
+      if (!subscribedRef.current) return;
       const stats = facesRef.current;
       channel.send({
         type: 'broadcast',
@@ -64,7 +84,9 @@ export const useDeviceMonitor = (
         clearInterval(facesIntervalRef.current);
         facesIntervalRef.current = null;
       }
+      subscribedRef.current = false;
       supabase.removeChannel(channel);
+      channelRef.current = null;
     };
   }, [deviceCode]);
 
@@ -75,7 +97,8 @@ export const useDeviceMonitor = (
     if (isMonitoring && sourceRef?.current) {
       monitoringIntervalRef.current = setInterval(() => {
         const element = sourceRef.current;
-        if (!element) return;
+        const channel = channelRef.current;
+        if (!element || !channel || !subscribedRef.current) return;
 
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
@@ -107,7 +130,7 @@ export const useDeviceMonitor = (
           context.drawImage(element, 0, 0, canvas.width, canvas.height);
           const imageData = canvas.toDataURL('image/jpeg', 0.6);
 
-          supabase.channel(`device_monitor:${deviceCode}`).send({
+          channel.send({
             type: 'broadcast',
             event: 'frame',
             payload: {

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Users, Smile, Clock, Activity, Camera } from "lucide-react";
+import { Loader2, Users, Activity, Camera, Wifi, WifiOff } from "lucide-react";
 import { DeviceWithRelations } from "@/hooks/useDevices";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveFace } from "@/hooks/useFaceDetection";
@@ -26,111 +26,125 @@ interface StreamPayload {
   meta: { width: number; height: number };
 }
 
+interface FacesPayload {
+  stats: ActiveFace[];
+  count: number;
+  timestamp: string;
+}
+
 export function DeviceMonitorDialog({
   open,
   onOpenChange,
   device,
 }: DeviceMonitorDialogProps) {
-  const [isConnected, setIsConnected] = useState(false);
+  const [channelStatus, setChannelStatus] = useState<"connecting" | "connected" | "error">("connecting");
+  const [hasReceivedData, setHasReceivedData] = useState(false);
   const [lastFrame, setLastFrame] = useState<StreamPayload | null>(null);
+  const [lastFaces, setLastFaces] = useState<FacesPayload | null>(null);
+  const [lastEventAt, setLastEventAt] = useState<Date | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>();
 
-  // Subscribe to stream
+  // Subscribe to monitor channel
   useEffect(() => {
     if (!open || !device) return;
 
-    console.log("Connecting to monitor channel:", `device_monitor:${device.device_code}`);
+    setChannelStatus("connecting");
+    setHasReceivedData(false);
+    setLastFrame(null);
+    setLastFaces(null);
 
-    const channel = supabase.channel(`device_monitor:${device.device_code}`)
-      .on('broadcast', { event: 'start_stream' }, () => {
-        setIsConnected(true);
-        console.log("Stream started by device");
-      })
-      .on('broadcast', { event: 'stop_stream' }, () => {
-        setIsConnected(false);
-        setLastFrame(null);
-        console.log("Stream stopped by device");
-      })
-      .on('broadcast', { event: 'frame' }, (payload) => {
-        if (!isConnected) setIsConnected(true);
+    const channelName = `device_monitor:${device.device_code}`;
+    console.log("[Monitor] Subscribing to:", channelName);
+
+    const channel = supabase.channel(channelName, {
+      config: { broadcast: { self: false, ack: false } },
+    })
+      .on("broadcast", { event: "frame" }, (payload) => {
+        setHasReceivedData(true);
         setLastFrame(payload.payload as StreamPayload);
+        setLastEventAt(new Date());
       })
-      .subscribe();
-
-    // Trigger device to start streaming if it's listening
-    // We might need a way to tell the device "Start sending data"
-    // Currently the device starts streaming when it initializes useDeviceMonitor
-    // But maybe we should send a 'request_stream' event?
-    // For now, let's assume the device is already streaming or will start when we connect if we add that logic later.
-    // Ideally, the device should only stream when someone is watching to save bandwidth.
-    // Let's send a 'start_stream' signal.
-    channel.send({
-      type: 'broadcast',
-      event: 'start_stream',
-      payload: {}
-    });
+      .on("broadcast", { event: "faces" }, (payload) => {
+        setHasReceivedData(true);
+        setLastFaces(payload.payload as FacesPayload);
+        setLastEventAt(new Date());
+      })
+      .subscribe((status) => {
+        console.log(`[Monitor] Channel status:`, status);
+        if (status === "SUBSCRIBED") {
+          setChannelStatus("connected");
+          // Now that we are subscribed, request frame stream + current state from device
+          channel.send({
+            type: "broadcast",
+            event: "start_stream",
+            payload: {},
+          });
+          channel.send({
+            type: "broadcast",
+            event: "request_state",
+            payload: {},
+          });
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setChannelStatus("error");
+        }
+      });
 
     return () => {
-      channel.send({
-        type: 'broadcast',
-        event: 'stop_stream',
-        payload: {}
-      });
+      try {
+        channel.send({
+          type: "broadcast",
+          event: "stop_stream",
+          payload: {},
+        });
+      } catch (err) {
+        console.warn("[Monitor] Failed to send stop_stream:", err);
+      }
       supabase.removeChannel(channel);
-      setIsConnected(false);
-      setLastFrame(null);
     };
   }, [open, device?.device_code]);
 
-  // Render frame to canvas
+  // Render frame to canvas (when frame stream is active)
   useEffect(() => {
     if (!lastFrame || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const img = new Image();
     img.onload = () => {
-      // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw image
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // Draw overlays (faces)
-      if (lastFrame.stats && lastFrame.stats.length > 0) {
-        lastFrame.stats.forEach(face => {
-            // The position from face-api is relative to the source video (640x480 typically)
-            // We need to scale it to our canvas size
-            // Use meta dimensions if available, otherwise fallback to img size
-            const sourceWidth = lastFrame.meta?.width || img.width;
-            const sourceHeight = lastFrame.meta?.height || img.height;
-            
-            const scaleX = canvas.width / sourceWidth;
-            const scaleY = canvas.height / sourceHeight;
+      const stats = lastFrame.stats || [];
+      if (stats.length > 0) {
+        stats.forEach((face) => {
+          const sourceWidth = lastFrame.meta?.width || img.width;
+          const sourceHeight = lastFrame.meta?.height || img.height;
+          const scaleX = canvas.width / sourceWidth;
+          const scaleY = canvas.height / sourceHeight;
+          const { x, y, width, height } = face.position;
 
-            const { x, y, width, height } = face.position;
+          ctx.strokeStyle = "hsl(142, 76%, 50%)";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x * scaleX, y * scaleY, width * scaleX, height * scaleY);
 
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x * scaleX, y * scaleY, width * scaleX, height * scaleY);
+          ctx.fillStyle = "hsl(142, 76%, 50%)";
+          ctx.font = "14px sans-serif";
+          const label = `${face.gender}, ${face.ageGroup}`;
+          ctx.fillText(label, x * scaleX, y * scaleY - 5);
 
-            // Draw labels
-            ctx.fillStyle = '#00ff00';
-            ctx.font = '14px sans-serif';
-            const label = `${face.gender}, ${face.ageGroup}`;
-            ctx.fillText(label, x * scaleX, (y * scaleY) - 5);
-            
-            const emotion = `${face.emotion.emotion} (${Math.round(face.emotion.confidence * 100)}%)`;
-            ctx.fillText(emotion, x * scaleX, (y * scaleY) + (height * scaleY) + 15);
+          const emotion = `${face.emotion.emotion} (${Math.round(face.emotion.confidence * 100)}%)`;
+          ctx.fillText(emotion, x * scaleX, y * scaleY + height * scaleY + 15);
         });
       }
     };
     img.src = lastFrame.image;
-
   }, [lastFrame]);
+
+  // Stats source: prefer the heavier frame payload, fallback to lightweight faces broadcast
+  const stats: ActiveFace[] = lastFrame?.stats ?? lastFaces?.stats ?? [];
+  const lastTimestamp = lastFrame?.timestamp ?? lastFaces?.timestamp;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -140,33 +154,66 @@ export function DeviceMonitorDialog({
             <Camera className="w-5 h-5" />
             Monitoramento em Tempo Real: {device?.name}
           </DialogTitle>
-          <DialogDescription>
-            Visualização da câmera e análise de IA do dispositivo.
+          <DialogDescription className="flex items-center gap-2">
+            <span>Visualização da câmera e análise de IA do dispositivo.</span>
+            {channelStatus === "connected" ? (
+              <Badge variant="outline" className="gap-1">
+                <Wifi className="w-3 h-3" /> Canal conectado
+              </Badge>
+            ) : channelStatus === "error" ? (
+              <Badge variant="destructive" className="gap-1">
+                <WifiOff className="w-3 h-3" /> Erro de canal
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Conectando...
+              </Badge>
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Video Feed Area */}
           <div className="md:col-span-2 bg-black rounded-lg overflow-hidden aspect-video relative flex items-center justify-center">
-            {!isConnected && !lastFrame ? (
-              <div className="text-white text-center">
+            {!lastFrame ? (
+              <div className="text-white text-center px-4">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                <p>Aguardando conexão com o dispositivo...</p>
-                <p className="text-xs text-white/70 mt-1">Certifique-se que o player está rodando.</p>
+                {channelStatus === "connected" && hasReceivedData ? (
+                  <>
+                    <p>Recebendo telemetria, aguardando vídeo...</p>
+                    <p className="text-xs text-white/70 mt-1">
+                      O dispositivo está respondendo. O stream de vídeo iniciará em instantes.
+                    </p>
+                  </>
+                ) : channelStatus === "connected" ? (
+                  <>
+                    <p>Aguardando dados do dispositivo...</p>
+                    <p className="text-xs text-white/70 mt-1">
+                      Verifique se o player está aberto em /play ou /device.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p>Conectando ao canal de monitoramento...</p>
+                    <p className="text-xs text-white/70 mt-1">Device: {device?.device_code}</p>
+                  </>
+                )}
               </div>
             ) : (
-              <canvas 
-                ref={canvasRef} 
-                width={640} 
-                height={480} 
+              <canvas
+                ref={canvasRef}
+                width={640}
+                height={480}
                 className="w-full h-full object-contain"
               />
             )}
-            
-            {isConnected && (
-                <div className="absolute top-2 right-2">
-                    <Badge variant="default" className="bg-green-500 animate-pulse">AO VIVO</Badge>
-                </div>
+
+            {hasReceivedData && (
+              <div className="absolute top-2 right-2">
+                <Badge variant="default" className="bg-green-500 animate-pulse">
+                  AO VIVO
+                </Badge>
+              </div>
             )}
           </div>
 
@@ -175,40 +222,62 @@ export function DeviceMonitorDialog({
             <Card>
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Pessoas Detectadas</span>
-                    </div>
-                    <span className="text-2xl font-bold">{lastFrame?.stats.length || 0}</span>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Pessoas Detectadas</span>
+                  </div>
+                  <span className="text-2xl font-bold">{stats.length}</span>
                 </div>
-                
+
                 <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Emoções Atuais</p>
-                    {lastFrame?.stats.map((face, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
-                            <span className="capitalize">{face.emotion.emotion}</span>
-                            <Badge variant="outline">{Math.round(face.emotion.confidence * 100)}%</Badge>
-                        </div>
-                    ))}
-                    {(!lastFrame?.stats || lastFrame.stats.length === 0) && (
-                        <p className="text-sm text-muted-foreground italic">Nenhuma face detectada</p>
-                    )}
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">
+                    Emoções Atuais
+                  </p>
+                  {stats.map((face, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between text-sm border-b pb-2 last:border-0"
+                    >
+                      <span className="capitalize">{face.emotion.emotion}</span>
+                      <Badge variant="outline">
+                        {Math.round(face.emotion.confidence * 100)}%
+                      </Badge>
+                    </div>
+                  ))}
+                  {stats.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">
+                      Nenhuma face detectada
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2 pt-2 border-t">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Demografia</p>
-                     {lastFrame?.stats.map((face, idx) => (
-                        <div key={idx} className="text-sm">
-                            <span className="font-medium">Pessoa {idx + 1}:</span> {face.gender}, {face.ageGroup}
-                        </div>
-                    ))}
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">
+                    Demografia
+                  </p>
+                  {stats.map((face, idx) => (
+                    <div key={idx} className="text-sm">
+                      <span className="font-medium">Pessoa {idx + 1}:</span> {face.gender},{" "}
+                      {face.ageGroup}
+                    </div>
+                  ))}
+                  {stats.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">—</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Activity className="w-3 h-3" />
-                <span>Atualizado: {lastFrame?.timestamp ? new Date(lastFrame.timestamp).toLocaleTimeString() : '-'}</span>
+              <Activity className="w-3 h-3" />
+              <span>
+                Atualizado:{" "}
+                {lastTimestamp
+                  ? new Date(lastTimestamp).toLocaleTimeString()
+                  : lastEventAt
+                  ? lastEventAt.toLocaleTimeString()
+                  : "-"}
+              </span>
             </div>
           </div>
         </div>
