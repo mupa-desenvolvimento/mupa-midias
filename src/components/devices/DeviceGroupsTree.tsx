@@ -27,8 +27,11 @@ import {
   Star,
   Globe,
   CircleDot,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDroppable } from "@dnd-kit/core";
+import { DeviceDraggableItem } from "./management/DeviceDraggableItem";
 
 const SCREEN_ICONS: Record<string, typeof Monitor> = {
   tv: Tv,
