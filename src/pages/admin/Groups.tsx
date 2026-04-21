@@ -83,13 +83,37 @@ const GROUP_COLOR_PALETTE = [
   },
 ];
 
-// Deterministic color assignment based on group id (so the same group keeps the same color)
-const getGroupColor = (id: string) => {
+// Resolve color: use stored key if valid, otherwise deterministic fallback by id
+const getGroupColor = (id: string, storedKey?: string | null) => {
+  if (storedKey) {
+    const found = GROUP_COLOR_PALETTE.find(c => c.key === storedKey);
+    if (found) return found;
+  }
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
   }
   return GROUP_COLOR_PALETTE[hash % GROUP_COLOR_PALETTE.length];
+};
+
+// Color labels for the picker UI
+const COLOR_LABELS: Record<string, string> = {
+  blue: "Azul",
+  green: "Verde",
+  orange: "Laranja",
+  violet: "Lilás",
+  amber: "Amarelo",
+  rose: "Rosa",
+};
+
+// Solid swatch colors for the picker (visual preview only)
+const COLOR_SWATCHES: Record<string, string> = {
+  blue: "bg-blue-400",
+  green: "bg-emerald-400",
+  orange: "bg-orange-400",
+  violet: "bg-violet-400",
+  amber: "bg-amber-400",
+  rose: "bg-rose-400",
 };
 
 // ===== Global Group Tree Item =====
@@ -149,8 +173,9 @@ const GroupItem = ({
   const isRoot = level === 0;
   const isMap = viewMode === 'map';
   const NodeIcon = isRoot ? Network : level === 1 ? Folder : Globe;
-  // Per-group color identity (only applied to root groups for visual hierarchy)
-  const color = getGroupColor(isRoot ? group.id : (allGroups.find(g => g.id === group.parent_id)?.id || group.id));
+  // Per-group color identity: prefer stored color, then inherit from parent root, else deterministic
+  const rootForColor = isRoot ? group : (allGroups.find(g => g.id === group.parent_id) || group);
+  const color = getGroupColor(rootForColor.id, (rootForColor as GroupWithDetails & { color?: string | null }).color);
 
   return (
     <div 
@@ -504,7 +529,7 @@ const GroupsPage = () => {
   const [internalLinkGroupId, setInternalLinkGroupId] = useState<string | null>(null);
   const [internalDeviceSearch, setInternalDeviceSearch] = useState("");
 
-  const [formData, setFormData] = useState({ name: "", parent_id: "none", playlist_id: "none", inherit_playlist: true });
+  const [formData, setFormData] = useState({ name: "", parent_id: "none", playlist_id: "none", inherit_playlist: true, color: "auto" });
 
   const rootGroups = useMemo(() => groups.filter(g => !g.parent_id), [groups]);
 
@@ -530,18 +555,29 @@ const GroupsPage = () => {
 
   const handleOpenCreate = (parentId?: string) => {
     setEditingGroup(null);
-    setFormData({ name: "", parent_id: parentId || "none", playlist_id: "none", inherit_playlist: true });
+    setFormData({ name: "", parent_id: parentId || "none", playlist_id: "none", inherit_playlist: true, color: "auto" });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (group: GroupWithDetails) => {
     setEditingGroup(group);
-    setFormData({ name: group.name, parent_id: group.parent_id || "none", playlist_id: group.playlist_id || "none", inherit_playlist: !group.playlist_id });
+    setFormData({ 
+      name: group.name, 
+      parent_id: group.parent_id || "none", 
+      playlist_id: group.playlist_id || "none", 
+      inherit_playlist: !group.playlist_id,
+      color: (group as GroupWithDetails & { color?: string | null }).color || "auto",
+    });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = () => {
-    const data = { name: formData.name, parent_id: formData.parent_id === "none" ? null : formData.parent_id, playlist_id: formData.inherit_playlist ? null : (formData.playlist_id === "none" ? null : formData.playlist_id) };
+    const data = { 
+      name: formData.name, 
+      parent_id: formData.parent_id === "none" ? null : formData.parent_id, 
+      playlist_id: formData.inherit_playlist ? null : (formData.playlist_id === "none" ? null : formData.playlist_id),
+      color: formData.color === "auto" ? null : formData.color,
+    };
     if (editingGroup) {
       updateGroup.mutate({ id: editingGroup.id, ...data }, { onSuccess: () => setIsDialogOpen(false) });
     } else {
@@ -854,6 +890,44 @@ const GroupsPage = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Cor do Grupo</Label>
+              <p className="text-xs text-muted-foreground">Define a identidade visual nos cards e conectores</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, color: "auto" })}
+                  className={cn(
+                    "h-9 px-3 rounded-md border text-xs font-medium transition-all flex items-center gap-2",
+                    formData.color === "auto"
+                      ? "border-foreground/40 bg-muted shadow-sm"
+                      : "border-border bg-background hover:border-foreground/20"
+                  )}
+                  aria-label="Cor automática"
+                >
+                  <span className="h-4 w-4 rounded-full border border-border bg-gradient-to-br from-blue-300 via-violet-300 to-rose-300" />
+                  Auto
+                </button>
+                {GROUP_COLOR_PALETTE.map(c => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color: c.key })}
+                    className={cn(
+                      "h-9 w-9 rounded-md border transition-all flex items-center justify-center",
+                      formData.color === c.key
+                        ? "border-foreground/60 ring-2 ring-foreground/20 shadow-sm scale-105"
+                        : "border-border hover:border-foreground/30"
+                    )}
+                    aria-label={COLOR_LABELS[c.key]}
+                    title={COLOR_LABELS[c.key]}
+                  >
+                    <span className={cn("h-4 w-4 rounded-full", COLOR_SWATCHES[c.key])} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
               <Label className="text-sm font-semibold">Playlist</Label>
               <div className="flex flex-col gap-3">

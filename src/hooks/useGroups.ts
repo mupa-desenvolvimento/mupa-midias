@@ -9,6 +9,7 @@ export interface Group {
   parent_id: string | null;
   playlist_id: string | null;
   tenant_id: string | null;
+  color: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -48,7 +49,7 @@ export const useGroups = () => {
   });
 
   const createGroup = useMutation({
-    mutationFn: async (group: { name: string; parent_id?: string | null; playlist_id?: string | null; tenant_id?: string | null }) => {
+    mutationFn: async (group: { name: string; parent_id?: string | null; playlist_id?: string | null; tenant_id?: string | null; color?: string | null }) => {
       const groupData = { ...group };
       if (!isSuperAdmin && tenantId && !groupData.tenant_id) {
         groupData.tenant_id = tenantId;
