@@ -84,6 +84,12 @@ export const PlaylistEditor = () => {
   const [zoom, setZoom] = useState(100);
   const [activeTab, setActiveTab] = useState<"channels" | "legacy">("channels");
   const [selectedChannel, setSelectedChannel] = useState<PlaylistChannel | null>(null);
+  const [isCampaignDrawerOpen, setIsCampaignDrawerOpen] = useState(false);
+
+  const handleSelectChannel = useCallback((channel: PlaylistChannel) => {
+    setSelectedChannel(channel);
+    setIsCampaignDrawerOpen(true);
+  }, []);
 
   const existingPlaylist = playlists.find((p) => p.id === activePlaylistId);
   const isNewPlaylist = !playlistId && !createdPlaylistId;
