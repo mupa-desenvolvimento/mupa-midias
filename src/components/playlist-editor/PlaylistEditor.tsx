@@ -294,16 +294,16 @@ export const PlaylistEditor = () => {
     { id: "settings", icon: Settings, label: "Configurações" },
   ];
 
-  const currentPreviewItem = adaptedItems ? adaptedItems[currentPreviewIndex] : undefined;
-  const totalDuration = getChannelTotalDuration();
-
-  // Adapt channelItems to match PlaylistItem type expected by EditorTimeline
+  // Adapt channelItems to match PlaylistItem type expected by EditorTimeline/EditorCanvas
   const adaptedItems = useMemo(() => {
-    return channelItems.map(item => ({
+    return (channelItems || []).map(item => ({
       ...item,
       playlist_id: activePlaylistId || "",
-    })) as any[];
-  }, [channelItems, activePlaylistId]);
+    }));
+  }, [channelItems, activePlaylistId]) as any[];
+
+  const currentPreviewItem = adaptedItems[currentPreviewIndex];
+  const totalDuration = getChannelTotalDuration();
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
@@ -451,7 +451,7 @@ export const PlaylistEditor = () => {
                   </div>
 
                   <EditorCanvas
-                    currentItem={currentPreviewItem}
+                    currentItem={currentPreviewItem as any}
                     isPlaying={isPreviewPlaying}
                     onTogglePlay={() => setIsPreviewPlaying(!isPreviewPlaying)}
                     onPrevious={() => setCurrentPreviewIndex(Math.max(0, currentPreviewIndex - 1))}
