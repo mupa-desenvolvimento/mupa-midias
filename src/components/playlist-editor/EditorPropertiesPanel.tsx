@@ -555,7 +555,7 @@ const SettingsPanel = ({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Canal</Label>
+            <Label className="text-xs text-muted-foreground">Campanha</Label>
             <Select
               value={formData.channel_id || "none"}
               onValueChange={(v) => onFormChange({ channel_id: v === "none" ? null : v })}
