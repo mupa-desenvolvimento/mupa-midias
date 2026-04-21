@@ -615,7 +615,7 @@ export const ChannelsTimeline = ({
                 {/* Empty state */}
                 {channels.length === 0 && (
                   <div className="h-24 flex items-center justify-center text-muted-foreground text-sm">
-                    Adicione canais para visualizar a programação
+                    Adicione campanhas para visualizar a programação
                   </div>
                 )}
               </div>

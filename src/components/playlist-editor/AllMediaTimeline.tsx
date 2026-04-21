@@ -215,7 +215,7 @@ export const AllMediaTimeline = ({
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
         <Film className="w-12 h-12 mb-3 opacity-50" />
         <p className="text-sm font-medium">Nenhuma mídia na playlist</p>
-        <p className="text-xs mt-1">Adicione mídias aos canais para visualizá-las aqui</p>
+        <p className="text-xs mt-1">Adicione mídias às campanhas para visualizá-las aqui</p>
       </div>
     );
   }

@@ -466,7 +466,7 @@ export const PlaylistEditor = () => {
                 <TabsList className="w-full">
                   <TabsTrigger value="channels" className="flex-1 gap-2">
                     <Radio className="w-4 h-4" />
-                    Canais
+                    Campanhas
                   </TabsTrigger>
                   <TabsTrigger value="legacy" className="flex-1 gap-2">
                     <Layers className="w-4 h-4" />
@@ -573,9 +573,9 @@ export const PlaylistEditor = () => {
               {playlistChannels.length === 0 && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center">
                   <Radio className="w-16 h-16 text-muted-foreground/50 mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">Nenhum Canal Criado</h2>
+                  <h2 className="text-xl font-semibold mb-2">Nenhuma Campanha Criada</h2>
                   <p className="text-muted-foreground max-w-md mb-6">
-                    Crie seu primeiro canal na lista à esquerda para começar a programar conteúdos por horário.
+                    Crie sua primeira campanha na lista à esquerda para começar a programar conteúdos por horário.
                   </p>
                 </div>
               )}
@@ -583,7 +583,7 @@ export const PlaylistEditor = () => {
               {/* Instructions when channels exist */}
               {playlistChannels.length > 0 && (
                 <div className="text-center text-muted-foreground text-sm shrink-0">
-                  Clique em um canal para editar ou arraste para reordenar
+                  Clique em uma campanha para editar ou arraste para reordenar
                 </div>
               )}
             </div>
