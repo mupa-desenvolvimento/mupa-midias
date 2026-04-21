@@ -291,6 +291,7 @@ export const PlaylistEditor = () => {
   const sidebarItems = [
     { id: "campaigns", icon: Folder, label: "Campanhas" },
     { id: "media", icon: Film, label: "Mídias" },
+    { id: "elements", icon: Box, label: "Elementos (Breve)", disabled: true },
     { id: "settings", icon: Settings, label: "Configurações" },
   ];
 
