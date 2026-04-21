@@ -8,6 +8,7 @@ import { MEDIA_FILTER_OPTIONS } from "@/constants/contentTypes";
 
 interface MediaLibraryProps {
   onDragStart: (media: MediaItem) => void;
+  onSelect?: (media: MediaItem) => void;
 }
 
 const getMediaIcon = (type: string) => {
@@ -34,7 +35,7 @@ const formatDuration = (seconds: number | null) => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-export const MediaLibrary = ({ onDragStart }: MediaLibraryProps) => {
+export const MediaLibrary = ({ onDragStart, onSelect }: MediaLibraryProps) => {
   const { mediaItems, isLoading } = useMediaItems();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -104,7 +105,8 @@ export const MediaLibrary = ({ onDragStart }: MediaLibraryProps) => {
                 key={media.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, media)}
-                className="group flex items-center gap-3 p-2 rounded-lg border border-transparent hover:border-border hover:bg-accent/50 cursor-grab active:cursor-grabbing transition-all"
+                onClick={() => onSelect?.(media)}
+                className="group flex items-center gap-3 p-2 rounded-lg border border-transparent hover:border-border hover:bg-accent/50 cursor-pointer transition-all"
               >
                 <div className="flex-shrink-0 w-12 h-12 rounded-md bg-muted overflow-hidden relative">
                   {media.file_url ? (

@@ -13,6 +13,7 @@ import { EditorHeader } from "./EditorHeader";
 import { EditorPropertiesPanel } from "./EditorPropertiesPanel";
 import { ChannelsList } from "./ChannelsList";
 import { ChannelEditor } from "./ChannelEditor";
+import { CampaignDrawer } from "./CampaignDrawer";
 import { ChannelsTimeline } from "./ChannelsTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +84,12 @@ export const PlaylistEditor = () => {
   const [zoom, setZoom] = useState(100);
   const [activeTab, setActiveTab] = useState<"channels" | "legacy">("channels");
   const [selectedChannel, setSelectedChannel] = useState<PlaylistChannel | null>(null);
+  const [isCampaignDrawerOpen, setIsCampaignDrawerOpen] = useState(false);
+
+  const handleSelectChannel = useCallback((channel: PlaylistChannel) => {
+    setSelectedChannel(channel);
+    setIsCampaignDrawerOpen(true);
+  }, []);
 
   const existingPlaylist = playlists.find((p) => p.id === activePlaylistId);
   const isNewPlaylist = !playlistId && !createdPlaylistId;
@@ -430,17 +437,8 @@ export const PlaylistEditor = () => {
   const totalDuration = getTotalDuration();
   const currentPreviewItem = items[currentPreviewIndex];
 
-  // If editing a channel, show channel editor
-  if (selectedChannel) {
-    return (
-      <ChannelEditor
-        channel={selectedChannel}
-        playlistName={formData.name || "Nova Playlist"}
-        onBack={() => setSelectedChannel(null)}
-        onUpdateChannel={(updates) => handleUpdateChannel(selectedChannel.id, updates)}
-      />
-    );
-  }
+  // We removed the early return for selectedChannel to keep the timeline visible
+  // and show the campaign editor in a drawer instead.
 
   return (
     <div className="h-[calc(100vh-7rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
@@ -481,7 +479,7 @@ export const PlaylistEditor = () => {
                 <ChannelsList
                   channels={playlistChannels}
                   activeChannelId={null}
-                  onSelectChannel={setSelectedChannel}
+                  onSelectChannel={handleSelectChannel}
                   onCreateChannel={handleCreateChannel}
                   onUpdateChannel={handleUpdateChannel}
                   onDeleteChannel={handleDeleteChannel}
@@ -590,6 +588,13 @@ export const PlaylistEditor = () => {
           </div>
         )}
       </div>
+      <CampaignDrawer
+        channel={selectedChannel}
+        isOpen={isCampaignDrawerOpen}
+        onClose={() => setIsCampaignDrawerOpen(false)}
+        onUpdateChannel={handleUpdateChannel}
+        playlistName={formData.name || "Nova Playlist"}
+      />
     </div>
   );
 };
