@@ -53,13 +53,26 @@ const DeviceGroupsPage = () => {
   } = useDeviceGroups();
   const { channels } = useChannels();
   const { stores } = useStores();
+  const { updateDevice } = useDevices();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<DeviceGroupWithDetails | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [channelDialogGroup, setChannelDialogGroup] = useState<DeviceGroupWithDetails | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
+  const [activeDevice, setActiveDevice] = useState<any>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
 
   const [formData, setFormData] = useState<DeviceGroupInsert>({
     name: "",
