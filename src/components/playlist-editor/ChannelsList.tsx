@@ -329,35 +329,20 @@ export const ChannelsList = ({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header - Fixed */}
-      <div className="flex items-center justify-between p-4 border-b shrink-0">
+      {/* Header - Compact */}
+      <div className="flex items-center justify-between p-4 border-b shrink-0 bg-muted/20">
         <div>
-          <h2 className="text-base font-semibold flex items-center gap-2">
+          <h2 className="text-sm font-semibold flex items-center gap-2">
             <Radio className="w-4 h-4 text-primary" />
             Campanhas
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {channels.length} {channels.length === 1 ? "campanha" : "campanhas"}
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            {channels.length} {channels.length === 1 ? "agrupador" : "agrupadores"}
           </p>
         </div>
-        <Button onClick={openNewDialog} size="sm" variant="outline">
+        <Button onClick={openNewDialog} size="icon" variant="outline" className="h-8 w-8">
           <Plus className="w-4 h-4" />
         </Button>
-      </div>
-
-      {/* Legend */}
-      <div className="px-4 py-2 bg-muted/30 border-b flex gap-3 text-[10px] text-muted-foreground overflow-x-auto shrink-0">
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <div className="w-2 h-2 rounded-full bg-green-500" />
-          <span>Ao Vivo</span>
-        </div>
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <span>Programado</span>
-        </div>
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <div className="w-2 h-2 rounded-full bg-yellow-500" />
-          <span>Fallback</span>
-        </div>
       </div>
 
       {/* Channels List - Scrollable */}
