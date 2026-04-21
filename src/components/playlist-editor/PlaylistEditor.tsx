@@ -437,17 +437,8 @@ export const PlaylistEditor = () => {
   const totalDuration = getTotalDuration();
   const currentPreviewItem = items[currentPreviewIndex];
 
-  // If editing a channel, show channel editor
-  if (selectedChannel) {
-    return (
-      <ChannelEditor
-        channel={selectedChannel}
-        playlistName={formData.name || "Nova Playlist"}
-        onBack={() => setSelectedChannel(null)}
-        onUpdateChannel={(updates) => handleUpdateChannel(selectedChannel.id, updates)}
-      />
-    );
-  }
+  // We removed the early return for selectedChannel to keep the timeline visible
+  // and show the campaign editor in a drawer instead.
 
   return (
     <div className="h-[calc(100vh-7rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
