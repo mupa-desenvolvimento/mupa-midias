@@ -3,17 +3,10 @@ import { PlaylistItem } from "@/hooks/usePlaylistItems";
 import { useNews } from "@/hooks/useNews";
 import { NewsLayoutRenderer, type NewsLayoutId } from "@/components/news/NewsLayoutPreview";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { 
-  Play, 
-  Pause, 
-  SkipBack, 
-  SkipForward, 
-  Maximize2, 
-  Volume2, 
+import {
+  Maximize2,
+  Volume2,
   VolumeX,
-  ZoomIn,
-  ZoomOut,
   Grid3X3,
   Loader2
 } from "lucide-react";
