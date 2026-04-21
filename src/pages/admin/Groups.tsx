@@ -889,7 +889,44 @@ const GroupsPage = () => {
                   {groups.filter(g => g.id !== editingGroup?.id).map(g => (<SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>))}
                 </SelectContent>
               </Select>
+            <div className="space-y-2">
+              <Label>Cor do Grupo</Label>
+              <p className="text-xs text-muted-foreground">Define a identidade visual nos cards e conectores</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, color: "auto" })}
+                  className={cn(
+                    "h-9 px-3 rounded-md border text-xs font-medium transition-all flex items-center gap-2",
+                    formData.color === "auto"
+                      ? "border-foreground/40 bg-muted shadow-sm"
+                      : "border-border bg-background hover:border-foreground/20"
+                  )}
+                  aria-label="Cor automática"
+                >
+                  <span className="h-4 w-4 rounded-full border border-border bg-gradient-to-br from-blue-300 via-violet-300 to-rose-300" />
+                  Auto
+                </button>
+                {GROUP_COLOR_PALETTE.map(c => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color: c.key })}
+                    className={cn(
+                      "h-9 w-9 rounded-md border transition-all flex items-center justify-center",
+                      formData.color === c.key
+                        ? "border-foreground/60 ring-2 ring-foreground/20 shadow-sm scale-105"
+                        : "border-border hover:border-foreground/30"
+                    )}
+                    aria-label={COLOR_LABELS[c.key]}
+                    title={COLOR_LABELS[c.key]}
+                  >
+                    <span className={cn("h-4 w-4 rounded-full", COLOR_SWATCHES[c.key])} />
+                  </button>
+                ))}
+              </div>
             </div>
+            
             <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
               <Label className="text-sm font-semibold">Playlist</Label>
               <div className="flex flex-col gap-3">
