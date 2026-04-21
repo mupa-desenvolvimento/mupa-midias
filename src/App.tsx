@@ -34,6 +34,7 @@ import Groups from "./pages/admin/Groups";
 import RetailMedia from "./pages/RetailMedia";
 import Playlists from "./pages/admin/Playlists";
 import PlaylistEditorPage from "./pages/admin/PlaylistEditor";
+import PlaylistSmartTimelinePage from "./pages/admin/PlaylistSmartTimeline";
 import Tenants from "./pages/admin/Tenants";
 import Companies from "./pages/admin/Companies";
 import ProductDisplayConfig from "./pages/admin/ProductDisplayConfig";
@@ -191,6 +192,7 @@ function AppContent() {
                         <Route path="groups" element={<Groups />} />
                         <Route path="playlists" element={<Playlists />} />
                         <Route path="playlists/:id/edit" element={<PlaylistEditorPage />} />
+                        <Route path="playlists/:id/smart-timeline" element={<PlaylistSmartTimelinePage />} />
                         <Route path="playlists/new" element={<PlaylistEditorPage />} />
                         <Route path="media" element={<Media />} />
                         <Route path="analytics" element={<Analytics />} />

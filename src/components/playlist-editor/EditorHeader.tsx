@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useNavigate, useParams } from "react-router-dom";
 import { 
   ArrowLeft, 
   Save, 
@@ -11,7 +12,8 @@ import {
   Download,
   MoreHorizontal,
   Check,
-  Circle
+  Circle,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +44,9 @@ export const EditorHeader = ({
   onSave,
   onUpdateDevices,
 }: EditorHeaderProps) => {
+  const navigate = useNavigate();
+  const { id: playlistId } = useParams<{ id: string }>();
+
   return (
     <header className="h-14 flex items-center justify-between px-4 bg-muted/50 border-b border-border">
       {/* Left Section */}
@@ -97,6 +102,20 @@ export const EditorHeader = ({
 
       {/* Right Section */}
       <div className="flex items-center gap-2">
+        {/* Smart Timeline Mode Toggle */}
+        {playlistId && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary"
+            onClick={() => navigate(`/admin/playlists/${playlistId}/smart-timeline`)}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Modo Timeline Inteligente</span>
+            <span className="md:hidden">Timeline IA</span>
+          </Button>
+        )}
+
         {/* Connected Devices */}
         {connectedDevicesCount > 0 && (
           <Button
