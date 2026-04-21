@@ -36,6 +36,8 @@ interface GroupItemProps {
   onUnlinkDevice: (groupId: string, deviceId: string) => void;
   getStoresForGroup: (groupId: string) => { id: string; store_id: string; store?: { id: string; name: string; code: string } | null }[];
   onUnlinkStore: (groupId: string, storeId: string) => void;
+  viewMode: 'list' | 'map';
+  isLast?: boolean;
 }
 
 const GroupItem = ({ group, level, allGroups, onEdit, onDelete, onCreateSubgroup, onLinkDevice, onLinkInternalGroups, getDevicesForGroup, onUnlinkDevice, getStoresForGroup, onUnlinkStore }: GroupItemProps) => {
