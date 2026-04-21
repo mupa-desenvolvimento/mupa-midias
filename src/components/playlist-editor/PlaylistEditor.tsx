@@ -1,39 +1,41 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePlaylists } from "@/hooks/usePlaylists";
-import { usePlaylistItems } from "@/hooks/usePlaylistItems";
-import { usePlaylistChannels, PlaylistChannel, usePlaylistChannelItems } from "@/hooks/usePlaylistChannels";
+import {
+  usePlaylistChannels,
+  PlaylistChannel,
+  PlaylistChannelItem,
+} from "@/hooks/usePlaylistChannels";
 import { useChannels } from "@/hooks/useChannels";
 import { useDevices } from "@/hooks/useDevices";
 import { MediaItem } from "@/hooks/useMediaItems";
-import { AutoContentItem } from "@/hooks/useAutoContent";
 import { EditorCanvas } from "./EditorCanvas";
-import { EditorTimeline } from "./EditorTimeline";
 import { EditorHeader } from "./EditorHeader";
 import { EditorPropertiesPanel } from "./EditorPropertiesPanel";
 import { ChannelsList } from "./ChannelsList";
 import { PlaylistSettings } from "./PlaylistSettings";
+import { GlobalTimeline } from "./GlobalTimeline";
+import { CampaignDrawer } from "./CampaignDrawer";
+import { EditItemDrawer } from "./EditItemDrawer";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { db } from "@/services/firebase";
-import { ref, update } from "firebase/database";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  Radio, 
-  Layers, 
-  Folder, 
-  Film, 
-  Settings, 
-  Plus, 
-  ChevronRight, 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Folder,
+  Film,
+  Settings,
+  Plus,
+  ChevronRight,
   ChevronLeft,
-  LayoutList,
   Box,
-  Monitor
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PlaylistFormData {
   name: string;
@@ -47,46 +49,44 @@ interface PlaylistFormData {
   start_time: string;
   end_time: string;
   priority: number;
-  content_scale: 'cover' | 'contain' | 'fill';
+  content_scale: "cover" | "contain" | "fill";
 }
 
 export const PlaylistEditor = () => {
   const navigate = useNavigate();
   const { id: playlistId } = useParams<{ id: string }>();
   const { toast } = useToast();
-  
+
   const { playlists, updatePlaylist, createPlaylist } = usePlaylists();
   const { channels: distributionChannels } = useChannels();
   const { devices } = useDevices();
   const [createdPlaylistId, setCreatedPlaylistId] = useState<string | null>(null);
-  
+
   const activePlaylistId = createdPlaylistId || playlistId || null;
-  
-  // Playlist channels (campaigns)
+
+  // Playlist channels (campaigns) + items in one query
   const {
     channels: playlistChannels,
-    isLoading: channelsLoading,
+    channelsWithItems,
     createChannel,
     updateChannel,
     deleteChannel,
     reorderChannels,
+    reorderGlobalItems,
+    updateChannelItem,
   } = usePlaylistChannels(activePlaylistId);
-  
-  const [activeSidebarTab, setActiveSidebarTab] = useState<"campaigns" | "media" | "settings">("campaigns");
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-  const [selectedChannel, setSelectedChannel] = useState<PlaylistChannel | null>(null);
-  
-  // Fetch items for the selected channel
-  const { 
-    items: channelItems, 
-    isLoading: itemsLoading, 
-    addItem: addChannelItem, 
-    removeItem: removeChannelItem, 
-    updateItem: updateChannelItem, 
-    reorderItems: reorderChannelItems,
-    getTotalDuration: getChannelTotalDuration 
-  } = usePlaylistChannelItems(selectedChannel?.id || null);
 
+  // Sidebar state
+  const [activeSidebarTab, setActiveSidebarTab] = useState<
+    "campaigns" | "media" | "settings"
+  >("campaigns");
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+
+  // Drawer state
+  const [drawerChannel, setDrawerChannel] = useState<PlaylistChannel | null>(null);
+  const [editingItem, setEditingItem] = useState<PlaylistChannelItem | null>(null);
+
+  // Player state
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -95,15 +95,10 @@ export const PlaylistEditor = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [zoom, setZoom] = useState(100);
 
-  // Auto-select first channel if none selected
-  useEffect(() => {
-    if (!selectedChannel && playlistChannels.length > 0) {
-      setSelectedChannel(playlistChannels[0]);
-    }
-  }, [playlistChannels, selectedChannel]);
-
   const existingPlaylist = playlists.find((p) => p.id === activePlaylistId);
-  const connectedDevices = devices.filter(d => d.current_playlist_id === activePlaylistId);
+  const connectedDevices = devices.filter(
+    (d) => d.current_playlist_id === activePlaylistId
+  );
 
   const [formData, setFormData] = useState<PlaylistFormData>({
     name: "",
@@ -117,13 +112,17 @@ export const PlaylistEditor = () => {
     start_time: "00:00",
     end_time: "23:59",
     priority: 5,
-    content_scale: 'cover',
+    content_scale: "cover",
   });
 
   useEffect(() => {
     if (existingPlaylist) {
       const schedule = existingPlaylist.schedule as Record<string, unknown> | null;
-      const contentScale = (existingPlaylist as any).content_scale as 'cover' | 'contain' | 'fill' | null;
+      const contentScale = (existingPlaylist as any).content_scale as
+        | "cover"
+        | "contain"
+        | "fill"
+        | null;
       setFormData({
         name: existingPlaylist.name,
         description: existingPlaylist.description,
@@ -136,7 +135,7 @@ export const PlaylistEditor = () => {
         start_time: (schedule?.start_time as string) || "00:00",
         end_time: (schedule?.end_time as string) || "23:59",
         priority: (schedule?.priority as number) || 5,
-        content_scale: contentScale || 'cover',
+        content_scale: contentScale || "cover",
       });
     }
   }, [existingPlaylist]);
@@ -146,94 +145,121 @@ export const PlaylistEditor = () => {
     setHasUnsavedChanges(true);
   }, []);
 
-  const ensurePlaylistExists = async (): Promise<string | null> => {
-    if (activePlaylistId) return activePlaylistId;
-    
-    const tempName = formData.name || `Nova Playlist ${new Date().toLocaleString("pt-BR")}`;
-    
-    const schedule = {
-      start_date: formData.start_date,
-      end_date: formData.end_date,
-      days_of_week: formData.days_of_week,
-      start_time: formData.start_time,
-      end_time: formData.end_time,
-      priority: formData.priority,
-    };
-
-    const playlistData = {
-      name: tempName,
-      description: formData.description,
-      channel_id: formData.channel_id,
-      is_active: formData.is_active,
-      is_default: formData.is_default,
-      schedule,
-      content_scale: formData.content_scale,
-      has_channels: true,
-    };
-
-    try {
-      const result = await createPlaylist.mutateAsync(playlistData);
-      setCreatedPlaylistId(result.id);
-      setFormData(prev => ({ ...prev, name: tempName }));
-      return result.id;
-    } catch (error) {
-      toast({ title: "Erro ao criar playlist", variant: "destructive" });
-      return null;
-    }
-  };
-
-  const handleAddMedia = useCallback(async (media: MediaItem, position: number) => {
-    if (!selectedChannel) {
-      toast({ title: "Selecione uma campanha primeiro", variant: "destructive" });
-      return;
-    }
-    
-    const itemDuration = (media.type === "video" && media.duration) ? media.duration : (media.duration ?? 8);
-    
-    addChannelItem.mutate({
-      channel_id: selectedChannel.id,
-      media_id: media.id,
-      position,
-      duration_override: itemDuration,
+  // Build flat timeline (all items from all campaigns)
+  const flatTimelineItems = useMemo(() => {
+    const items: Array<{
+      item: PlaylistChannelItem;
+      channel: PlaylistChannel;
+    }> = [];
+    channelsWithItems.forEach((channel) => {
+      channel.items?.forEach((item) => {
+        items.push({ item, channel });
+      });
     });
-  }, [selectedChannel, addChannelItem, toast]);
+    items.sort(
+      (a, b) => (a.item.global_position ?? 0) - (b.item.global_position ?? 0)
+    );
+    return items;
+  }, [channelsWithItems]);
 
-  const handleRemoveItem = useCallback((id: string) => {
-    removeChannelItem.mutate(id);
-    if (selectedItemId === id) {
-      setSelectedItemId(null);
-    }
-  }, [removeChannelItem, selectedItemId]);
+  const totalDuration = useMemo(
+    () =>
+      flatTimelineItems.reduce(
+        (sum, e) =>
+          sum +
+          (e.item.duration_override || e.item.media?.duration || 8),
+        0
+      ),
+    [flatTimelineItems]
+  );
 
-  const handleDuplicateItem = useCallback(async (item: any) => {
-    if (!selectedChannel) return;
-    
-    addChannelItem.mutate({
-      channel_id: selectedChannel.id,
-      media_id: item.media_id,
-      position: channelItems.length,
-      duration_override: item.duration_override,
-    });
-  }, [channelItems.length, addChannelItem, selectedChannel]);
+  // Adapt current item for canvas preview
+  const currentPreviewEntry = flatTimelineItems[currentPreviewIndex];
+  const currentPreviewItem = currentPreviewEntry
+    ? ({
+        ...currentPreviewEntry.item,
+        playlist_id: activePlaylistId || "",
+      } as any)
+    : undefined;
 
-  const handleUpdateDuration = useCallback((id: string, duration: number) => {
-    updateChannelItem.mutate({ id, duration_override: duration });
-  }, [updateChannelItem]);
+  // Handlers
+  const handleSelectChannel = useCallback((channel: PlaylistChannel) => {
+    setDrawerChannel(channel);
+  }, []);
 
-  const handleUpdateItemSettings = useCallback((id: string, updates: any) => {
-    updateChannelItem.mutate({ id, ...updates });
-  }, [updateChannelItem]);
+  const handleEditItem = useCallback((item: PlaylistChannelItem) => {
+    setEditingItem(item);
+  }, []);
 
-  const handleReorderItems = useCallback((orderedItems: { id: string; position: number }[]) => {
-    reorderChannelItems.mutate(orderedItems);
-  }, [reorderChannelItems]);
+  const handleRemoveItem = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from("playlist_channel_items")
+        .delete()
+        .eq("id", id);
+      if (error) {
+        toast({
+          title: "Erro ao remover mídia",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Mídia removida" });
+        // Trigger refetch via invalidating channel items handled by hook on operations.
+        // Force a manual re-trigger by toggling state if needed; the channelsWithItems query
+        // will re-run on focus / next mount. To make UX immediate, we do a hard refetch.
+        window.dispatchEvent(new Event("focus"));
+      }
+      if (selectedItemId === id) setSelectedItemId(null);
+    },
+    [selectedItemId, toast]
+  );
+
+  const handleAddMediaToActiveCampaign = useCallback(
+    async (media: MediaItem) => {
+      const targetChannel =
+        drawerChannel || playlistChannels[0];
+      if (!targetChannel) {
+        toast({
+          title: "Crie uma campanha primeiro",
+          variant: "destructive",
+        });
+        return;
+      }
+      const dur =
+        media.type === "video" && media.duration
+          ? media.duration
+          : media.duration ?? 8;
+
+      const { error } = await supabase
+        .from("playlist_channel_items")
+        .insert([
+          {
+            channel_id: targetChannel.id,
+            media_id: media.id,
+            position: targetChannel.item_count || 0,
+            duration_override: dur,
+          },
+        ]);
+      if (error) {
+        toast({
+          title: "Erro ao adicionar mídia",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: `Mídia adicionada à campanha "${targetChannel.name}"` });
+        window.dispatchEvent(new Event("focus"));
+      }
+    },
+    [drawerChannel, playlistChannels, toast]
+  );
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast({ title: "Nome é obrigatório", variant: "destructive" });
       return;
     }
-
     setIsSaving(true);
     const schedule = {
       start_date: formData.start_date,
@@ -243,7 +269,6 @@ export const PlaylistEditor = () => {
       end_time: formData.end_time,
       priority: formData.priority,
     };
-
     const playlistData = {
       name: formData.name,
       description: formData.description,
@@ -254,10 +279,12 @@ export const PlaylistEditor = () => {
       content_scale: formData.content_scale,
       has_channels: true,
     };
-
     try {
       if (activePlaylistId) {
-        await updatePlaylist.mutateAsync({ id: activePlaylistId, ...playlistData });
+        await updatePlaylist.mutateAsync({
+          id: activePlaylistId,
+          ...playlistData,
+        });
       } else {
         const result = await createPlaylist.mutateAsync(playlistData);
         setCreatedPlaylistId(result.id);
@@ -276,10 +303,12 @@ export const PlaylistEditor = () => {
       toast({ title: "Salve a playlist primeiro", variant: "destructive" });
       return;
     }
-
     setIsUpdatingDevices(true);
     try {
-      await supabase.from("playlists").update({ updated_at: new Date().toISOString() }).eq("id", activePlaylistId);
+      await supabase
+        .from("playlists")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", activePlaylistId);
       toast({ title: "Sincronização enviada!" });
     } catch (error) {
       toast({ title: "Erro ao sincronizar", variant: "destructive" });
@@ -295,34 +324,24 @@ export const PlaylistEditor = () => {
     { id: "settings", icon: Settings, label: "Configurações" },
   ];
 
-  // Adapt channelItems to match PlaylistItem type expected by EditorTimeline/EditorCanvas
-  const adaptedItems = useMemo(() => {
-    return (channelItems || []).map(item => ({
-      ...item,
-      playlist_id: activePlaylistId || "",
-    }));
-  }, [channelItems, activePlaylistId]) as any[];
-
-  const currentPreviewItem = adaptedItems[currentPreviewIndex];
-  const totalDuration = getChannelTotalDuration();
-
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
-      {/* Editor Main Layout */}
       <div className="flex-1 flex overflow-hidden">
-        
-        {/* 1. COMPACT LEFT SIDEBAR */}
-        <div className="w-16 border-r bg-card flex flex-col items-center py-4 gap-4 z-20 shrink-0">
-          <TooltipProvider>
+        {/* Compact Left Sidebar */}
+        <div className="w-16 border-r bg-card flex flex-col items-center py-4 gap-3 z-20 shrink-0">
+          <TooltipProvider delayDuration={300}>
             {sidebarItems.map((item) => (
               <Tooltip key={item.id}>
                 <TooltipTrigger asChild>
                   <Button
                     variant={activeSidebarTab === item.id ? "secondary" : "ghost"}
                     size="icon"
+                    disabled={item.disabled}
                     className={cn(
                       "w-10 h-10 rounded-xl transition-all",
-                      activeSidebarTab === item.id ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:text-foreground"
+                      activeSidebarTab === item.id
+                        ? "bg-primary/10 text-primary hover:bg-primary/20"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                     onClick={() => {
                       setActiveSidebarTab(item.id as any);
@@ -337,10 +356,8 @@ export const PlaylistEditor = () => {
                 </TooltipContent>
               </Tooltip>
             ))}
-          </TooltipProvider>
-          
-          <div className="mt-auto pb-4">
-             <TooltipProvider>
+
+            <div className="mt-auto pt-4">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -349,57 +366,70 @@ export const PlaylistEditor = () => {
                     className="w-10 h-10 rounded-xl text-muted-foreground hover:text-foreground"
                     onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
                   >
-                    {isSidebarExpanded ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                    {isSidebarExpanded ? (
+                      <ChevronLeft className="w-5 h-5" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>{isSidebarExpanded ? "Colapsar menu" : "Expandir menu"}</p>
+                  <p>{isSidebarExpanded ? "Recolher" : "Expandir"}</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          </div>
+            </div>
+          </TooltipProvider>
         </div>
 
-        {/* 2. EXPANDED SIDE PANEL */}
+        {/* Expanded Side Panel */}
         {isSidebarExpanded && (
-          <div className="w-80 border-r bg-card flex flex-col overflow-hidden z-10 animate-in slide-in-from-left duration-200 shrink-0">
+          <div className="w-80 border-r bg-card flex flex-col overflow-hidden z-10 shrink-0 animate-in slide-in-from-left duration-200">
             {activeSidebarTab === "campaigns" && (
               <ChannelsList
                 channels={playlistChannels}
-                activeChannelId={selectedChannel?.id || null}
-                onSelectChannel={setSelectedChannel}
-                onCreateChannel={(data) => createChannel.mutate({ ...data, playlist_id: activePlaylistId || "" })}
-                onUpdateChannel={(id, data) => updateChannel.mutate({ id, ...data })}
+                activeChannelId={drawerChannel?.id || null}
+                onSelectChannel={handleSelectChannel}
+                onCreateChannel={(data) =>
+                  createChannel.mutate({
+                    ...data,
+                    playlist_id: activePlaylistId || "",
+                  })
+                }
+                onUpdateChannel={(id, data) =>
+                  updateChannel.mutate({ id, ...data })
+                }
                 onDeleteChannel={(id) => deleteChannel.mutate(id)}
-                onReorderChannels={(ordered) => reorderChannels.mutate(ordered)}
+                onReorderChannels={(ordered) =>
+                  reorderChannels.mutate(ordered)
+                }
                 playlistId={activePlaylistId || ""}
                 playlistName={formData.name || "Nova Playlist"}
               />
             )}
-            
+
             {activeSidebarTab === "media" && (
               <div className="flex-1 overflow-hidden">
                 <EditorPropertiesPanel
                   activePanel="media"
                   formData={formData}
                   channels={distributionChannels}
-                  itemCount={channelItems.length}
+                  itemCount={flatTimelineItems.length}
                   totalDuration={totalDuration}
                   connectedDevicesCount={connectedDevices.length}
                   onFormChange={handleFormChange}
-                  onAddMedia={handleAddMedia}
-                  itemsLength={channelItems.length}
-                  onAddAutoContent={() => {}} // Not implemented for channels yet in this view
+                  onAddMedia={(media) => handleAddMediaToActiveCampaign(media)}
+                  itemsLength={flatTimelineItems.length}
+                  onAddAutoContent={() => {}}
                 />
               </div>
             )}
-            
+
             {activeSidebarTab === "settings" && (
               <div className="flex-1 overflow-hidden">
                 <PlaylistSettings
                   playlist={formData}
                   channels={distributionChannels}
-                  itemCount={channelItems.length}
+                  itemCount={flatTimelineItems.length}
                   totalDuration={totalDuration}
                   onChange={handleFormChange}
                   connectedDevicesCount={connectedDevices.length}
@@ -409,9 +439,8 @@ export const PlaylistEditor = () => {
           </div>
         )}
 
-        {/* 3. MAIN CONTENT AREA */}
+        {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          {/* Header */}
           <EditorHeader
             projectName={formData.name || "Novo Projeto"}
             hasUnsavedChanges={hasUnsavedChanges}
@@ -424,62 +453,40 @@ export const PlaylistEditor = () => {
           />
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Center Area - Canvas/Preview */}
+            {/* Preview Canvas (top) */}
             <div className="flex-1 flex flex-col min-h-0 bg-muted/20">
-              {selectedChannel ? (
-                <div className="flex-1 flex flex-col min-h-0">
-                   {/* Campaign Info Bar */}
-                   <div className="px-6 py-3 border-b bg-card flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Monitor className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <h2 className="text-sm font-semibold">{selectedChannel.name}</h2>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
-                          <span className="flex items-center gap-1">
-                            <Layers className="w-3 h-3" />
-                            {channelItems.length} mídias
-                          </span>
-                          <span className="opacity-30">|</span>
-                          <span className="flex items-center gap-1">
-                            <Folder className="w-3 h-3" />
-                            {selectedChannel.start_time.slice(0, 5)} - {selectedChannel.end_time.slice(0, 5)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <EditorCanvas
-                    currentItem={currentPreviewItem as any}
-                    isPlaying={isPreviewPlaying}
-                    onTogglePlay={() => setIsPreviewPlaying(!isPreviewPlaying)}
-                    onPrevious={() => setCurrentPreviewIndex(Math.max(0, currentPreviewIndex - 1))}
-                    onNext={() => {
-                      if (currentPreviewIndex >= channelItems.length - 1) {
-                        setCurrentPreviewIndex(0);
-                      } else {
-                        setCurrentPreviewIndex(currentPreviewIndex + 1);
-                      }
-                    }}
-                    currentIndex={currentPreviewIndex}
-                    totalItems={channelItems.length}
-                    zoom={zoom}
-                    onZoomChange={setZoom}
-                  />
-                </div>
+              {flatTimelineItems.length > 0 ? (
+                <EditorCanvas
+                  currentItem={currentPreviewItem}
+                  isPlaying={isPreviewPlaying}
+                  onTogglePlay={() => setIsPreviewPlaying(!isPreviewPlaying)}
+                  onPrevious={() =>
+                    setCurrentPreviewIndex(Math.max(0, currentPreviewIndex - 1))
+                  }
+                  onNext={() => {
+                    if (currentPreviewIndex >= flatTimelineItems.length - 1) {
+                      setCurrentPreviewIndex(0);
+                    } else {
+                      setCurrentPreviewIndex(currentPreviewIndex + 1);
+                    }
+                  }}
+                  currentIndex={currentPreviewIndex}
+                  totalItems={flatTimelineItems.length}
+                  zoom={zoom}
+                  onZoomChange={setZoom}
+                />
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                     <Folder className="w-8 h-8 text-muted-foreground/50" />
                   </div>
-                  <h3 className="text-lg font-semibold">Nenhuma Campanha Selecionada</h3>
+                  <h3 className="text-lg font-semibold">Playlist vazia</h3>
                   <p className="text-muted-foreground max-w-sm mt-2">
-                    Selecione uma campanha no painel à esquerda para visualizar e editar seu conteúdo na timeline.
+                    Crie uma campanha e adicione mídias para começar a montar
+                    sua programação.
                   </p>
-                  <Button 
-                    className="mt-6 gap-2" 
+                  <Button
+                    className="mt-6 gap-2"
                     variant="outline"
                     onClick={() => {
                       setActiveSidebarTab("campaigns");
@@ -493,28 +500,64 @@ export const PlaylistEditor = () => {
               )}
             </div>
 
-            {/* Bottom Area - Timeline */}
-            <div className="shrink-0 h-[280px]">
-              <EditorTimeline
-                items={adaptedItems as any}
+            {/* Global Timeline (bottom) - SOURCE OF TRUTH */}
+            <div className="shrink-0 h-[260px]">
+              <GlobalTimeline
+                channelsWithItems={channelsWithItems}
                 selectedItemId={selectedItemId}
                 currentPreviewIndex={currentPreviewIndex}
+                isPlaying={isPreviewPlaying}
                 onSelectItem={setSelectedItemId}
                 onSetPreviewIndex={setCurrentPreviewIndex}
-                onAddMedia={handleAddMedia}
+                onTogglePlay={() => setIsPreviewPlaying(!isPreviewPlaying)}
+                onPrevious={() =>
+                  setCurrentPreviewIndex(Math.max(0, currentPreviewIndex - 1))
+                }
+                onNext={() => {
+                  if (currentPreviewIndex >= flatTimelineItems.length - 1) {
+                    setCurrentPreviewIndex(0);
+                  } else {
+                    setCurrentPreviewIndex(currentPreviewIndex + 1);
+                  }
+                }}
+                onEditItem={handleEditItem}
                 onRemoveItem={handleRemoveItem}
-                onDuplicateItem={handleDuplicateItem}
-                onUpdateDuration={handleUpdateDuration}
-                onUpdateItemSettings={handleUpdateItemSettings}
-                onReorderItems={handleReorderItems}
-                totalDuration={totalDuration}
-                isPlaying={isPreviewPlaying}
+                onSelectChannel={handleSelectChannel}
+                onReorderGlobal={(updates) => reorderGlobalItems.mutate(updates)}
+                onAddMedia={handleAddMediaToActiveCampaign}
               />
             </div>
           </div>
         </div>
-
       </div>
+
+      {/* Drawers */}
+      <CampaignDrawer
+        channel={drawerChannel}
+        isOpen={!!drawerChannel}
+        onClose={() => setDrawerChannel(null)}
+        onUpdateChannel={(id, updates) => updateChannel.mutate({ id, ...updates })}
+      />
+
+      <EditItemDrawer
+        item={editingItem}
+        channel={
+          editingItem
+            ? channelsWithItems.find((c) => c.id === editingItem.channel_id) || null
+            : null
+        }
+        channels={playlistChannels}
+        isOpen={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        onSave={(id, updates) => {
+          updateChannelItem.mutate({ id, ...updates });
+          setEditingItem(null);
+        }}
+        onChangeChannel={(channel) => {
+          setEditingItem(null);
+          setDrawerChannel(channel);
+        }}
+      />
     </div>
   );
 };
