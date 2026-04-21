@@ -22,6 +22,76 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { cn } from "@/lib/utils";
 
+// ===== Soft color palette per group (low saturation, accessible in light/dark) =====
+// Uses Tailwind's predefined color utilities to avoid touching the design tokens.
+// Each entry provides paired classes for the side bar accent, soft surface, badge
+// and icon background — keeping a coherent look across the card.
+const GROUP_COLOR_PALETTE = [
+  {
+    key: "blue",
+    bar: "bg-blue-400/70 dark:bg-blue-400/60",
+    softBg: "bg-blue-50/60 dark:bg-blue-950/20",
+    iconBg: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+    iconHover: "group-hover/node:bg-blue-500 group-hover/node:text-white",
+    badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+    line: "bg-blue-300/60 dark:bg-blue-400/30",
+  },
+  {
+    key: "green",
+    bar: "bg-emerald-400/70 dark:bg-emerald-400/60",
+    softBg: "bg-emerald-50/60 dark:bg-emerald-950/20",
+    iconBg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    iconHover: "group-hover/node:bg-emerald-500 group-hover/node:text-white",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    line: "bg-emerald-300/60 dark:bg-emerald-400/30",
+  },
+  {
+    key: "orange",
+    bar: "bg-orange-400/70 dark:bg-orange-400/60",
+    softBg: "bg-orange-50/60 dark:bg-orange-950/20",
+    iconBg: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+    iconHover: "group-hover/node:bg-orange-500 group-hover/node:text-white",
+    badge: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+    line: "bg-orange-300/60 dark:bg-orange-400/30",
+  },
+  {
+    key: "violet",
+    bar: "bg-violet-400/70 dark:bg-violet-400/60",
+    softBg: "bg-violet-50/60 dark:bg-violet-950/20",
+    iconBg: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+    iconHover: "group-hover/node:bg-violet-500 group-hover/node:text-white",
+    badge: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+    line: "bg-violet-300/60 dark:bg-violet-400/30",
+  },
+  {
+    key: "amber",
+    bar: "bg-amber-400/70 dark:bg-amber-400/60",
+    softBg: "bg-amber-50/60 dark:bg-amber-950/20",
+    iconBg: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    iconHover: "group-hover/node:bg-amber-500 group-hover/node:text-white",
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    line: "bg-amber-300/60 dark:bg-amber-400/30",
+  },
+  {
+    key: "rose",
+    bar: "bg-rose-400/70 dark:bg-rose-400/60",
+    softBg: "bg-rose-50/60 dark:bg-rose-950/20",
+    iconBg: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+    iconHover: "group-hover/node:bg-rose-500 group-hover/node:text-white",
+    badge: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+    line: "bg-rose-300/60 dark:bg-rose-400/30",
+  },
+];
+
+// Deterministic color assignment based on group id (so the same group keeps the same color)
+const getGroupColor = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return GROUP_COLOR_PALETTE[hash % GROUP_COLOR_PALETTE.length];
+};
+
 // ===== Global Group Tree Item =====
 interface GroupItemProps {
   group: GroupWithDetails;
