@@ -627,7 +627,6 @@ const GroupsPage = () => {
     <div className="h-full w-full overflow-y-auto custom-scrollbar">
       <div className="px-4 sm:px-6 pt-[15px] pb-6 max-w-[1600px] mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <TabsList>
