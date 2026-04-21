@@ -106,23 +106,28 @@ export const AppDrawerHeader = ({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            {titleSlot ?? (
+            {titleSlot ? (
+              <>
+                {/* Hidden title for a11y when using custom slot */}
+                <SheetTitle className="sr-only">{title || subtitle || "Drawer"}</SheetTitle>
+                {titleSlot}
+              </>
+            ) : (
               <>
                 {subtitle && (
-                  <SheetTitle asChild>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium leading-tight">
-                      {subtitle}
-                    </p>
-                  </SheetTitle>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium leading-tight">
+                    {subtitle}
+                  </p>
                 )}
-                <h2
-                  className="text-base font-semibold text-foreground truncate-title leading-snug mt-0.5"
-                  title={title}
-                >
-                  {title}
-                </h2>
-                {!subtitle && (
-                  <SheetTitle className="sr-only">{title}</SheetTitle>
+                {title && (
+                  <SheetTitle asChild>
+                    <h2
+                      className="text-base font-semibold text-foreground truncate-title leading-snug mt-0.5"
+                      title={title}
+                    >
+                      {title}
+                    </h2>
+                  </SheetTitle>
                 )}
               </>
             )}
