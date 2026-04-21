@@ -133,7 +133,7 @@ export const CampaignDrawer = ({
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0" side="left" align="start">
                 <div className="h-[500px]">
-                  <MediaLibrary onAddMedia={handleAddMedia} />
+                  <MediaLibrary onDragStart={handleAddMedia} onSelect={handleAddMedia} />
                 </div>
               </PopoverContent>
             </Popover>
