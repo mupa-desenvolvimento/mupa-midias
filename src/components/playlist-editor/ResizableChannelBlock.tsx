@@ -218,7 +218,7 @@ export const ResizableChannelBlock = ({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
-                Editar conteúdos do canal
+                Editar conteúdos da campanha
               </TooltipContent>
             </Tooltip>
 
