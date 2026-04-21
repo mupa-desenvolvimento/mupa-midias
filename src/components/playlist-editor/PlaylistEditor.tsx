@@ -588,6 +588,13 @@ export const PlaylistEditor = () => {
           </div>
         )}
       </div>
+      <CampaignDrawer
+        channel={selectedChannel}
+        isOpen={isCampaignDrawerOpen}
+        onClose={() => setIsCampaignDrawerOpen(false)}
+        onUpdateChannel={handleUpdateChannel}
+        playlistName={formData.name || "Nova Playlist"}
+      />
     </div>
   );
 };
