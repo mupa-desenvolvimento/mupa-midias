@@ -25,7 +25,7 @@ import { useListState } from "@/hooks/useListState";
 import { DeviceGroupsTree } from "@/components/devices/DeviceGroupsTree";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { DeviceAvailablePanel } from "@/components/devices/management/DeviceAvailablePanel";
-import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, defaultDropAnimationSideEffects } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor } from "@dnd-kit/core";
 import { useToast } from "@/hooks/use-toast";
 import { DeviceDraggableItem } from "@/components/devices/management/DeviceDraggableItem";
 
@@ -135,6 +135,16 @@ const DeviceGroupsPage = () => {
       ? []
       : filteredGroups.slice(startIndex, startIndex + state.pageSize);
 
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: null,
+      store_id: null,
+      screen_type: "tv",
+      is_default: false,
+    });
+  };
+
   const handleCreate = () => {
     createDeviceGroup.mutate(formData, {
       onSuccess: () => {
@@ -217,15 +227,12 @@ const DeviceGroupsPage = () => {
         const targetGroupId = overData.groupId;
         const targetStoreId = overData.storeId;
 
-        // Update group membership for all selected devices
         for (const deviceId of deviceIds) {
-          // 1. Remove from all groups (as per requirement: no duplication)
           await supabase
             .from("device_group_members")
             .delete()
             .eq("device_id", deviceId);
 
-          // 2. Add to the target group
           await supabase
             .from("device_group_members")
             .insert({
@@ -233,7 +240,6 @@ const DeviceGroupsPage = () => {
               group_id: targetGroupId,
             });
 
-          // 3. Update device table (store_id and legacy group_id)
           const updates: any = { group_id: targetGroupId };
           if (targetStoreId && targetStoreId !== "__no_store__") {
             updates.store_id = targetStoreId;
@@ -247,10 +253,9 @@ const DeviceGroupsPage = () => {
 
         toast({
           title: "Dispositivos movidos",
-          description: `${deviceIds.length} dispositivo(s) movido(s) para o grupo com sucesso.`,
+          description: `${deviceIds.length} dispositivo(s) movido(s) com sucesso.`,
         });
       } else if (overData?.type === "available") {
-        // Remove from all groups
         for (const deviceId of deviceIds) {
           await supabase
             .from("device_group_members")
@@ -269,7 +274,6 @@ const DeviceGroupsPage = () => {
         });
       }
 
-      // Refresh data
       queryClient.invalidateQueries({ queryKey: ["device-group-members-tree"] });
       queryClient.invalidateQueries({ queryKey: ["devices"] });
       setSelectedDeviceIds([]);
@@ -281,15 +285,6 @@ const DeviceGroupsPage = () => {
         variant: "destructive",
       });
     }
-  };
-
-    setFormData({
-      name: "",
-      description: null,
-      store_id: null,
-      screen_type: "tv",
-      is_default: false,
-    });
   };
 
   const openEdit = (group: DeviceGroupWithDetails) => {
@@ -364,19 +359,10 @@ const DeviceGroupsPage = () => {
         />
         <Label htmlFor="is_default" className="flex items-center gap-1.5 cursor-pointer">
           <Star className="h-4 w-4 text-amber-500" />
-          Grupo padrão (novos dispositivos serão atribuídos automaticamente)
+          Grupo padrão
         </Label>
       </div>
     </div>
-  );
-
-  const renderTreeView = () => (
-    <DeviceGroupsTree
-      groups={paginatedGroups}
-      onEdit={openEdit}
-      onDelete={(id) => setDeleteId(id)}
-      onManageChannels={(group) => setChannelDialogGroup(group)}
-    />
   );
 
   const renderListView = () => (
@@ -396,7 +382,6 @@ const DeviceGroupsPage = () => {
             {paginatedGroups.map((group) => {
               const screenType = SCREEN_TYPES.find((t) => t.value === group.screen_type);
               const ScreenIcon = screenType?.icon || Monitor;
-
               return (
                 <TableRow key={group.id}>
                   <TableCell className="font-medium">
@@ -556,16 +541,8 @@ const DeviceGroupsPage = () => {
                       <Layers className="h-12 w-12 text-muted-foreground mb-4" />
                       <h3 className="text-lg font-medium mb-2">Nenhum grupo encontrado</h3>
                       <p className="text-muted-foreground text-center">
-                        {state.search
-                          ? "Nenhum grupo corresponde à sua busca."
-                          : "Crie seu primeiro grupo para organizar dispositivos."}
+                        {state.search ? "Nenhum grupo corresponde à sua busca." : "Crie seu primeiro grupo."}
                       </p>
-                      {!state.search && (
-                        <Button className="mt-4" onClick={() => setIsCreateOpen(true)}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Criar Primeiro Grupo
-                        </Button>
-                      )}
                     </CardContent>
                   </Card>
                 ) : state.view === "list" ? (
@@ -598,96 +575,75 @@ const DeviceGroupsPage = () => {
           ) : null}
         </DragOverlay>
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editingGroup} onOpenChange={(open) => !open && setEditingGroup(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Grupo</DialogTitle>
-          </DialogHeader>
-          {renderGroupForm()}
-          <DialogFooter>
-            <Button onClick={handleUpdate} disabled={!formData.name}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Dialog open={!!editingGroup} onOpenChange={(open) => !open && setEditingGroup(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Grupo</DialogTitle>
+            </DialogHeader>
+            {renderGroupForm()}
+            <DialogFooter>
+              <Button onClick={handleUpdate} disabled={!formData.name}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Channel Assignment Dialog */}
-      <Dialog open={!!channelDialogGroup} onOpenChange={(open) => !open && setChannelDialogGroup(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Campanhas do Grupo: {channelDialogGroup?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione uma campanha" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableChannels.map((channel) => (
-                    <SelectItem key={channel.id} value={channel.id}>
-                      {channel.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAssignChannel} disabled={!selectedChannelId}>
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {groupChannels.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground text-sm">
-                <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
-                Nenhuma campanha atribuída a este grupo
+        <Dialog open={!!channelDialogGroup} onOpenChange={(open) => !open && setChannelDialogGroup(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Campanhas do Grupo: {channelDialogGroup?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione uma campanha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableChannels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id}>{channel.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAssignChannel} disabled={!selectedChannelId}>
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {groupChannels.map((gc, index) => (
-                  <div
-                    key={gc.id}
-                    className="flex items-center justify-between p-2 rounded border bg-accent/30"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground w-4">{index + 1}</span>
-                      <span className="font-medium">{gc.channel?.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {gc.channel?.type}
-                      </Badge>
+              {groupChannels.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">Nenhuma campanha atribuída</div>
+              ) : (
+                <div className="space-y-2">
+                  {groupChannels.map((gc, index) => (
+                    <div key={gc.id} className="flex items-center justify-between p-2 rounded border bg-accent/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-4">{index + 1}</span>
+                        <span className="font-medium">{gc.channel?.name}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveChannel(gc.distribution_channel_id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveChannel(gc.distribution_channel_id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este grupo? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-        </PageShell>
-      </DndContext>
-    );
-  };
-  
-  export default DeviceGroupsPage;
+        <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
+              <AlertDialogDescription>Tem certeza que deseja excluir este grupo?</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </PageShell>
+    </DndContext>
+  );
+};
+
+export default DeviceGroupsPage;
