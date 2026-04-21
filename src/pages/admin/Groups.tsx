@@ -889,6 +889,7 @@ const GroupsPage = () => {
                   {groups.filter(g => g.id !== editingGroup?.id).map(g => (<SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>))}
                 </SelectContent>
               </Select>
+            </div>
             <div className="space-y-2">
               <Label>Cor do Grupo</Label>
               <p className="text-xs text-muted-foreground">Define a identidade visual nos cards e conectores</p>
