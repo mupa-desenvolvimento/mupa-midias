@@ -599,8 +599,24 @@ const GroupsPage = () => {
               </CardContent>
             </Card>
           ) : (
-            rootGroups.map(group => (
-              <GroupItem key={group.id} group={group} level={0} allGroups={groups} onEdit={handleEdit} onDelete={setDeleteId} onCreateSubgroup={handleOpenCreate} onLinkDevice={id => { setLinkGroupId(id); setDeviceSearch(""); }} onLinkInternalGroups={handleOpenSegment} getDevicesForGroup={getDevicesForGroup} onUnlinkDevice={handleUnlinkDevice} getStoresForGroup={getStoresForGroup} onUnlinkStore={(groupId, storeId) => unlinkStore.mutate({ groupId, storeId })} />
+            rootGroups.map((group, index) => (
+              <GroupItem 
+                key={group.id} 
+                group={group} 
+                level={0} 
+                allGroups={groups} 
+                onEdit={handleEdit} 
+                onDelete={setDeleteId} 
+                onCreateSubgroup={handleOpenCreate} 
+                onLinkDevice={id => { setLinkGroupId(id); setDeviceSearch(""); }} 
+                onLinkInternalGroups={handleOpenSegment} 
+                getDevicesForGroup={getDevicesForGroup} 
+                onUnlinkDevice={handleUnlinkDevice} 
+                getStoresForGroup={getStoresForGroup} 
+                onUnlinkStore={(groupId, storeId) => unlinkStore.mutate({ groupId, storeId })} 
+                viewMode={viewMode}
+                isLast={index === rootGroups.length - 1}
+              />
             ))
           )}
         </TabsContent>
