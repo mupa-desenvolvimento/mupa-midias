@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { EditorTimeline } from "./EditorTimeline";
 import { Radio, Clock, Save, X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useMediaLibrary } from "@/hooks/useMediaLibrary";
+// ... removed invalid import
 import { MediaLibrary } from "./MediaLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
