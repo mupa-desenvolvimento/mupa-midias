@@ -21,6 +21,7 @@ import { ListViewport } from "@/components/list/ListViewport";
 import { ListControls } from "@/components/list/ListControls";
 import { UniversalPagination } from "@/components/list/UniversalPagination";
 import { useListState } from "@/hooks/useListState";
+import { DeviceGroupsTree } from "@/components/devices/DeviceGroupsTree";
 
 const SCREEN_TYPES = [
   { value: "tv", label: "TV", icon: Tv },
