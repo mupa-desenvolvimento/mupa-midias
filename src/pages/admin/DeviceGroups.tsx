@@ -444,98 +444,159 @@ const DeviceGroupsPage = () => {
   );
 
   return (
-    <PageShell
-      className="animate-fade-in"
-      header={
-        <div className="flex items-center justify-between gap-4 py-4">
-          <p className="text-muted-foreground">
-            Organize dispositivos e atribua campanhas
-          </p>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Grupo
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Grupo</DialogTitle>
-              </DialogHeader>
-              {renderGroupForm()}
-              <DialogFooter>
-                <Button onClick={handleCreate} disabled={!formData.name}>Criar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      }
-      controls={
-        <div className="py-2">
-          <ListControls
-            state={state}
-            onSearchChange={setSearch}
-            onViewChange={setView}
-            onClearFilters={reset}
-          >
-            <Select
-              value={state.filters.screenType}
-              onValueChange={(value) =>
-                setFilters({ ...state.filters, screenType: value as ScreenTypeFilter })
-              }
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Tipo de Tela" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {SCREEN_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </ListControls>
-        </div>
-      }
-      footer={
-        <UniversalPagination
-          page={state.page}
-          pageSize={state.pageSize}
-          total={totalGroups}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-        />
-      }
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
-      <ListViewport>
-        {isLoading ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : totalGroups === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Layers className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhum grupo encontrado</h3>
-              <p className="text-muted-foreground text-center">
-                {state.search
-                  ? "Nenhum grupo corresponde à sua busca."
-                  : "Crie seu primeiro grupo para organizar dispositivos."}
+      <PageShell
+        className="animate-fade-in"
+        header={
+          <div className="flex items-center justify-between gap-4 py-4">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold tracking-tight">Gerenciamento de Grupos</h1>
+              <p className="text-muted-foreground">
+                Organize dispositivos e atribua campanhas de forma visual
               </p>
-              {!state.search && (
-                <Button className="mt-4" onClick={() => setIsCreateOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar Primeiro Grupo
+            </div>
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm} className="gradient-primary text-white">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Grupo
                 </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : state.view === "list" ? (
-          renderListView()
-        ) : (
-          renderTreeView()
-        )}
-      </ListViewport>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Criar Grupo</DialogTitle>
+                </DialogHeader>
+                {renderGroupForm()}
+                <DialogFooter>
+                  <Button onClick={handleCreate} disabled={!formData.name}>Criar</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        }
+        controls={
+          <div className="flex flex-col gap-3 py-2">
+            <ListControls
+              state={state}
+              onSearchChange={setSearch}
+              onViewChange={setView}
+              onClearFilters={reset}
+            >
+              <Select
+                value={state.filters.screenType}
+                onValueChange={(value) =>
+                  setFilters({ ...state.filters, screenType: value as ScreenTypeFilter })
+                }
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Tipo de Tela" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {SCREEN_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </ListControls>
+
+            {selectedDeviceIds.length > 0 && (
+              <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 animate-in slide-in-from-top-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <CheckSquare className="h-4 w-4 text-primary" />
+                  <span>{selectedDeviceIds.length} dispositivo(s) selecionado(s)</span>
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground mr-2 italic">
+                    Arraste para mover para um grupo
+                  </p>
+                  <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedDeviceIds([])}>
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Limpar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        }
+        footer={
+          <UniversalPagination
+            page={state.page}
+            pageSize={state.pageSize}
+            total={totalGroups}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        }
+      >
+        <div className="h-[calc(100vh-280px)] -mx-6 -mb-6">
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <DeviceAvailablePanel 
+                selectedIds={selectedDeviceIds}
+                onSelectDevices={setSelectedDeviceIds}
+              />
+            </ResizablePanel>
+            
+            <ResizableHandle withHandle />
+            
+            <ResizablePanel defaultSize={80}>
+              <ListViewport className="h-full p-6">
+                {isLoading ? (
+                  <div className="flex h-full items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : totalGroups === 0 ? (
+                  <Card className="col-span-full">
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <Layers className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Nenhum grupo encontrado</h3>
+                      <p className="text-muted-foreground text-center">
+                        {state.search
+                          ? "Nenhum grupo corresponde à sua busca."
+                          : "Crie seu primeiro grupo para organizar dispositivos."}
+                      </p>
+                      {!state.search && (
+                        <Button className="mt-4" onClick={() => setIsCreateOpen(true)}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Criar Primeiro Grupo
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : state.view === "list" ? (
+                  renderListView()
+                ) : (
+                  <DeviceGroupsTree
+                    groups={paginatedGroups}
+                    onEdit={openEdit}
+                    onDelete={(id) => setDeleteId(id)}
+                    onManageChannels={(group) => setChannelDialogGroup(group)}
+                    selectedIds={selectedDeviceIds}
+                    onToggleSelect={(id) => {
+                      setSelectedDeviceIds(prev => 
+                        prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+                      );
+                    }}
+                  />
+                )}
+              </ListViewport>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+
+        <DragOverlay>
+          {activeDevice ? (
+            <DeviceDraggableItem 
+              device={activeDevice} 
+              className="w-64 opacity-80 shadow-2xl cursor-grabbing border-primary" 
+            />
+          ) : null}
+        </DragOverlay>
 
       {/* Edit Dialog */}
       <Dialog open={!!editingGroup} onOpenChange={(open) => !open && setEditingGroup(null)}>
