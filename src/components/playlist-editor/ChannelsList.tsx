@@ -381,7 +381,7 @@ export const ChannelsList = ({
               const isLive = status.type === "live";
             
               return (
-              <Card 
+              <div 
                 key={channel.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, channel, index)}
@@ -389,83 +389,57 @@ export const ChannelsList = ({
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDrop={(e) => handleDrop(e, index)}
                 className={cn(
-                  "cursor-pointer transition-all group relative overflow-hidden",
-                  "hover:border-primary/50 hover:shadow-md",
+                  "p-3 rounded-lg border transition-all group cursor-pointer flex items-center gap-3",
+                  "hover:bg-accent hover:border-accent-foreground/20",
                   activeChannelId === channel.id 
-                    ? "border-primary bg-primary/10 ring-2 ring-primary shadow-md" 
-                    : "border-border/60 bg-card/50 shadow-sm",
+                    ? "bg-primary/5 border-primary" 
+                    : "bg-card border-border",
                   draggedChannel?.id === channel.id && "opacity-50",
-                  dragOverIndex === index && draggedChannel?.id !== channel.id && "border-primary border-dashed border-2",
-                  isLive && "ring-1 ring-green-500/50 shadow-[0_0_12px_rgba(34,197,94,0.15)]"
+                  dragOverIndex === index && draggedChannel?.id !== channel.id && "border-primary border-dashed border-2"
                 )}
                 onClick={() => onSelectChannel(channel)}
               >
-                {/* Priority Indicator */}
-                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                
-                <CardContent className="p-4">
-                  {/* Row 1: Status + Name + Actions */}
-                  <div className="flex items-center gap-3 mb-4">
-                    {/* Drag Handle */}
-                    <div 
-                      className="text-muted-foreground/30 hover:text-muted-foreground cursor-grab shrink-0 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <GripVertical className="w-5 h-5" />
-                    </div>
-                    
-                    {/* Status Icon with Tooltip */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className={cn(
-                            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-sm transition-colors",
-                            status.type === "live" && "bg-green-500/10 text-green-600 border border-green-200",
-                            status.type === "fallback" && "bg-yellow-500/10 text-yellow-600 border border-yellow-200",
-                            status.type === "scheduled" && "bg-blue-500/10 text-blue-600 border border-blue-200",
-                            status.type === "inactive" && "bg-muted text-muted-foreground border border-border"
-                          )}>
-                            {getStatusIcon(channel)}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          <p>{status.label}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {status.type === 'fallback' ? 'Conteúdo padrão' : 'Conteúdo programado'}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    {/* Name + Badge */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-semibold text-base truncate">{channel.name}</span>
-                        <Badge 
-                          variant="outline" 
-                          className={cn("text-[10px] px-1.5 py-0 h-4 shrink-0", status.color)}
-                        >
-                          {status.label}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2">
-                         <span className="bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono">
-                           #{index + 1}
-                         </span>
-                         {channel.description && <span className="truncate max-w-[200px]">{channel.description}</span>}
-                      </div>
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                              onClick={(e) => {
+                {/* Drag Handle */}
+                <div 
+                  className="text-muted-foreground/30 hover:text-muted-foreground cursor-grab shrink-0 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <GripVertical className="w-4 h-4" />
+                </div>
+
+                {/* Name */}
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium text-sm block truncate pr-2" title={channel.name}>
+                    {channel.name}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditDialog(channel);
+                    }}
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteId(channel.id);
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
                                 e.stopPropagation();
                                 openEditDialog(channel);
                               }}
