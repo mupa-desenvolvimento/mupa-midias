@@ -368,11 +368,11 @@ export const ChannelsList = ({
               <CardContent className="py-6 text-center">
                 <Tv className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground mb-3">
-                  Nenhum canal criado
+                  Nenhuma campanha criada
                 </p>
                 <Button onClick={openNewDialog} size="sm">
                   <Plus className="w-4 h-4 mr-2" />
-                  Criar Canal
+                  Criar Campanha
                 </Button>
               </CardContent>
             </Card>
