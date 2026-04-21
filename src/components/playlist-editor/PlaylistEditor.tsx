@@ -466,7 +466,7 @@ export const PlaylistEditor = () => {
                 <TabsList className="w-full">
                   <TabsTrigger value="channels" className="flex-1 gap-2">
                     <Radio className="w-4 h-4" />
-                    Canais
+                    Campanhas
                   </TabsTrigger>
                   <TabsTrigger value="legacy" className="flex-1 gap-2">
                     <Layers className="w-4 h-4" />
