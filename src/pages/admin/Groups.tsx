@@ -548,18 +548,43 @@ const GroupsPage = () => {
         }
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4" />Grupos</TabsTrigger>
-            <TabsTrigger value="internal" className="gap-2"><Store className="w-4 h-4" />Lojas</TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <TabsList>
+              <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4" />Grupos</TabsTrigger>
+              <TabsTrigger value="internal" className="gap-2"><Store className="w-4 h-4" />Lojas</TabsTrigger>
+            </TabsList>
+            
+            {activeTab === "global" && (
+              <div className="flex items-center bg-muted/50 p-1 rounded-lg border border-border/50">
+                <Button 
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setViewMode('list')}
+                  className="h-7 px-2 gap-1.5 text-xs"
+                >
+                  <List className="w-3.5 h-3.5" /> Lista
+                </Button>
+                <Button 
+                  variant={viewMode === 'map' ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setViewMode('map')}
+                  className="h-7 px-2 gap-1.5 text-xs"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" /> Mapa
+                </Button>
+              </div>
+            )}
+          </div>
 
-          {activeTab === "global" && (
-            <Button onClick={() => handleOpenCreate()} className="gap-2"><Plus className="w-4 h-4" />Criar Grupo</Button>
-          )}
-          {activeTab === "internal" && (
-            <Button onClick={() => { setBulkDialogOpen(true); setBulkName(""); setBulkSelectedStores([]); }} className="gap-2"><Plus className="w-4 h-4" />Criar Setor</Button>
-          )}
+          <div className="flex items-center gap-2">
+            {activeTab === "global" && (
+              <Button onClick={() => handleOpenCreate()} className="gap-2"><Plus className="w-4 h-4" />Criar Grupo</Button>
+            )}
+            {activeTab === "internal" && (
+              <Button onClick={() => { setBulkDialogOpen(true); setBulkName(""); setBulkSelectedStores([]); }} className="gap-2"><Plus className="w-4 h-4" />Criar Setor</Button>
+            )}
+          </div>
         </div>
 
         {/* === GLOBAL GROUPS TAB === */}
