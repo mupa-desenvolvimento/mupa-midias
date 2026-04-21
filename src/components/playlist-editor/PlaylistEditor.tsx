@@ -573,9 +573,9 @@ export const PlaylistEditor = () => {
               {playlistChannels.length === 0 && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center">
                   <Radio className="w-16 h-16 text-muted-foreground/50 mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">Nenhum Canal Criado</h2>
+                  <h2 className="text-xl font-semibold mb-2">Nenhuma Campanha Criada</h2>
                   <p className="text-muted-foreground max-w-md mb-6">
-                    Crie seu primeiro canal na lista à esquerda para começar a programar conteúdos por horário.
+                    Crie sua primeira campanha na lista à esquerda para começar a programar conteúdos por horário.
                   </p>
                 </div>
               )}
