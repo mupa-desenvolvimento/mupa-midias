@@ -259,61 +259,13 @@ const DeviceGroupsPage = () => {
     </div>
   );
 
-  const renderGridView = () => (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {paginatedGroups.map((group) => {
-        const screenType = SCREEN_TYPES.find((t) => t.value === group.screen_type);
-        const ScreenIcon = screenType?.icon || Monitor;
-
-        return (
-          <Card key={group.id} className="relative">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  <Layers className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-lg">{group.name}</CardTitle>
-                  {group.is_default && <Star className="w-4 h-4 text-amber-500 fill-amber-500" />}
-                </div>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <ScreenIcon className="w-3 h-3" />
-                  {screenType?.label}
-                </Badge>
-              </div>
-              <CardDescription>{group.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {group.store && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Loja:</span>
-                  <Badge variant="secondary">
-                    {group.store.name} ({group.store.code})
-                  </Badge>
-                </div>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => setChannelDialogGroup(group)}
-              >
-                <Link2 className="w-4 h-4 mr-2" />
-                Gerenciar Campanhas
-              </Button>
-
-              <div className="flex justify-end space-x-2 pt-2 border-t">
-                <Button variant="ghost" size="sm" onClick={() => openEdit(group)}>
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setDeleteId(group.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+  const renderTreeView = () => (
+    <DeviceGroupsTree
+      groups={paginatedGroups}
+      onEdit={openEdit}
+      onDelete={(id) => setDeleteId(id)}
+      onManageChannels={(group) => setChannelDialogGroup(group)}
+    />
   );
 
   const renderListView = () => (
