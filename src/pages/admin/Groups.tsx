@@ -22,6 +22,76 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { cn } from "@/lib/utils";
 
+// ===== Soft color palette per group (low saturation, accessible in light/dark) =====
+// Uses Tailwind's predefined color utilities to avoid touching the design tokens.
+// Each entry provides paired classes for the side bar accent, soft surface, badge
+// and icon background — keeping a coherent look across the card.
+const GROUP_COLOR_PALETTE = [
+  {
+    key: "blue",
+    bar: "bg-blue-400/70 dark:bg-blue-400/60",
+    softBg: "bg-blue-50/60 dark:bg-blue-950/20",
+    iconBg: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+    iconHover: "group-hover/node:bg-blue-500 group-hover/node:text-white",
+    badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+    line: "bg-blue-300/60 dark:bg-blue-400/30",
+  },
+  {
+    key: "green",
+    bar: "bg-emerald-400/70 dark:bg-emerald-400/60",
+    softBg: "bg-emerald-50/60 dark:bg-emerald-950/20",
+    iconBg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    iconHover: "group-hover/node:bg-emerald-500 group-hover/node:text-white",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    line: "bg-emerald-300/60 dark:bg-emerald-400/30",
+  },
+  {
+    key: "orange",
+    bar: "bg-orange-400/70 dark:bg-orange-400/60",
+    softBg: "bg-orange-50/60 dark:bg-orange-950/20",
+    iconBg: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+    iconHover: "group-hover/node:bg-orange-500 group-hover/node:text-white",
+    badge: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+    line: "bg-orange-300/60 dark:bg-orange-400/30",
+  },
+  {
+    key: "violet",
+    bar: "bg-violet-400/70 dark:bg-violet-400/60",
+    softBg: "bg-violet-50/60 dark:bg-violet-950/20",
+    iconBg: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+    iconHover: "group-hover/node:bg-violet-500 group-hover/node:text-white",
+    badge: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+    line: "bg-violet-300/60 dark:bg-violet-400/30",
+  },
+  {
+    key: "amber",
+    bar: "bg-amber-400/70 dark:bg-amber-400/60",
+    softBg: "bg-amber-50/60 dark:bg-amber-950/20",
+    iconBg: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    iconHover: "group-hover/node:bg-amber-500 group-hover/node:text-white",
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    line: "bg-amber-300/60 dark:bg-amber-400/30",
+  },
+  {
+    key: "rose",
+    bar: "bg-rose-400/70 dark:bg-rose-400/60",
+    softBg: "bg-rose-50/60 dark:bg-rose-950/20",
+    iconBg: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+    iconHover: "group-hover/node:bg-rose-500 group-hover/node:text-white",
+    badge: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+    line: "bg-rose-300/60 dark:bg-rose-400/30",
+  },
+];
+
+// Deterministic color assignment based on group id (so the same group keeps the same color)
+const getGroupColor = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return GROUP_COLOR_PALETTE[hash % GROUP_COLOR_PALETTE.length];
+};
+
 // ===== Global Group Tree Item =====
 interface GroupItemProps {
   group: GroupWithDetails;
@@ -79,6 +149,8 @@ const GroupItem = ({
   const isRoot = level === 0;
   const isMap = viewMode === 'map';
   const NodeIcon = isRoot ? Network : level === 1 ? Folder : Globe;
+  // Per-group color identity (only applied to root groups for visual hierarchy)
+  const color = getGroupColor(isRoot ? group.id : (allGroups.find(g => g.id === group.parent_id)?.id || group.id));
 
   return (
     <div 
@@ -98,14 +170,14 @@ const GroupItem = ({
             className={cn(
               "absolute left-[10px] sm:left-[18px] top-[-12px] w-[1.5px] bg-border transition-colors duration-300",
               isLast ? "h-[32px]" : "h-[calc(100%+12px)]",
-              isHovered && "bg-primary/50 w-[2px]"
+              isHovered && color.line
             )} 
           />
           {/* Horizontal line to this card */}
           <div 
             className={cn(
               "absolute left-[10px] sm:left-[18px] top-[20px] h-[1.5px] w-4 sm:w-8 bg-border transition-colors duration-300",
-              isHovered && "bg-primary/50 h-[2px]"
+              isHovered && color.line
             )} 
           />
         </>
@@ -113,19 +185,30 @@ const GroupItem = ({
 
       <Card
         className={cn(
-          "overflow-hidden transition-all duration-300",
+          "overflow-hidden transition-all duration-300 relative",
           isMap ? (
             isRoot 
-              ? "border-2 border-primary/20 bg-card shadow-sm" 
-              : "border border-border/60 bg-card/40 backdrop-blur-sm"
+              ? "border border-border/50 bg-card shadow-sm" 
+              : "border border-border/40 bg-card/50"
           ) : (
-            isRoot ? "border-l-4 border-l-primary/70" : "border-l-2 border-l-muted-foreground/20"
+            isRoot ? "border border-border/50" : "border border-border/40"
           ),
-          isHovered && (isMap ? "border-primary/40 shadow-md translate-x-1" : "shadow-sm border-primary/30")
+          isHovered && "shadow-md border-border/80"
         )}
       >
+        {/* === COLORED ACCENT BAR (left side) === */}
+        <div
+          aria-hidden
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-1 transition-all",
+            color.bar,
+            !isRoot && "opacity-50",
+            isHovered && "w-1.5"
+          )}
+        />
+
         {/* === NODE HEADER === */}
-        <div className="flex items-center gap-3 p-3 sm:p-4">
+        <div className="flex items-center gap-3 p-3 sm:p-4 pl-4 sm:pl-5">
           <Button
             variant="ghost"
             size="icon"
@@ -143,9 +226,8 @@ const GroupItem = ({
           <div
             className={cn(
               "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
-              isRoot ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-              isHovered && isRoot && "bg-primary text-primary-foreground",
-              isHovered && !isRoot && "bg-primary/20 text-primary"
+              color.iconBg,
+              color.iconHover
             )}
           >
             <NodeIcon className="h-4 w-4" />
@@ -158,12 +240,14 @@ const GroupItem = ({
                 as="h3"
                 className={cn(
                   "font-semibold leading-tight tracking-tight", 
-                  isRoot ? "text-base" : "text-sm",
-                  isHovered && "text-primary"
+                  isRoot ? "text-base" : "text-sm"
                 )}
               />
               {isMap && totalDevices > 0 && (
-                <span className="inline-flex items-center justify-center h-5 px-1.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                <span className={cn(
+                  "inline-flex items-center justify-center h-5 px-1.5 rounded-full text-[10px] font-bold",
+                  color.badge
+                )}>
                   {totalDevices}
                 </span>
               )}
@@ -526,9 +610,13 @@ const GroupsPage = () => {
 
   if (isLoading) {
     return (
-      <PageShell header={<div><h1 className="text-2xl font-bold">Grupos</h1><p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p></div>}>
-        <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-      </PageShell>
+      <div className="h-full w-full overflow-y-auto custom-scrollbar">
+        <div className="px-4 sm:px-6 pt-[15px] pb-6">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -537,16 +625,7 @@ const GroupsPage = () => {
 
   return (
     <div className="h-full w-full overflow-y-auto custom-scrollbar">
-      <PageShell
-        header={
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Grupos</h1>
-              <p className="text-muted-foreground text-sm">Gerencie grupos e setores por loja</p>
-            </div>
-          </div>
-        }
-      >
+      <div className="px-4 sm:px-6 pt-[15px] pb-6 max-w-[1600px] mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -1002,7 +1081,7 @@ const GroupsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </PageShell>
+      </div>
     </div>
   );
 };
