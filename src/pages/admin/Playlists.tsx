@@ -369,7 +369,7 @@ const PlaylistsPage = () => {
 
   return (
     <PageShell
-      className="space-y-0"
+      className="space-y-0 pt-[15px]"
       header={
         <div className="flex items-center justify-between gap-4 py-4">
           <p className="text-muted-foreground">
