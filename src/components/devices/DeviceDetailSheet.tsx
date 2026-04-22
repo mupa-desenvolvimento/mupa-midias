@@ -34,10 +34,11 @@ import {
   ListMusic,
   Loader2,
 } from "lucide-react";
-import { formatDistanceToNow, differenceInMinutes } from "date-fns";
+import { formatDistanceToNow, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useFirebaseDevices } from "@/hooks/useFirebaseDevices";
 
 interface DeviceDetailSheetProps {
   device: DeviceWithRelations | null;
