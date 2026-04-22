@@ -349,7 +349,8 @@ export const DeviceGroupsTree = ({
       const groupMembers = members.filter((m) => m.group_id === group.id);
       const devices = groupMembers
         .map((m) => m.device)
-        .filter((d): d is NonNullable<typeof d> => Boolean(d));
+        .filter((d): d is NonNullable<typeof d> => Boolean(d))
+        .map(d => ({ ...d, status: getDeviceStatus(d) }));
 
       const buckets = new Map<
         string,
