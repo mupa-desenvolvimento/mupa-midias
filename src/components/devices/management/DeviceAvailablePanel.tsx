@@ -45,13 +45,14 @@ export const DeviceAvailablePanel = ({
         device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         device.device_code.toLowerCase().includes(searchTerm.toLowerCase());
       
+      const status = getDeviceStatus(device);
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "online" ? device.status === "online" : device.status !== "online");
+        (statusFilter === "online" ? status === "online" : status !== "online");
 
       return matchesSearch && matchesStatus;
     });
-  }, [unassignedDevices, searchTerm, statusFilter]);
+  }, [unassignedDevices, searchTerm, statusFilter, getDeviceStatus]);
 
   const toggleSelect = (id: string) => {
     if (!onSelectDevices) return;
