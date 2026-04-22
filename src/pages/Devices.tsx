@@ -301,11 +301,13 @@ const Devices = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "online": return "Online";
+      case "unstable": return "Instável";
       case "offline": return "Offline";
       case "pending": return "Pendente";
       default: return status;
     }
   };
+
 
   const copyDeviceLink = (deviceCode: string) => {
     const deviceUrl = `${window.location.origin}/play/${deviceCode}`;
