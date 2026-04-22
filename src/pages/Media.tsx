@@ -274,7 +274,7 @@ const Media = () => {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-[calc(100vh-118px)] gap-4 animate-fade-in -mt-[22px]">
+      <div className="flex h-[calc(100vh-118px)] gap-4 animate-fade-in">
         {/* Sidebar */}
         <FolderSidebar 
           currentFolderId={currentFolderId}

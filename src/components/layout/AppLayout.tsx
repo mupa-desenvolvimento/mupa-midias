@@ -36,8 +36,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             can scroll on its own and the pagination footer stays pinned to the viewport.
           */}
           <div
-            className="app-content-area flex-1 min-h-0 flex flex-col p-3 md:p-4 lg:p-6 overflow-y-auto custom-scrollbar"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            className="app-content-area flex-1 min-h-0 flex flex-col px-3 md:px-4 lg:px-6 pb-3 md:pb-4 lg:pb-6 pt-0 overflow-y-auto custom-scrollbar"
+            style={{ WebkitOverflowScrolling: 'touch', marginTop: '-22px' }}
           >
             {children}
           </div>
