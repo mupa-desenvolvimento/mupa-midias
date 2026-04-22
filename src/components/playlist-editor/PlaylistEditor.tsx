@@ -17,6 +17,8 @@ import { PlaylistSettings } from "./PlaylistSettings";
 import { GlobalTimeline } from "./GlobalTimeline";
 import { CampaignDrawer } from "./CampaignDrawer";
 import { EditItemDrawer } from "./EditItemDrawer";
+import { MobilePlaylistEditor } from "./mobile/MobilePlaylistEditor";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,6 +55,19 @@ interface PlaylistFormData {
 }
 
 export const PlaylistEditor = () => {
+  const isMobile = useIsMobile();
+
+  // Render the dedicated mobile experience on small screens.
+  // Hooks below run only on desktop — that's safe because this early
+  // return happens before any other hooks are called in this component.
+  if (isMobile) {
+    return <MobilePlaylistEditor />;
+  }
+
+  return <DesktopPlaylistEditor />;
+};
+
+const DesktopPlaylistEditor = () => {
   const navigate = useNavigate();
   const { id: playlistId } = useParams<{ id: string }>();
   const { toast } = useToast();
