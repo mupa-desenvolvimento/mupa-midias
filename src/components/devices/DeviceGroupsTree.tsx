@@ -323,6 +323,7 @@ export const DeviceGroupsTree = ({
 }: DeviceGroupsTreeProps) => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedStores, setExpandedStores] = useState<Set<string>>(new Set());
+  const { getDeviceStatus } = useFirebaseDevices();
 
   const groupIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
