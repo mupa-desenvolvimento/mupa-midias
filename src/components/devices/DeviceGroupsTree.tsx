@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useFirebaseDevices } from "@/hooks/useFirebaseDevices";
 import { DeviceGroupWithDetails } from "@/hooks/useDeviceGroups";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -322,6 +323,7 @@ export const DeviceGroupsTree = ({
 }: DeviceGroupsTreeProps) => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedStores, setExpandedStores] = useState<Set<string>>(new Set());
+  const { getDeviceStatus } = useFirebaseDevices();
 
   const groupIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
@@ -347,7 +349,8 @@ export const DeviceGroupsTree = ({
       const groupMembers = members.filter((m) => m.group_id === group.id);
       const devices = groupMembers
         .map((m) => m.device)
-        .filter((d): d is NonNullable<typeof d> => Boolean(d));
+        .filter((d): d is NonNullable<typeof d> => Boolean(d))
+        .map(d => ({ ...d, status: getDeviceStatus(d) }));
 
       const buckets = new Map<
         string,

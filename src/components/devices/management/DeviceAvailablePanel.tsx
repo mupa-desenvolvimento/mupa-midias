@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useDevices, DeviceWithRelations } from "@/hooks/useDevices";
+import { useFirebaseDevices } from "@/hooks/useFirebaseDevices";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -26,16 +27,21 @@ export const DeviceAvailablePanel = ({
   selectedIds = [],
 }: DeviceAvailablePanelProps) => {
   const { devices, isLoading } = useDevices();
+  const { getDeviceStatus } = useFirebaseDevices();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
 
+  const devicesWithStatus = useMemo(() => {
+    return devices.map(d => ({ ...d, status: getDeviceStatus(d) }));
+  }, [devices, getDeviceStatus]);
+
   const unassignedDevices = useMemo(() => {
     // A device is unassigned if it has no group relationship
-    return devices.filter((device) => {
+    return devicesWithStatus.filter((device) => {
       const hasGroup = device.group || (device.groups && device.groups.length > 0);
       return !hasGroup;
     });
-  }, [devices]);
+  }, [devicesWithStatus]);
 
   const filteredDevices = useMemo(() => {
     return unassignedDevices.filter((device) => {
@@ -43,13 +49,14 @@ export const DeviceAvailablePanel = ({
         device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         device.device_code.toLowerCase().includes(searchTerm.toLowerCase());
       
+      const status = getDeviceStatus(device);
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "online" ? device.status === "online" : device.status !== "online");
+        (statusFilter === "online" ? status === "online" : status !== "online");
 
       return matchesSearch && matchesStatus;
     });
-  }, [unassignedDevices, searchTerm, statusFilter]);
+  }, [unassignedDevices, searchTerm, statusFilter, getDeviceStatus]);
 
   const toggleSelect = (id: string) => {
     if (!onSelectDevices) return;

@@ -34,7 +34,8 @@ import {
   DeviceWithRelations,
 } from "@/hooks/useDevices";
 import { usePlaylists } from "@/hooks/usePlaylists";
-import { formatDistanceToNow, differenceInMinutes } from "date-fns";
+import { useFirebaseDevices } from "@/hooks/useFirebaseDevices";
+import { formatDistanceToNow, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DeviceFormDialog } from "@/components/devices/DeviceFormDialog";
 import { DeviceControlDialog } from "@/components/devices/DeviceControlDialog";
@@ -97,6 +98,7 @@ const Devices = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const { toast } = useToast();
   const { devices, isLoading, createDevice, updateDevice, deleteDevice, refetch } = useDevices();
+  const { firebaseData, loading: loadingFirebase } = useFirebaseDevices();
   const { playlists } = usePlaylists();
 
   const {
@@ -134,14 +136,24 @@ const Devices = () => {
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [devices, playlists]);
 
-  const getDeviceStatus = (device: DeviceWithRelations) => {
-    if (device.status === "pending" && !device.last_seen_at) return "pending";
-    if (!device.last_seen_at) return "offline";
-    const lastSeenDate = new Date(device.last_seen_at);
-    const now = new Date();
-    const diffInMinutes = differenceInMinutes(now, lastSeenDate);
-    return diffInMinutes < 6 ? "online" : "offline";
-  };
+  const getDeviceStatus = useCallback((device: DeviceWithRelations) => {
+    // Attempt to find Firebase data for this device by id
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+
+    if (device.status === "pending" && !lastUpdate) return "pending";
+    if (!lastUpdate) return "offline";
+
+    try {
+      const lastSeenDate = typeof lastUpdate === 'string' ? parseISO(lastUpdate) : new Date(lastUpdate);
+      const now = new Date();
+      const diffInMinutes = differenceInMinutes(now, lastSeenDate);
+      return diffInMinutes < 5 ? "online" : "offline";
+    } catch (e) {
+      console.error("Error parsing date:", lastUpdate, e);
+      return "offline";
+    }
+  }, [firebaseData]);
 
   const filteredDevices = useMemo(() => {
     const term = state.search.toLowerCase().trim();
@@ -169,7 +181,7 @@ const Devices = () => {
 
       return matchesTerm && matchesStatus && matchesStore && matchesPlaylist;
     });
-  }, [devices, state.search, state.filters]);
+  }, [devices, state.search, state.filters, getDeviceStatus]);
 
   const totalDevices = filteredDevices.length;
   const startIndex = (state.page - 1) * state.pageSize;
@@ -308,10 +320,12 @@ const Devices = () => {
     );
   };
 
-  const formatLastSeen = (lastSeen: string | null) => {
-    if (!lastSeen) return "Nunca";
-    return formatDistanceToNow(new Date(lastSeen), { addSuffix: true, locale: ptBR });
-  };
+  const formatLastSeen = useCallback((device: DeviceWithRelations) => {
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+    if (!lastUpdate) return "Nunca";
+    return formatDistanceToNow(new Date(lastUpdate), { addSuffix: true, locale: ptBR });
+  }, [firebaseData]);
 
   const handleAddDevice = () => {
     setEditingDevice(null);
@@ -627,7 +641,7 @@ const Devices = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {formatLastSeen(device.last_seen_at)}
+                          {formatLastSeen(device)}
                         </TableCell>
                         <TableCell>
                           {device.current_playlist?.name || "Nenhuma"}
@@ -820,7 +834,7 @@ const Devices = () => {
                       Última atualização
                     </span>
                     <span className="text-sm">
-                      {formatLastSeen(device.last_seen_at)}
+                      {formatLastSeen(device)}
                     </span>
                   </div>
 

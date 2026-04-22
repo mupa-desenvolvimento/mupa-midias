@@ -34,10 +34,11 @@ import {
   ListMusic,
   Loader2,
 } from "lucide-react";
-import { formatDistanceToNow, differenceInMinutes } from "date-fns";
+import { formatDistanceToNow, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useFirebaseDevices } from "@/hooks/useFirebaseDevices";
 
 interface DeviceDetailSheetProps {
   device: DeviceWithRelations | null;
@@ -62,16 +63,27 @@ export const DeviceDetailSheet = ({
 }: DeviceDetailSheetProps) => {
   const { toast } = useToast();
   const { playlists } = usePlaylists();
+  const { firebaseData } = useFirebaseDevices();
   const [changingPlaylist, setChangingPlaylist] = useState(false);
 
   if (!device) return null;
 
   const getDeviceStatus = () => {
-    if (device.status === "pending" && !device.last_seen_at) return "pending";
-    if (!device.last_seen_at) return "offline";
-    const lastSeenDate = new Date(device.last_seen_at);
-    const diffInMinutes = differenceInMinutes(new Date(), lastSeenDate);
-    return diffInMinutes < 6 ? "online" : "offline";
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+
+    if (device.status === "pending" && !lastUpdate) return "pending";
+    if (!lastUpdate) return "offline";
+
+    try {
+      const lastSeenDate = typeof lastUpdate === 'string' ? parseISO(lastUpdate) : new Date(lastUpdate);
+      const now = new Date();
+      const diffInMinutes = differenceInMinutes(now, lastSeenDate);
+      return diffInMinutes < 5 ? "online" : "offline";
+    } catch (e) {
+      console.error("Error parsing date in Sheet:", lastUpdate, e);
+      return "offline";
+    }
   };
 
   const status = getDeviceStatus();
@@ -113,9 +125,11 @@ export const DeviceDetailSheet = ({
     }
   };
 
-  const formatLastSeen = (lastSeen: string | null) => {
-    if (!lastSeen) return "Nunca conectado";
-    return formatDistanceToNow(new Date(lastSeen), { addSuffix: true, locale: ptBR });
+  const formatLastSeen = () => {
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+    if (!lastUpdate) return "Nunca conectado";
+    return formatDistanceToNow(new Date(lastUpdate), { addSuffix: true, locale: ptBR });
   };
 
   const InfoRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -196,7 +210,7 @@ export const DeviceDetailSheet = ({
                   </Badge>
                 </div>
               </InfoRow>
-              <InfoRow label="Último acesso">{formatLastSeen(device.last_seen_at)}</InfoRow>
+              <InfoRow label="Último acesso">{formatLastSeen()}</InfoRow>
               <InfoRow label="Ativo">
                 <Badge variant={device.is_active ? "default" : "secondary"}>
                   {device.is_active ? "Sim" : "Não"}
