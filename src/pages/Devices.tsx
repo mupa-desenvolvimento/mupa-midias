@@ -34,7 +34,8 @@ import {
   DeviceWithRelations,
 } from "@/hooks/useDevices";
 import { usePlaylists } from "@/hooks/usePlaylists";
-import { formatDistanceToNow, differenceInMinutes } from "date-fns";
+import { useFirebaseDevices } from "@/hooks/useFirebaseDevices";
+import { formatDistanceToNow, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DeviceFormDialog } from "@/components/devices/DeviceFormDialog";
 import { DeviceControlDialog } from "@/components/devices/DeviceControlDialog";
