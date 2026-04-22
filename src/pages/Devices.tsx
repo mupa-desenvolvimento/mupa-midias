@@ -320,10 +320,12 @@ const Devices = () => {
     );
   };
 
-  const formatLastSeen = (lastSeen: string | null) => {
-    if (!lastSeen) return "Nunca";
-    return formatDistanceToNow(new Date(lastSeen), { addSuffix: true, locale: ptBR });
-  };
+  const formatLastSeen = useCallback((device: DeviceWithRelations) => {
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+    if (!lastUpdate) return "Nunca";
+    return formatDistanceToNow(new Date(lastUpdate), { addSuffix: true, locale: ptBR });
+  }, [firebaseData]);
 
   const handleAddDevice = () => {
     setEditingDevice(null);
