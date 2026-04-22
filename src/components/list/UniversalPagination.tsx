@@ -37,9 +37,15 @@ export const UniversalPagination = ({
   };
 
   return (
-    <div className={cn("flex flex-col gap-3 border-t border-border bg-background/80 px-4 py-3 md:flex-row md:items-center md:justify-between", className)}>
+    <div
+      className={cn(
+        "flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between",
+        className
+      )}
+    >
       <div className="text-sm text-muted-foreground">
-        Mostrando {start}–{end} de {total}
+        Mostrando <span className="font-medium text-foreground">{start}–{end}</span> de{" "}
+        <span className="font-medium text-foreground">{total}</span>
       </div>
       <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:gap-3">
         <div className="flex items-center gap-2">
