@@ -205,7 +205,7 @@ export const MobileTimeline = ({
                     className="flex-1 min-w-0 text-left"
                   >
                     <p className="text-sm font-medium truncate leading-tight">
-                      {item.media?.title || item.media?.file_name || "Sem título"}
+                      {item.media?.name || "Sem título"}
                     </p>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <Badge
