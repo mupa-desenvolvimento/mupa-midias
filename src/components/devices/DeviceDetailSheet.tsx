@@ -63,16 +63,27 @@ export const DeviceDetailSheet = ({
 }: DeviceDetailSheetProps) => {
   const { toast } = useToast();
   const { playlists } = usePlaylists();
+  const { firebaseData } = useFirebaseDevices();
   const [changingPlaylist, setChangingPlaylist] = useState(false);
 
   if (!device) return null;
 
   const getDeviceStatus = () => {
-    if (device.status === "pending" && !device.last_seen_at) return "pending";
-    if (!device.last_seen_at) return "offline";
-    const lastSeenDate = new Date(device.last_seen_at);
-    const diffInMinutes = differenceInMinutes(new Date(), lastSeenDate);
-    return diffInMinutes < 6 ? "online" : "offline";
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+
+    if (device.status === "pending" && !lastUpdate) return "pending";
+    if (!lastUpdate) return "offline";
+
+    try {
+      const lastSeenDate = typeof lastUpdate === 'string' ? parseISO(lastUpdate) : new Date(lastUpdate);
+      const now = new Date();
+      const diffInMinutes = differenceInMinutes(now, lastSeenDate);
+      return diffInMinutes < 5 ? "online" : "offline";
+    } catch (e) {
+      console.error("Error parsing date in Sheet:", lastUpdate, e);
+      return "offline";
+    }
   };
 
   const status = getDeviceStatus();
