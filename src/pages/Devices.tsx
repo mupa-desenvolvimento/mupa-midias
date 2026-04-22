@@ -181,7 +181,7 @@ const Devices = () => {
 
       return matchesTerm && matchesStatus && matchesStore && matchesPlaylist;
     });
-  }, [devices, state.search, state.filters]);
+  }, [devices, state.search, state.filters, getDeviceStatus]);
 
   const totalDevices = filteredDevices.length;
   const startIndex = (state.page - 1) * state.pageSize;
