@@ -127,6 +127,9 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* Audiência ao vivo (broadcast Realtime do /play) */}
+      <LiveAudienceWidget />
+
       {/* Feed ao vivo dos players */}
       <LivePlayerFeed />
 
