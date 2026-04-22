@@ -147,13 +147,17 @@ const Devices = () => {
     try {
       const lastSeenDate = typeof lastUpdate === 'string' ? parseISO(lastUpdate) : new Date(lastUpdate);
       const now = new Date();
-      const diffInMinutes = differenceInMinutes(now, lastSeenDate);
-      return diffInMinutes < 5 ? "online" : "offline";
+      const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
+      
+      if (diffInSeconds < 30) return "online";
+      if (diffInSeconds < 60) return "unstable";
+      return "offline";
     } catch (e) {
       console.error("Error parsing date:", lastUpdate, e);
       return "offline";
     }
   }, [firebaseData]);
+
 
   const filteredDevices = useMemo(() => {
     const term = state.search.toLowerCase().trim();
