@@ -274,7 +274,7 @@ const Media = () => {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-[calc(100vh-140px)] gap-4 animate-fade-in">
+      <div className="flex h-[calc(100vh-110px)] gap-4 animate-fade-in -mt-[30px]">
         {/* Sidebar */}
         <FolderSidebar 
           currentFolderId={currentFolderId}
@@ -287,17 +287,6 @@ const Media = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col gap-4 overflow-hidden min-w-0">
-            {/* Storage Warning - hidden for Lite plans */}
-            {!isLite && (
-              <Alert className="bg-red-50 border-red-200 shadow-sm shrink-0">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <AlertTitle className="text-red-800 font-semibold ml-2">Atenção</AlertTitle>
-                <AlertDescription className="text-red-700 ml-2">
-                  Mídias não utilizadas por mais de 30 dias serão removidas automaticamente do sistema.
-                </AlertDescription>
-              </Alert>
-            )}
-
             <div className="flex flex-col gap-4 shrink-0">
             {/* Navigation and Actions */}
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
