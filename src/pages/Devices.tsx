@@ -641,7 +641,7 @@ const Devices = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {formatLastSeen(device.last_seen_at)}
+                          {formatLastSeen(device)}
                         </TableCell>
                         <TableCell>
                           {device.current_playlist?.name || "Nenhuma"}
