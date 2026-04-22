@@ -11,6 +11,16 @@
 
 @layer base {
   :root {
+    /* ============================================================
+       GLOBAL LAYOUT TOKENS
+       ------------------------------------------------------------
+       Single source of truth for the app shell. Every page MUST
+       inherit layout from <AppLayout/> + <PageShell/> and never
+       re-implement header offsets, fixed positions or manual
+       margin-top hacks.
+       ============================================================ */
+    --header-height: 64px;
+
     /* Light mode — refined, airy, professional */
     --background: 200 20% 98%;       /* Near-white with cool tint */
     --foreground: 224 40% 15%;       /* Deep blue-gray for readability */
@@ -407,4 +417,39 @@ body {
 .app-content-area:has([data-fixed-layout="true"]) {
   overflow: hidden !important;
   padding-bottom: 0 !important;
+}
+
+/* ============================================================
+   GLOBAL APP SHELL
+   ------------------------------------------------------------
+   Architectural rule (DO NOT bypass per page):
+     <AppLayout>            -> .app-shell  (flex column, 100dvh)
+       <Header />           -> sticky top:0, height: var(--header-height)
+       <main>               -> flex:1, min-h:0, owns its own scroll
+         <PageShell> ...    -> internal layout per page type
+   No page should set margin-top to compensate the header.
+   The sticky header naturally pushes content below it.
+   ============================================================ */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.app-header {
+  height: var(--header-height);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
