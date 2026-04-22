@@ -6,6 +6,7 @@ import { useDashboardAnalytics } from "@/hooks/useDashboardAnalytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { LivePlayerFeed } from "@/components/dashboard/LivePlayerFeed";
+import { LiveAudienceWidget } from "@/components/dashboard/LiveAudienceWidget";
 
 const EMOTION_COLORS: Record<string, string> = {
   'Neutro': '#94a3b8',
@@ -125,6 +126,9 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Audiência ao vivo (broadcast Realtime do /play) */}
+      <LiveAudienceWidget />
 
       {/* Feed ao vivo dos players */}
       <LivePlayerFeed />

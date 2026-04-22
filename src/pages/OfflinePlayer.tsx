@@ -12,6 +12,7 @@ import { useFaceDetection } from "@/hooks/useFaceDetection";
 import { useTerminalMetrics } from "@/hooks/useTerminalMetrics";
 import { useTerminalAI } from "@/hooks/useTerminalAI";
 import { usePeopleCounter } from "@/hooks/usePeopleCounter";
+import { useAudienceAggregator, type AggregatedFace } from "@/hooks/useAudienceAggregator";
 import { useAutoHideControls, useFullscreen, useKeyboardShortcuts, useClock, useSeamlessMediaPlayer, type SeamlessMediaItem } from "@/hooks/player";
 import {
   MediaRenderer,
@@ -154,6 +155,21 @@ const OfflinePlayer = () => {
 
   // People counter
   const { count: peopleCount, todayCount, processFaces } = usePeopleCounter();
+
+  // Live audience aggregator → broadcasts compact snapshots to dashboard.
+  // Wiring happens after activeMedia/activeItem are declared (see below).
+  const audienceFacesRef = useRef<AggregatedFace[]>([]);
+  useEffect(() => {
+    audienceFacesRef.current = (activeFaces || []).map((f: any) => ({
+      gender: f.gender,
+      age: f.age,
+      emotion: f.emotion?.emotion ?? f.emotion ?? "neutral",
+      attentionDurationMs:
+        typeof f.lookingDuration === "number"
+          ? f.lookingDuration
+          : (f.attentionDuration || 0) * 1000,
+    }));
+  }, [activeFaces]);
 
   // Player UI hooks
   const { showControls } = useAutoHideControls();
@@ -316,6 +332,24 @@ const OfflinePlayer = () => {
 
   const activeItem = items[currentIndex] || null;
   const activeMedia = displayOverrideMedia ? overrideMedia : activeItem?.media;
+
+  // Live audience broadcast (Supabase Realtime). Adaptive cadence: 5s with
+  // people detected, 30s when empty. Buffers offline and replays on reconnect.
+  const audienceContent = useMemo(() => {
+    const media = (activeMedia as any) || null;
+    if (!media) return null;
+    return {
+      contentId: media.id ?? "",
+      contentName: media.name ?? "",
+      playlistId: (activeItem as any)?.playlist_id ?? "",
+    };
+  }, [activeMedia, activeItem]);
+  useAudienceAggregator(
+    deviceCode || "",
+    !!faceModelsReady,
+    audienceFacesRef,
+    audienceContent,
+  );
 
   // Sincroniza mediaElementRef com o slot ativo (para useDeviceMonitor)
   useEffect(() => {
