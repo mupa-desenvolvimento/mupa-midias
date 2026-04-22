@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useDevices, DeviceWithRelations } from "@/hooks/useDevices";
+import { useFirebaseDevices } from "@/hooks/useFirebaseDevices";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
