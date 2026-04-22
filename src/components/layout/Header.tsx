@@ -67,15 +67,14 @@ const Header = () => {
     const tick = () => setNow(new Date());
     // Sync to next minute boundary, then every 60s
     const msUntilNextMinute = 60_000 - (Date.now() % 60_000);
-    const timeout = setTimeout(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const timeoutId = setTimeout(() => {
       tick();
-      const interval = setInterval(tick, 60_000);
-      (timeout as any)._interval = interval;
+      intervalId = setInterval(tick, 60_000);
     }, msUntilNextMinute);
     return () => {
-      clearTimeout(timeout);
-      const i = (timeout as any)?._interval;
-      if (i) clearInterval(i);
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
     };
   }, []);
 
