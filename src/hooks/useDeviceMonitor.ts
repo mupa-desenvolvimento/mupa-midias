@@ -31,8 +31,9 @@ export const useDeviceMonitor = (
     if (!deviceCode) return;
 
     const payload = {
-      device_token: deviceCode, // In this app, deviceCode is often used as the identifier
+      device_code: deviceCode,
       status: 'active',
+
       timestamp: new Date().toISOString(),
       metadata: {
         last_faces_count: facesRef.current.length,
