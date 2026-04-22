@@ -283,10 +283,12 @@ const Devices = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "online": return "bg-green-500";
+      case "unstable": return "bg-yellow-500";
       case "offline": return "bg-red-500";
-      default: return "bg-yellow-500";
+      default: return "bg-gray-500";
     }
   };
+
 
   const getStatusVariant = (status: string): "default" | "destructive" | "secondary" => {
     switch (status) {
