@@ -391,3 +391,20 @@ body {
   top: 0 !important;
   left: 0 !important;
 }
+
+/* ============================================================
+   Page scroll behavior
+   ------------------------------------------------------------
+   Pages that render <PageShell fixedLayout/> (default) emit
+   data-fixed-layout="true". When that's the case, we want the
+   table/list inside the page to own the scroll and the footer
+   (pagination) to stay pinned to the viewport — so the outer
+   .app-content-area must NOT scroll and must NOT add padding
+   (PageShell already controls inner spacing).
+   For other pages (Dashboard, Settings, forms), .app-content-area
+   keeps its default natural page scroll.
+   ============================================================ */
+.app-content-area:has([data-fixed-layout="true"]) {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
