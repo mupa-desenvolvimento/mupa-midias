@@ -340,7 +340,7 @@ const DesktopPlaylistEditor = () => {
   ];
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6">
+    <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-background text-foreground overflow-hidden -m-3 md:-m-4 lg:-m-6 mb-[-1rem] md:mb-[-1.5rem] lg:mb-[-2rem]">
       <div className="flex-1 flex overflow-hidden">
         {/* Compact Left Sidebar */}
         <div className="w-16 border-r bg-card flex flex-col items-center py-4 gap-3 z-20 shrink-0">
