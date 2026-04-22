@@ -15,11 +15,11 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { device_id, device_token, status, app_version, last_content_played, metadata } = await req.json()
+    const { device_id, device_token, device_code, status, app_version, last_content_played, metadata } = await req.json()
 
-    if (!device_id && !device_token) {
+    if (!device_id && !device_token && !device_code) {
       return new Response(
-        JSON.stringify({ error: 'device_id or device_token is required' }),
+        JSON.stringify({ error: 'device_id, device_token, or device_code is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -28,9 +28,12 @@ Deno.serve(async (req: Request) => {
     let query = supabase.from('devices').select('id, metadata')
     if (device_id) {
       query = query.eq('id', device_id)
-    } else {
+    } else if (device_token) {
       query = query.eq('device_token', device_token)
+    } else {
+      query = query.eq('device_code', device_code)
     }
+
 
     const { data: device, error: deviceError } = await query.maybeSingle()
 
