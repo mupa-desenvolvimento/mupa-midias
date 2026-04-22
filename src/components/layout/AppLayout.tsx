@@ -37,7 +37,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           */}
           <div
             className="app-content-area flex-1 min-h-0 flex flex-col px-3 md:px-4 lg:px-6 pb-3 md:pb-4 lg:pb-6 pt-0 overflow-y-auto custom-scrollbar"
-            style={{ WebkitOverflowScrolling: 'touch', marginTop: isPlaylistEditor ? '8px' : '-22px' }}
+            style={{ WebkitOverflowScrolling: 'touch', marginTop: isPlaylistEditor ? '18px' : '-22px' }}
           >
             {children}
           </div>
