@@ -834,7 +834,7 @@ const Devices = () => {
                       Última atualização
                     </span>
                     <span className="text-sm">
-                      {formatLastSeen(device.last_seen_at)}
+                      {formatLastSeen(device)}
                     </span>
                   </div>
 
