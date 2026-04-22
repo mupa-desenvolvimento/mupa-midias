@@ -6,6 +6,7 @@ import { useDashboardAnalytics } from "@/hooks/useDashboardAnalytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { LivePlayerFeed } from "@/components/dashboard/LivePlayerFeed";
+import { LiveAudienceWidget } from "@/components/dashboard/LiveAudienceWidget";
 
 const EMOTION_COLORS: Record<string, string> = {
   'Neutro': '#94a3b8',

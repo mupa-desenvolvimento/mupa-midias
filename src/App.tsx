@@ -64,6 +64,7 @@ import EnterpriseReports from "./pages/admin/EnterpriseReports";
 import TagsManager from "./pages/admin/TagsManager";
 import CampaignsManager from "./pages/admin/CampaignsManager";
 import ScheduleTimeline from "./pages/admin/ScheduleTimeline";
+import AudienceLive from "./pages/admin/AudienceLive";
 import Install from "./pages/Install";
  import Presentation from "./pages/Presentation";
 import AssaiPresentation from "./pages/AssaiPresentation";
@@ -186,6 +187,7 @@ function AppContent() {
                     <AppLayout>
                       <Routes>
                         <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="dashboard/audiencia-live" element={<AudienceLive />} />
                         <Route path="devices" element={<Devices />} />
                         <Route path="stores" element={<Stores />} />
                         <Route path="regions" element={<EnterpriseManager />} />
