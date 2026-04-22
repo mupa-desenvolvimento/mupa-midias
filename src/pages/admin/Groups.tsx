@@ -645,13 +645,13 @@ const GroupsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="h-full w-full overflow-y-auto custom-scrollbar">
-        <div className="px-4 sm:px-6 pt-[15px] pb-6">
+      <PageShell fixedLayout={false} className="animate-fade-in">
+        <div className="px-4 pt-4 pb-6 sm:px-6">
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -659,8 +659,8 @@ const GroupsPage = () => {
   const segmentGroupName = segmentGroupId ? groups.find(g => g.id === segmentGroupId)?.name : "";
 
   return (
-    <div className="h-full w-full overflow-y-auto custom-scrollbar">
-      <div className="px-4 sm:px-6 pt-[15px] pb-6 max-w-[1600px] mx-auto">
+    <PageShell fixedLayout={false} className="animate-fade-in">
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col px-4 pt-4 pb-6 sm:px-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -1155,7 +1155,7 @@ const GroupsPage = () => {
         </AlertDialogContent>
       </AlertDialog>
       </div>
-    </div>
+    </PageShell>
   );
 };
 
