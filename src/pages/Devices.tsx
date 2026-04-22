@@ -98,6 +98,7 @@ const Devices = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const { toast } = useToast();
   const { devices, isLoading, createDevice, updateDevice, deleteDevice, refetch } = useDevices();
+  const { firebaseData, loading: loadingFirebase } = useFirebaseDevices();
   const { playlists } = usePlaylists();
 
   const {
