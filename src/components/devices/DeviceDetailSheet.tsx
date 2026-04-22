@@ -210,7 +210,7 @@ export const DeviceDetailSheet = ({
                   </Badge>
                 </div>
               </InfoRow>
-              <InfoRow label="Último acesso">{formatLastSeen(device.last_seen_at)}</InfoRow>
+              <InfoRow label="Último acesso">{formatLastSeen()}</InfoRow>
               <InfoRow label="Ativo">
                 <Badge variant={device.is_active ? "default" : "secondary"}>
                   {device.is_active ? "Sim" : "Não"}
