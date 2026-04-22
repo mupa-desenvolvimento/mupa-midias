@@ -1116,12 +1116,20 @@ export function useFabricCanvas() {
     const exportLeft = bg ? Math.round(((bg as any).left as number) || 0) : 0;
     const exportTop = bg ? Math.round(((bg as any).top as number) || 0) : 0;
 
+    // Snapshot current visual state (zoom, viewport, canvas element size)
+    const prevWidth = c.getWidth();
+    const prevHeight = c.getHeight();
     const vpt = (c.viewportTransform ? [...c.viewportTransform] : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number];
     const active = c.getActiveObject();
     const prevClipPath = (c as any).clipPath;
+
     c.discardActiveObject();
-    // Temporarily remove clipPath so the toDataURL bounds dictate the crop.
+    // Remove clipPath so export bounds are dictated by the requested area only.
     (c as any).clipPath = null;
+    // CRITICAL: resize the Fabric canvas to match the page dimensions and reset
+    // zoom/pan to 1:1. Otherwise toDataURL clips to the viewport canvas element
+    // (which is the editor area, not the design area), producing a cropped export.
+    c.setDimensions({ width: exportW, height: exportH });
     c.setViewportTransform([1, 0, 0, 1, 0, 0]);
     c.renderAll();
 
@@ -1136,7 +1144,9 @@ export function useFabricCanvas() {
       enableRetinaScaling: false,
     });
 
+    // Restore previous visual state
     (c as any).clipPath = prevClipPath;
+    c.setDimensions({ width: prevWidth, height: prevHeight });
     c.setViewportTransform(vpt);
     c.renderAll();
     if (active) {
@@ -1165,9 +1175,15 @@ export function useFabricCanvas() {
     const exportW = bg ? Math.max(1, Math.round(bg.getScaledWidth())) : canvasWidth;
     const exportH = bg ? Math.max(1, Math.round(bg.getScaledHeight())) : canvasHeight;
 
+    const prevWidth = c.getWidth();
+    const prevHeight = c.getHeight();
     const vpt = (c.viewportTransform ? [...c.viewportTransform] : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number];
     const active = c.getActiveObject();
+    const prevClipPath = (c as any).clipPath;
+
     c.discardActiveObject();
+    (c as any).clipPath = null;
+    c.setDimensions({ width: exportW, height: exportH });
     c.setViewportTransform([1, 0, 0, 1, 0, 0]);
     c.renderAll();
 
@@ -1177,6 +1193,8 @@ export function useFabricCanvas() {
       viewBox: { x: 0, y: 0, width: exportW, height: exportH },
     });
 
+    (c as any).clipPath = prevClipPath;
+    c.setDimensions({ width: prevWidth, height: prevHeight });
     c.setViewportTransform(vpt);
     c.renderAll();
     if (active) {
