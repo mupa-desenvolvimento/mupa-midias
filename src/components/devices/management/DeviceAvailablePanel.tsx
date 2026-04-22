@@ -27,6 +27,7 @@ export const DeviceAvailablePanel = ({
   selectedIds = [],
 }: DeviceAvailablePanelProps) => {
   const { devices, isLoading } = useDevices();
+  const { getDeviceStatus } = useFirebaseDevices();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
 
