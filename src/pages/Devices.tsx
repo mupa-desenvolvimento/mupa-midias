@@ -136,14 +136,24 @@ const Devices = () => {
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [devices, playlists]);
 
-  const getDeviceStatus = (device: DeviceWithRelations) => {
-    if (device.status === "pending" && !device.last_seen_at) return "pending";
-    if (!device.last_seen_at) return "offline";
-    const lastSeenDate = new Date(device.last_seen_at);
-    const now = new Date();
-    const diffInMinutes = differenceInMinutes(now, lastSeenDate);
-    return diffInMinutes < 6 ? "online" : "offline";
-  };
+  const getDeviceStatus = useCallback((device: DeviceWithRelations) => {
+    // Attempt to find Firebase data for this device by id
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+
+    if (device.status === "pending" && !lastUpdate) return "pending";
+    if (!lastUpdate) return "offline";
+
+    try {
+      const lastSeenDate = typeof lastUpdate === 'string' ? parseISO(lastUpdate) : new Date(lastUpdate);
+      const now = new Date();
+      const diffInMinutes = differenceInMinutes(now, lastSeenDate);
+      return diffInMinutes < 5 ? "online" : "offline";
+    } catch (e) {
+      console.error("Error parsing date:", lastUpdate, e);
+      return "offline";
+    }
+  }, [firebaseData]);
 
   const filteredDevices = useMemo(() => {
     const term = state.search.toLowerCase().trim();
