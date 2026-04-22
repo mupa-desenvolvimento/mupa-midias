@@ -125,9 +125,11 @@ export const DeviceDetailSheet = ({
     }
   };
 
-  const formatLastSeen = (lastSeen: string | null) => {
-    if (!lastSeen) return "Nunca conectado";
-    return formatDistanceToNow(new Date(lastSeen), { addSuffix: true, locale: ptBR });
+  const formatLastSeen = () => {
+    const firebaseInfo = Object.values(firebaseData || {}).find(f => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+    if (!lastUpdate) return "Nunca conectado";
+    return formatDistanceToNow(new Date(lastUpdate), { addSuffix: true, locale: ptBR });
   };
 
   const InfoRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
