@@ -29,7 +29,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               <LitePlanBanner />
             </div>
           )}
-          <div className="flex-1 min-h-0 flex flex-col p-3 md:p-4 lg:p-6 overflow-hidden">
+          {/*
+            Conditional scroll: when the page uses PageShell with fixedLayout (data-fixed-layout),
+            the parent stays overflow-hidden so the table scrolls internally and the footer pins.
+            Otherwise (Dashboard, forms, settings...), enable natural page scroll.
+          */}
+          <div className="flex-1 min-h-0 flex flex-col p-3 md:p-4 lg:p-6 overflow-y-auto custom-scrollbar has-[[data-fixed-layout=true]]:overflow-hidden has-[[data-fixed-layout=true]]:p-0 has-[[data-fixed-layout=true]]:px-3 md:has-[[data-fixed-layout=true]]:px-4 lg:has-[[data-fixed-layout=true]]:px-6 has-[[data-fixed-layout=true]]:pt-3 md:has-[[data-fixed-layout=true]]:pt-4 lg:has-[[data-fixed-layout=true]]:pt-6" style={{ WebkitOverflowScrolling: 'touch' }}>
             {children}
           </div>
         </div>
