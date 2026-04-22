@@ -23,7 +23,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <AppSidebar />
       <main className="flex-1 flex flex-col overflow-hidden relative min-w-0 h-screen">
         <Header />
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative z-[35]">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
           {!isPlaylistEditor && (
             <div className="shrink-0 px-3 md:px-4 lg:px-6 pt-3 md:pt-4 lg:pt-6">
               <LitePlanBanner />
@@ -36,8 +36,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             can scroll on its own and the pagination footer stays pinned to the viewport.
           */}
           <div
-            className="app-content-area flex-1 min-h-0 flex flex-col px-3 md:px-4 lg:px-6 pb-3 md:pb-4 lg:pb-6 pt-0 overflow-y-auto custom-scrollbar"
-            style={{ WebkitOverflowScrolling: 'touch', marginTop: isPlaylistEditor ? '33px' : '-22px' }}
+            className="app-content-area flex-1 min-h-0 flex flex-col px-3 md:px-4 lg:px-6 pb-3 md:pb-4 lg:pb-6 pt-3 md:pt-4 lg:pt-6 overflow-y-auto custom-scrollbar"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {children}
           </div>
