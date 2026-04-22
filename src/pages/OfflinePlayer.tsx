@@ -155,8 +155,8 @@ const OfflinePlayer = () => {
   // People counter
   const { count: peopleCount, todayCount, processFaces } = usePeopleCounter();
 
-  // Live audience aggregator → broadcasts compact snapshots to dashboard
-  // (adaptive: 5s with audience / 30s when empty). Buffers offline.
+  // Live audience aggregator → broadcasts compact snapshots to dashboard.
+  // Wiring happens after activeMedia/activeItem are declared (see below).
   const audienceFacesRef = useRef<AggregatedFace[]>([]);
   useEffect(() => {
     audienceFacesRef.current = (activeFaces || []).map((f: any) => ({
@@ -169,22 +169,6 @@ const OfflinePlayer = () => {
           : (f.attentionDuration || 0) * 1000,
     }));
   }, [activeFaces]);
-  const audienceContent = useMemo(() => {
-    const media = (activeMedia as any) || null;
-    if (!media) return null;
-    return {
-      contentId: media.id ?? "",
-      contentName: media.name ?? "",
-      playlistId: (activeItem as any)?.playlist_id ?? "",
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMedia]);
-  useAudienceAggregator(
-    deviceCode || "",
-    !!faceModelsReady,
-    audienceFacesRef,
-    audienceContent,
-  );
 
   // Player UI hooks
   const { showControls } = useAutoHideControls();
