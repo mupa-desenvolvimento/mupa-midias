@@ -675,7 +675,7 @@ const OfflinePlayer = () => {
       <EanInput
         isVisible={terminalMode === "player"}
         onSubmit={handleEanSubmit}
-        disabled={false}
+        disabled={true}
         onReset={handleReset}
         alwaysListenForScanner={true}
       />
