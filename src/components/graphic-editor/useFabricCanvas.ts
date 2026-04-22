@@ -1105,9 +1105,23 @@ export function useFabricCanvas() {
   const getCanvasDataUrl = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return null;
+
+    // Always derive page dimensions from the REAL background rect (source of truth),
+    // falling back to React state only if unavailable. Prevents export cropping when
+    // state is briefly out of sync after template loads/resizes.
+    const bg = bgRectRef.current
+      || (c.getObjects().find((o) => isBackgroundObject(o as any) && (o as any).type === "rect") as Rect | undefined);
+    const exportW = bg ? Math.max(1, Math.round(bg.getScaledWidth())) : canvasWidth;
+    const exportH = bg ? Math.max(1, Math.round(bg.getScaledHeight())) : canvasHeight;
+    const exportLeft = bg ? Math.round(((bg as any).left as number) || 0) : 0;
+    const exportTop = bg ? Math.round(((bg as any).top as number) || 0) : 0;
+
     const vpt = (c.viewportTransform ? [...c.viewportTransform] : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number];
     const active = c.getActiveObject();
+    const prevClipPath = (c as any).clipPath;
     c.discardActiveObject();
+    // Temporarily remove clipPath so the toDataURL bounds dictate the crop.
+    (c as any).clipPath = null;
     c.setViewportTransform([1, 0, 0, 1, 0, 0]);
     c.renderAll();
 
@@ -1115,12 +1129,14 @@ export function useFabricCanvas() {
       format: "png",
       quality: 1,
       multiplier: 2,
-      left: 0,
-      top: 0,
-      width: canvasWidth,
-      height: canvasHeight,
+      left: exportLeft,
+      top: exportTop,
+      width: exportW,
+      height: exportH,
+      enableRetinaScaling: false,
     });
 
+    (c as any).clipPath = prevClipPath;
     c.setViewportTransform(vpt);
     c.renderAll();
     if (active) {
@@ -1129,7 +1145,7 @@ export function useFabricCanvas() {
     }
 
     return dataUrl;
-  }, [canvasHeight, canvasWidth]);
+  }, [canvasHeight, canvasWidth, isBackgroundObject]);
 
   const exportPNG = useCallback(() => {
     const dataUrl = getCanvasDataUrl();
@@ -1143,6 +1159,12 @@ export function useFabricCanvas() {
   const exportSVG = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
+
+    const bg = bgRectRef.current
+      || (c.getObjects().find((o) => isBackgroundObject(o as any) && (o as any).type === "rect") as Rect | undefined);
+    const exportW = bg ? Math.max(1, Math.round(bg.getScaledWidth())) : canvasWidth;
+    const exportH = bg ? Math.max(1, Math.round(bg.getScaledHeight())) : canvasHeight;
+
     const vpt = (c.viewportTransform ? [...c.viewportTransform] : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number];
     const active = c.getActiveObject();
     c.discardActiveObject();
@@ -1150,9 +1172,9 @@ export function useFabricCanvas() {
     c.renderAll();
 
     const svg = (c as any).toSVG({
-      width: canvasWidth,
-      height: canvasHeight,
-      viewBox: { x: 0, y: 0, width: canvasWidth, height: canvasHeight },
+      width: exportW,
+      height: exportH,
+      viewBox: { x: 0, y: 0, width: exportW, height: exportH },
     });
 
     c.setViewportTransform(vpt);
@@ -1167,7 +1189,7 @@ export function useFabricCanvas() {
     a.href = URL.createObjectURL(blob);
     a.download = `${projectName}.svg`;
     a.click();
-  }, [canvasHeight, canvasWidth, projectName]);
+  }, [canvasHeight, canvasWidth, projectName, isBackgroundObject]);
 
   const saveProject = useCallback(() => {
     const c = canvasRef.current;
