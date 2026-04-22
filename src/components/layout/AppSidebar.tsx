@@ -356,26 +356,7 @@ const AppSidebar = () => {
         }
       </SidebarContent>
 
-      {/* LITE upgrade CTA only — user/plan info moved to header dropdown */}
-      {!isSuperAdmin && isLite && !collapsed && (
-        <SidebarFooter className="p-3 border-t border-sidebar-border/30">
-          <Button
-            size="sm"
-            className="w-full h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-            onClick={() => navigate("/admin/settings?tab=license")}
-          >
-            <Crown className="h-3.5 w-3.5 mr-1.5" />
-            Fazer Upgrade
-          </Button>
-        </SidebarFooter>
-      )}
-      {!isSuperAdmin && !isLite && !collapsed && (
-        <SidebarFooter className="p-3 border-t border-sidebar-border/30">
-          <p className="text-[10px] text-sidebar-foreground/40 text-center">
-            v{packageJson.version}
-          </p>
-        </SidebarFooter>
-      )}
+      {/* User info, plan and version moved entirely to header dropdown */}
     </Sidebar>);
 
 };
