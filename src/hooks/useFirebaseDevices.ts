@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { database, ref, onValue } from "@/lib/firebase";
+import { differenceInMinutes, parseISO } from "date-fns";
 
 export interface FirebaseDeviceData {
   atualizacao_plataforma: string;
