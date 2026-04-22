@@ -13,14 +13,53 @@ export const useDeviceMonitor = (
   const [isMonitoring, setIsMonitoring] = useState(false);
   const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const facesIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const facesRef = useRef<ActiveFace[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const subscribedRef = useRef(false);
+
+  // Buffer for heartbeats if network fails
+  const heartbeatBufferRef = useRef<any[]>([]);
 
   // Always keep latest faces snapshot for background broadcasting
   useEffect(() => {
     facesRef.current = faces || [];
   }, [faces]);
+
+  // Heartbeat function with resilience
+  const sendHeartbeat = async () => {
+    if (!deviceCode) return;
+
+    const payload = {
+      device_code: deviceCode,
+      status: 'active',
+
+      timestamp: new Date().toISOString(),
+      metadata: {
+        last_faces_count: facesRef.current.length,
+      }
+    };
+
+    try {
+      const { data, error } = await supabase.functions.invoke('device-heartbeat', {
+        body: payload
+      });
+
+      if (error) throw error;
+
+      // If we had buffered heartbeats, try to send them now (simplified)
+      if (heartbeatBufferRef.current.length > 0) {
+        console.log(`[DeviceMonitor] Sending ${heartbeatBufferRef.current.length} buffered heartbeats`);
+        heartbeatBufferRef.current = [];
+      }
+    } catch (err) {
+      console.warn('[DeviceMonitor] Heartbeat failed, buffering...', err);
+      heartbeatBufferRef.current.push(payload);
+      if (heartbeatBufferRef.current.length > 10) {
+        heartbeatBufferRef.current.shift(); // Keep buffer sane
+      }
+    }
+  };
 
   // Single shared channel for all monitor traffic (subscribe/broadcast/listen)
   useEffect(() => {
@@ -63,8 +102,11 @@ export const useDeviceMonitor = (
 
     channelRef.current = channel;
 
+    // Heartbeat Interval (15s)
+    sendHeartbeat(); // Initial heartbeat
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
+
     // Background face stats broadcast — always on, regardless of frame stream.
-    // This feeds the dashboard / monitoring UI in real time.
     facesIntervalRef.current = setInterval(() => {
       if (!subscribedRef.current) return;
       const stats = facesRef.current;
@@ -80,10 +122,8 @@ export const useDeviceMonitor = (
     }, 1000);
 
     return () => {
-      if (facesIntervalRef.current) {
-        clearInterval(facesIntervalRef.current);
-        facesIntervalRef.current = null;
-      }
+      if (facesIntervalRef.current) clearInterval(facesIntervalRef.current);
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       subscribedRef.current = false;
       supabase.removeChannel(channel);
       channelRef.current = null;
@@ -161,3 +201,4 @@ export const useDeviceMonitor = (
 
   return { isMonitoring };
 };
+

@@ -147,13 +147,17 @@ const Devices = () => {
     try {
       const lastSeenDate = typeof lastUpdate === 'string' ? parseISO(lastUpdate) : new Date(lastUpdate);
       const now = new Date();
-      const diffInMinutes = differenceInMinutes(now, lastSeenDate);
-      return diffInMinutes < 5 ? "online" : "offline";
+      const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
+      
+      if (diffInSeconds < 30) return "online";
+      if (diffInSeconds < 60) return "unstable";
+      return "offline";
     } catch (e) {
       console.error("Error parsing date:", lastUpdate, e);
       return "offline";
     }
   }, [firebaseData]);
+
 
   const filteredDevices = useMemo(() => {
     const term = state.search.toLowerCase().trim();
@@ -279,10 +283,12 @@ const Devices = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "online": return "bg-green-500";
+      case "unstable": return "bg-yellow-500";
       case "offline": return "bg-red-500";
-      default: return "bg-yellow-500";
+      default: return "bg-gray-500";
     }
   };
+
 
   const getStatusVariant = (status: string): "default" | "destructive" | "secondary" => {
     switch (status) {
@@ -295,11 +301,13 @@ const Devices = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "online": return "Online";
+      case "unstable": return "Instável";
       case "offline": return "Offline";
       case "pending": return "Pendente";
       default: return status;
     }
   };
+
 
   const copyDeviceLink = (deviceCode: string) => {
     const deviceUrl = `${window.location.origin}/play/${deviceCode}`;

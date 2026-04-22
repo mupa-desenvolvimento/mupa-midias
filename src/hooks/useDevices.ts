@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserTenant } from "./useUserTenant";
 import type { Json } from "@/integrations/supabase/types";
+import { useEffect } from "react";
 
 export interface Device {
   id: string;
@@ -125,7 +126,6 @@ export const useDevices = () => {
         )
       `;
 
-      // Get all company IDs for the tenant to filter devices properly
       let tenantCompanyIds: string[] = [];
       if (!isSuperAdmin && tenantId) {
         const { data: companies } = await supabase
@@ -142,11 +142,9 @@ export const useDevices = () => {
           .select(select)
           .order("created_at", { ascending: false });
 
-        // Filter by ALL companies belonging to the tenant
         if (!isSuperAdmin && tenantCompanyIds.length > 0) {
           query = query.in("company_id", tenantCompanyIds);
         } else if (!isSuperAdmin) {
-          // No tenant = no devices
           return null;
         }
 
@@ -194,12 +192,9 @@ export const useDevices = () => {
       if (queryError) throw queryError;
       
       const transformedData = (data || []).map((device: any) => {
-        // Handle multiple groups from group_devices
         const groups = (device.group_devices || [])
           .map((gd: any) => gd.group)
           .filter(Boolean);
-        
-        // For backward compatibility, use the first group as 'group'
         const primaryGroup = groups.length > 0 ? groups[0] : device.group;
 
         return {
@@ -219,9 +214,44 @@ export const useDevices = () => {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("devices-realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "devices" },
+        (payload) => {
+          queryClient.setQueryData<DeviceWithRelations[]>(["devices", tenantId, isSuperAdmin], (old) => {
+            if (!old) return old;
+            return old.map((d) => 
+              d.id === payload.new.id ? { ...d, ...payload.new } as DeviceWithRelations : d
+            );
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "devices" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["devices"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "devices" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["devices"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, tenantId, isSuperAdmin]);
+
   const createDevice = useMutation({
     mutationFn: async (device: DeviceInsert) => {
-      // Auto-assign company_id if not set
       const deviceData = { ...device };
       if (!isSuperAdmin && companyId && !deviceData.company_id) {
         deviceData.company_id = companyId;
@@ -269,10 +299,6 @@ export const useDevices = () => {
       return { previous };
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData<DeviceWithRelations[]>(["devices"], (current) => {
-        if (!current) return current;
-        return current.map((d) => (d.id === updated.id ? ({ ...d, ...(updated as any) } as any) : d));
-      });
       queryClient.invalidateQueries({ queryKey: ["devices"] });
       toast({ title: "Dispositivo atualizado com sucesso" });
     },
