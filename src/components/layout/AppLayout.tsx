@@ -21,9 +21,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <>
       <AppSidebar />
-      <main className="flex-1 flex flex-col overflow-hidden relative min-w-0 h-screen">
+      <main className="app-shell flex-1 relative min-w-0">
         <Header />
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
+        <div className="app-main relative">
           {!isPlaylistEditor && (
             <div className="shrink-0 px-3 md:px-4 lg:px-6 pt-3 md:pt-4 lg:pt-6">
               <LitePlanBanner />

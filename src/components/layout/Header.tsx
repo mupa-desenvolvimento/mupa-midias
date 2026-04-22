@@ -154,8 +154,11 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center px-3 md:px-4 gap-3">
+    <header
+      className="app-header border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60"
+      style={{ height: "var(--header-height)" }}
+    >
+      <div className="flex h-full items-center px-3 md:px-4 gap-3">
         <SidebarTrigger className="h-8 w-8 shrink-0" />
         <Separator orientation="vertical" className="h-6 hidden md:block" />
 
