@@ -1,6 +1,16 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { DetectedFace } from "./usePlayerFaceDetection";
+
+/**
+ * Normalized face shape consumed by the aggregator. Both `usePlayerFaceDetection`
+ * (DetectedFace) and `useFaceDetection` (ActiveFace) can be mapped into this.
+ */
+export interface AggregatedFace {
+  gender: "masculino" | "feminino" | "indefinido";
+  age: number;
+  emotion: string;
+  attentionDurationMs: number;
+}
 
 /**
  * Aggregates real-time face detection metrics from the player and broadcasts
@@ -52,7 +62,7 @@ const AUDIENCE_TOPIC = "audience:live";
 
 const buildSnapshot = (
   deviceCode: string,
-  faces: DetectedFace[],
+  faces: AggregatedFace[],
   content: CurrentContent | null,
 ): AudienceSnapshot => {
   const people = faces.length;
@@ -72,7 +82,7 @@ const buildSnapshot = (
 
     emotions[f.emotion] = (emotions[f.emotion] || 0) + 1;
     ageSum += f.age || 0;
-    const ms = (f.attentionDuration || 0) * 1000;
+    const ms = f.attentionDurationMs || 0;
     attentionSum += ms;
     if (ms > attentionMax) attentionMax = ms;
   }
@@ -117,7 +127,7 @@ const snapshotsAreSimilar = (a: AudienceSnapshot, b: AudienceSnapshot): boolean 
 export const useAudienceAggregator = (
   deviceCode: string,
   enabled: boolean,
-  facesRef: React.RefObject<DetectedFace[]>,
+  facesRef: React.RefObject<AggregatedFace[]>,
   currentContent: CurrentContent | null,
 ) => {
   const lastSentRef = useRef<number>(0);
