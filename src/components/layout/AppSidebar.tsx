@@ -356,68 +356,26 @@ const AppSidebar = () => {
         }
       </SidebarContent>
 
-      {/* License upgrade/info banner */}
-      {!isSuperAdmin && planLabel && !collapsed && (
-        <div className="px-3 py-2 border-t border-sidebar-border/30">
-          <div className="rounded-lg bg-sidebar-accent/30 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold tracking-wider uppercase text-sidebar-foreground/50">Plano</span>
-              <Badge variant={isLite ? "secondary" : "default"} className="text-[10px] px-1.5 py-0">
-                {planLabel}
-              </Badge>
-            </div>
-            {isLite && (
-              <Button
-                size="sm"
-                className="w-full h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => navigate("/admin/settings?tab=license")}
-              >
-                <Crown className="h-3.5 w-3.5 mr-1.5" />
-                Fazer Upgrade
-              </Button>
-            )}
-            {!isLite && license?.expires_at && (
-              <p className="text-[10px] text-sidebar-foreground/50 text-center">
-                Expira em {new Date(license.expires_at).toLocaleDateString('pt-BR')}
-              </p>
-            )}
-          </div>
-        </div>
+      {/* LITE upgrade CTA only — user/plan info moved to header dropdown */}
+      {!isSuperAdmin && isLite && !collapsed && (
+        <SidebarFooter className="p-3 border-t border-sidebar-border/30">
+          <Button
+            size="sm"
+            className="w-full h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+            onClick={() => navigate("/admin/settings?tab=license")}
+          >
+            <Crown className="h-3.5 w-3.5 mr-1.5" />
+            Fazer Upgrade
+          </Button>
+        </SidebarFooter>
       )}
-
-      <SidebarFooter className="p-3 border-t border-sidebar-border/30">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8 shrink-0">
-            <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
-              {userInitials}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed &&
-          <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-sidebar-foreground truncate">
-                {user?.email}
-              </p>
-              <p className="text-[10px] text-sidebar-foreground/50">
-                v{packageJson.version}
-              </p>
-            </div>
-          }
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/30"
-                aria-label="Sair">
-                
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Sair</TooltipContent>
-          </Tooltip>
-        </div>
-      </SidebarFooter>
+      {!isSuperAdmin && !isLite && !collapsed && (
+        <SidebarFooter className="p-3 border-t border-sidebar-border/30">
+          <p className="text-[10px] text-sidebar-foreground/40 text-center">
+            v{packageJson.version}
+          </p>
+        </SidebarFooter>
+      )}
     </Sidebar>);
 
 };
