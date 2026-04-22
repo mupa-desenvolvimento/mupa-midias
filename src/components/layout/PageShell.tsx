@@ -37,6 +37,7 @@ export const PageShell = ({
 }: PageShellProps) => {
   return (
     <div
+      data-fixed-layout={fixedLayout ? "true" : "false"}
       className={cn(
         "flex flex-col flex-1 w-full",
         fixedLayout ? "min-h-0 h-full overflow-hidden" : "min-h-0",
