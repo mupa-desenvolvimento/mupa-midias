@@ -37,5 +37,22 @@ export const useFirebaseDevices = () => {
     return () => unsubscribe();
   }, []);
 
-  return { firebaseData, loading };
+  const getDeviceStatus = useCallback((device: any) => {
+    const firebaseInfo = Object.values(firebaseData || {}).find((f: any) => f.device_id === device.id);
+    const lastUpdate = firebaseInfo?.["last-update"] || device.last_seen_at;
+
+    if (!lastUpdate) return "offline";
+
+    try {
+      const lastSeenDate = typeof lastUpdate === 'string' ? parseISO(lastUpdate) : new Date(lastUpdate);
+      const now = new Date();
+      const diffInMinutes = differenceInMinutes(now, lastSeenDate);
+      return diffInMinutes < 5 ? "online" : "offline";
+    } catch (e) {
+      console.error("Error parsing date in Firebase hook:", lastUpdate, e);
+      return "offline";
+    }
+  }, [firebaseData]);
+
+  return { firebaseData, loading, getDeviceStatus };
 };
