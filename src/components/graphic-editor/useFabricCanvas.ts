@@ -1175,9 +1175,15 @@ export function useFabricCanvas() {
     const exportW = bg ? Math.max(1, Math.round(bg.getScaledWidth())) : canvasWidth;
     const exportH = bg ? Math.max(1, Math.round(bg.getScaledHeight())) : canvasHeight;
 
+    const prevWidth = c.getWidth();
+    const prevHeight = c.getHeight();
     const vpt = (c.viewportTransform ? [...c.viewportTransform] : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number];
     const active = c.getActiveObject();
+    const prevClipPath = (c as any).clipPath;
+
     c.discardActiveObject();
+    (c as any).clipPath = null;
+    c.setDimensions({ width: exportW, height: exportH });
     c.setViewportTransform([1, 0, 0, 1, 0, 0]);
     c.renderAll();
 
@@ -1187,6 +1193,8 @@ export function useFabricCanvas() {
       viewBox: { x: 0, y: 0, width: exportW, height: exportH },
     });
 
+    (c as any).clipPath = prevClipPath;
+    c.setDimensions({ width: prevWidth, height: prevHeight });
     c.setViewportTransform(vpt);
     c.renderAll();
     if (active) {
