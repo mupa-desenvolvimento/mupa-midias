@@ -17,6 +17,8 @@ import { PlaylistSettings } from "./PlaylistSettings";
 import { GlobalTimeline } from "./GlobalTimeline";
 import { CampaignDrawer } from "./CampaignDrawer";
 import { EditItemDrawer } from "./EditItemDrawer";
+import { MobilePlaylistEditor } from "./mobile/MobilePlaylistEditor";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
