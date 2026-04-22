@@ -406,5 +406,5 @@ body {
    ============================================================ */
 .app-content-area:has([data-fixed-layout="true"]) {
   overflow: hidden !important;
-  padding: 0 !important;
+  padding-bottom: 0 !important;
 }
