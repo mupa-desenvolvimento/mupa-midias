@@ -30,6 +30,7 @@ const MonitoringPage = () => {
 
   const { ready: modelsReady, error: modelsError } = useFaceApiModels();
   const { status, devices, deviceId, start, setDeviceId } = useCamera(videoRef);
+  const { tenantId } = useUserTenant();
 
   const detecting = modelsReady && status === "active";
   
@@ -41,6 +42,7 @@ const MonitoringPage = () => {
 
   const [log, setLog] = useState<DetectionLogEntry[]>([]);
   const lastLogTimeRef = useRef(0);
+  const lastPersistRef = useRef<Map<string, number>>(new Map());
 
   // Throttle log entries (1 entry per unique session per second max)
   useEffect(() => {
@@ -57,6 +59,44 @@ const MonitoringPage = () => {
     }));
     setLog((prev) => [...prev, ...entries].slice(-MAX_LOG));
   }, [sessions]);
+
+  // Persist detections to the database (throttled per session)
+  useEffect(() => {
+    if (sessions.length === 0) return;
+    const now = Date.now();
+
+    const toInsert = sessions
+      .filter((s) => {
+        const last = lastPersistRef.current.get(s.personId) || 0;
+        return now - last >= PERSIST_INTERVAL_MS;
+      })
+      .map((s) => {
+        lastPersistRef.current.set(s.personId, now);
+        return {
+          detected_at: new Date().toISOString(),
+          age: Math.round(s.age),
+          gender: s.gender,
+          emotion: s.dominantEmotion,
+          tenant_id: tenantId || null,
+          session_id: s.personId,
+          metadata: {
+            duration_ms: s.durationMs,
+            long_session: s.longSession,
+            is_looking: s.isLooking,
+          },
+        };
+      });
+
+    if (toInsert.length === 0) return;
+
+    supabase
+      .from("audience_detections")
+      .insert(toInsert)
+      .then(({ error }) => {
+        if (error) console.warn("[Monitoring] Failed to persist detections:", error.message);
+      });
+  }, [sessions, tenantId]);
+
 
   const handleStart = () => start(deviceId);
 
