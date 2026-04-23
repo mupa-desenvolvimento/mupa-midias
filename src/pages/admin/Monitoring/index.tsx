@@ -18,8 +18,11 @@ import { useCamera } from "./useCamera";
 import { useAudienceIntelligence } from "@/hooks/useAudienceIntelligence";
 import { AudienceStats } from "./AudienceStats";
 import type { DetectionLogEntry } from "./types";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserTenant } from "@/hooks/useUserTenant";
 
 const MAX_LOG = 200;
+const PERSIST_INTERVAL_MS = 3000; // Persist each unique session at most every 3s
 
 const MonitoringPage = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
