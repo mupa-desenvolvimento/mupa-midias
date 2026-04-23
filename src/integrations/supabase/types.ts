@@ -184,6 +184,66 @@ export type Database = {
         }
         Relationships: []
       }
+      audience_detections: {
+        Row: {
+          age: number | null
+          created_at: string
+          detected_at: string
+          device_id: string | null
+          emotion: string | null
+          emotion_confidence: number | null
+          gender: string | null
+          gender_probability: number | null
+          id: string
+          metadata: Json | null
+          session_id: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          age?: number | null
+          created_at?: string
+          detected_at?: string
+          device_id?: string | null
+          emotion?: string | null
+          emotion_confidence?: number | null
+          gender?: string | null
+          gender_probability?: number | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          age?: number | null
+          created_at?: string
+          detected_at?: string
+          device_id?: string | null
+          emotion?: string | null
+          emotion_confidence?: number | null
+          gender?: string | null
+          gender_probability?: number | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audience_detections_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audience_detections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auto_content_items: {
         Row: {
           category: string | null
