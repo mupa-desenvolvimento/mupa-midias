@@ -1238,6 +1238,47 @@ export type Database = {
           },
         ]
       }
+      device_commands: {
+        Row: {
+          command: string
+          created_at: string
+          device_id: string
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          metadata: Json | null
+          status: string
+        }
+        Insert: {
+          command: string
+          created_at?: string
+          device_id: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+        }
+        Update: {
+          command?: string
+          created_at?: string
+          device_id?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_commands_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_detection_logs: {
         Row: {
           age: number | null
@@ -4932,6 +4973,17 @@ export type Database = {
         Args: { p_device_code: string }
         Returns: Json
       }
+      get_pending_device_command: {
+        Args: { p_device_id: string; p_device_token: string }
+        Returns: {
+          command: string
+          created_at: string
+          device_id: string
+          id: string
+          metadata: Json
+          status: string
+        }[]
+      }
       get_public_company_playlists: {
         Args: { p_company_code: string }
         Returns: {
@@ -4997,6 +5049,15 @@ export type Database = {
           tenant_id: string
           tenant_name: string
         }[]
+      }
+      mark_device_command_executed: {
+        Args: {
+          p_command_id: string
+          p_device_token: string
+          p_error?: string
+          p_status?: string
+        }
+        Returns: undefined
       }
       register_device: {
         Args: {
