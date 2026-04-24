@@ -32,10 +32,16 @@ import {
   Send,
   X,
   Users,
+  Terminal,
+  RotateCcw,
+  Power,
+  Trash2,
+  Sync,
 } from "lucide-react";
 import { DeviceWithRelations } from "@/hooks/useDevices";
 import { useMediaItems } from "@/hooks/useMediaItems";
 import { useDeviceGroups } from "@/hooks/useDeviceGroups";
+import { useDeviceCommands } from "@/hooks/useDeviceCommands";
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
 import { ref, update } from "firebase/database";
@@ -59,6 +65,7 @@ export function DeviceControlDialog({
   const { toast } = useToast();
   const { mediaItems, isLoading: mediaLoading } = useMediaItems();
   const { deviceGroups, isLoading: groupsLoading } = useDeviceGroups();
+  const { commands, sendCommand } = useDeviceCommands(device?.id);
   
   const [playlistItems, setPlaylistItems] = useState<any[]>([]);
   const [playlistItemsLoading, setPlaylistItemsLoading] = useState(false);
@@ -454,7 +461,7 @@ export function DeviceControlDialog({
         </DialogHeader>
 
         <Tabs defaultValue="content" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="content">
               <Play className="h-4 w-4 mr-2" />
               Conteúdo
@@ -465,7 +472,11 @@ export function DeviceControlDialog({
             </TabsTrigger>
             <TabsTrigger value="control">
               <Lock className="h-4 w-4 mr-2" />
-              Controle
+              Bloqueio
+            </TabsTrigger>
+            <TabsTrigger value="remote">
+              <Terminal className="h-4 w-4 mr-2" />
+              Remoto
             </TabsTrigger>
           </TabsList>
 
