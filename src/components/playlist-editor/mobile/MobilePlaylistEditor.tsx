@@ -145,6 +145,18 @@ export const MobilePlaylistEditor = () => {
     setFormData((prev) => ({ ...prev, ...updates }));
     setHasUnsavedChanges(true);
   }, []);
+  useEffect(() => {
+    if (formData.name) setLocalName(formData.name);
+  }, [formData.name]);
+
+  const handleFinishNameEdit = () => {
+    setIsEditingName(false);
+    if (localName.trim() && localName !== formData.name) {
+      handleFormChange({ name: localName });
+    } else {
+      setLocalName(formData.name);
+    }
+  };
 
   const flatTimelineItems = useMemo(() => {
     const items: Array<{
