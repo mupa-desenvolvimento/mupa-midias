@@ -168,7 +168,17 @@ const MonitoringPage = () => {
               )}
             </div>
 
-            {status !== "active" && (
+            {status === "active" ? (
+              <Button 
+                onClick={stop} 
+                variant="destructive"
+                size="lg"
+                className="rounded-xl px-8 h-11 shadow-lg shadow-destructive/20 transition-all hover:scale-105 active:scale-95"
+              >
+                <VideoOff className="w-4 h-4 mr-2" />
+                Interromper Monitoramento
+              </Button>
+            ) : (
               <Button 
                 onClick={handleStart} 
                 disabled={!modelsReady}
