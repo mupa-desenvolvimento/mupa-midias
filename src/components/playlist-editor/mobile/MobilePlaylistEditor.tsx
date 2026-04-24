@@ -94,9 +94,7 @@ export const MobilePlaylistEditor = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [localName, setLocalName] = useState("");
 
-  useEffect(() => {
-    if (formData.name) setLocalName(formData.name);
-  }, [formData.name]);
+  // Moving effect below formData declaration
 
   const existingPlaylist = playlists.find((p) => p.id === activePlaylistId);
   const connectedDevices = devices.filter(
