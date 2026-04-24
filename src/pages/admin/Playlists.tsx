@@ -44,6 +44,7 @@ interface PlaylistFormData {
   start_time: string;
   end_time: string;
   priority: number;
+  is_company_default: boolean;
 }
 
 interface PlaylistFormProps {
@@ -189,12 +190,30 @@ const PlaylistForm = ({ formData, setFormData, channels, onSubmit, submitLabel }
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Switch
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
-        />
-        <Label>Playlist ativa</Label>
+      <div className="space-y-4 pt-2 border-t">
+        <div className="flex items-center justify-between space-x-2">
+          <div className="space-y-0.5">
+            <Label>Playlist ativa</Label>
+            <p className="text-xs text-muted-foreground">Define se a playlist está visível no sistema</p>
+          </div>
+          <Switch
+            checked={formData.is_active}
+            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
+          />
+        </div>
+
+        <div className="flex items-center justify-between space-x-2 bg-primary/5 p-3 rounded-lg border border-primary/10">
+          <div className="space-y-0.5">
+            <Label className="text-primary font-semibold">Playlist Padrão da Empresa</Label>
+            <p className="text-xs text-muted-foreground">
+              Todos os novos dispositivos cadastrados receberão automaticamente o conteúdo desta playlist.
+            </p>
+          </div>
+          <Switch
+            checked={formData.is_company_default}
+            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_company_default: checked }))}
+          />
+        </div>
       </div>
 
       <DialogFooter>
@@ -230,6 +249,7 @@ const PlaylistsPage = () => {
     start_time: "00:00",
     end_time: "23:59",
     priority: 5,
+    is_company_default: false,
   });
 
   const {
@@ -264,6 +284,7 @@ const PlaylistsPage = () => {
         description: formData.description,
         channel_id: formData.channel_id,
         is_active: formData.is_active,
+        is_company_default: formData.is_company_default,
         schedule,
       },
       {
@@ -294,6 +315,7 @@ const PlaylistsPage = () => {
       start_time: "00:00",
       end_time: "23:59",
       priority: 5,
+      is_company_default: false,
     });
   };
 
@@ -311,6 +333,7 @@ const PlaylistsPage = () => {
       start_time: (schedule?.start_time as string) || "00:00",
       end_time: (schedule?.end_time as string) || "23:59",
       priority: (schedule?.priority as number) || 5,
+      is_company_default: playlist.is_company_default || false,
     });
   };
 
@@ -461,7 +484,14 @@ const PlaylistsPage = () => {
                       <div className="flex items-center gap-2">
                         <ListVideo className="w-4 h-4 text-primary shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{playlist.name}</p>
+                          <p className="font-medium truncate flex items-center gap-2">
+                            {playlist.name}
+                            {playlist.is_company_default && (
+                              <Badge variant="secondary" className="text-[10px] h-4 px-1 bg-primary/10 text-primary border-primary/20">
+                                Padrão
+                              </Badge>
+                            )}
+                          </p>
                           {playlist.description && (
                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">{playlist.description}</p>
                           )}

@@ -3154,6 +3154,7 @@ export type Database = {
           has_channels: boolean
           id: string
           is_active: boolean
+          is_company_default: boolean
           is_default: boolean
           name: string
           priority: number | null
@@ -3175,6 +3176,7 @@ export type Database = {
           has_channels?: boolean
           id?: string
           is_active?: boolean
+          is_company_default?: boolean
           is_default?: boolean
           name: string
           priority?: number | null
@@ -3196,6 +3198,7 @@ export type Database = {
           has_channels?: boolean
           id?: string
           is_active?: boolean
+          is_company_default?: boolean
           is_default?: boolean
           name?: string
           priority?: number | null
