@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, FileText, Loader2, Calendar } from "lucide-react";
+import { Download, FileText, Loader2, Calendar, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,9 +23,10 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -45,15 +46,16 @@ export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
 
       if (error) throw error;
 
+      if (!data || data.length === 0) return null;
+
       // Group by session_id to get unique people and their "average" traits
       const sessionGroups: Record<string, any[]> = {};
-      data?.forEach((d) => {
+      data.forEach((d) => {
         if (!sessionGroups[d.session_id]) sessionGroups[d.session_id] = [];
         sessionGroups[d.session_id].push(d);
       });
 
       const uniquePeople = Object.values(sessionGroups).map((logs) => {
-        // Simple mode for categorical data
         const gender = logs.reduce((acc, l) => {
           acc[l.gender] = (acc[l.gender] || 0) + 1;
           return acc;
@@ -124,40 +126,40 @@ export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2 bg-background/50 border-white/10 hover:bg-white/5">
-          <FileText className="w-4 h-4" /> Relatório Diário
+        <Button variant="outline" className="gap-2 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary transition-all shadow-lg shadow-primary/5">
+          <FileText className="w-4 h-4" /> Gerar Relatório de Audiência
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Calendar className="w-6 h-6 text-primary" />
+            <TrendingUp className="w-6 h-6 text-primary" />
             Relatório de Audiência - {format(new Date(), "dd/MM/yyyy")}
           </DialogTitle>
           <DialogDescription>
-            Análise detalhada da audiência captada hoje através dos sensores.
+            Dados consolidados da audiência captada hoje pelos sensores de IA.
           </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
-            <p className="text-muted-foreground animate-pulse">Gerando relatório...</p>
+            <p className="text-muted-foreground animate-pulse font-medium">Processando dados da audiência...</p>
           </div>
         ) : reportData ? (
           <div className="space-y-8 py-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center">
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center text-center">
                 <span className="text-4xl font-black text-primary">{reportData.totalUnique}</span>
                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider mt-1">Visitantes Únicos</span>
               </div>
-              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center">
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center text-center">
                 <span className="text-4xl font-black text-emerald-500">
                   {reportData.totalUnique > 0 ? Math.round(((reportData.emotionData.find(d => d.name === "happy")?.value || 0) / reportData.totalUnique) * 100) : 0}%
                 </span>
                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider mt-1">Nível de Satisfação</span>
               </div>
-              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center">
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center text-center">
                 <span className="text-4xl font-black text-blue-500">
                   {reportData.totalUnique > 0 ? Math.round(((reportData.genderData.find(d => d.name === "male")?.value || 0) / reportData.totalUnique) * 100) : 0}%
                 </span>
@@ -166,8 +168,11 @@ export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <h3 className="font-bold text-lg">Distribuição por Idade</h3>
+              <div className="space-y-4 p-6 rounded-2xl bg-muted/20 border border-border/50">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  Distribuição por Idade
+                </h3>
                 <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={reportData.ageData}>
@@ -178,14 +183,17 @@ export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
                         contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #ffffff10", borderRadius: "12px" }}
                         cursor={{ fill: "#ffffff05" }}
                       />
-                      <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="font-bold text-lg">Gênero e Expressões</h3>
+              <div className="space-y-4 p-6 rounded-2xl bg-muted/20 border border-border/50">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  Gênero e Expressões
+                </h3>
                 <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -205,6 +213,7 @@ export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
                       <Tooltip 
                         contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #ffffff10", borderRadius: "12px" }}
                       />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -212,17 +221,20 @@ export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <Button variant="outline" onClick={() => setIsOpen(false)} className="rounded-xl">
                 Fechar
               </Button>
-              <Button className="gap-2" onClick={exportCSV}>
+              <Button className="gap-2 rounded-xl" onClick={exportCSV}>
                 <Download className="w-4 h-4" /> Exportar CSV
               </Button>
             </div>
           </div>
         ) : (
-          <div className="py-20 text-center text-muted-foreground">
-            Nenhum dado captado hoje ainda.
+          <div className="py-20 text-center flex flex-col items-center gap-4">
+            <div className="p-4 rounded-full bg-muted/50">
+              <FileText className="w-12 h-12 text-muted-foreground/50" />
+            </div>
+            <p className="text-muted-foreground font-medium">Nenhum dado captado hoje ainda.</p>
           </div>
         )}
       </DialogContent>
