@@ -147,19 +147,19 @@ export const AudienceReport = ({ tenantId }: { tenantId: string | null }) => {
         ) : reportData ? (
           <div className="space-y-8 py-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-2xl bg-muted/30 border border-white/5 flex flex-col items-center justify-center">
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center">
                 <span className="text-4xl font-black text-primary">{reportData.totalUnique}</span>
                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider mt-1">Visitantes Únicos</span>
               </div>
-              <div className="p-6 rounded-2xl bg-muted/30 border border-white/5 flex flex-col items-center justify-center">
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center">
                 <span className="text-4xl font-black text-emerald-500">
-                  {Math.round(((reportData.emotionData.find(d => d.name === "happy")?.value || 0) / reportData.totalUnique) * 100) || 0}%
+                  {reportData.totalUnique > 0 ? Math.round(((reportData.emotionData.find(d => d.name === "happy")?.value || 0) / reportData.totalUnique) * 100) : 0}%
                 </span>
                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider mt-1">Nível de Satisfação</span>
               </div>
-              <div className="p-6 rounded-2xl bg-muted/30 border border-white/5 flex flex-col items-center justify-center">
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex flex-col items-center justify-center">
                 <span className="text-4xl font-black text-blue-500">
-                  {Math.round(((reportData.genderData.find(d => d.name === "male")?.value || 0) / reportData.totalUnique) * 100) || 0}%
+                  {reportData.totalUnique > 0 ? Math.round(((reportData.genderData.find(d => d.name === "male")?.value || 0) / reportData.totalUnique) * 100) : 0}%
                 </span>
                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider mt-1">Público Masculino</span>
               </div>
