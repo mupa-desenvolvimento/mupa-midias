@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeft, 
   Save, 
@@ -14,7 +15,9 @@ import {
   Check,
   Circle,
   Sparkles,
+  Pencil,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
