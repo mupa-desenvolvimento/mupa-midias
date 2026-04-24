@@ -807,6 +807,83 @@ export function DeviceControlDialog({
                 )}
               </p>
             </div>
+          <TabsContent value="remote" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="flex flex-col items-center justify-center h-24 gap-2"
+                onClick={() => sendCommand.mutate({ deviceId: device.id, command: "sync" })}
+                disabled={sendCommand.isPending}
+              >
+                <RefreshCw className="h-6 w-6" />
+                <div className="text-sm font-medium">Atualizar conteúdo</div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="flex flex-col items-center justify-center h-24 gap-2"
+                onClick={() => sendCommand.mutate({ deviceId: device.id, command: "restart_app" })}
+                disabled={sendCommand.isPending}
+              >
+                <RotateCcw className="h-6 w-6" />
+                <div className="text-sm font-medium">Reiniciar app</div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="flex flex-col items-center justify-center h-24 gap-2 text-destructive hover:text-destructive"
+                onClick={() => sendCommand.mutate({ deviceId: device.id, command: "close_app" })}
+                disabled={sendCommand.isPending}
+              >
+                <Power className="h-6 w-6" />
+                <div className="text-sm font-medium">Fechar app</div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="flex flex-col items-center justify-center h-24 gap-2"
+                onClick={() => sendCommand.mutate({ deviceId: device.id, command: "clear_data" })}
+                disabled={sendCommand.isPending}
+              >
+                <Trash2 className="h-6 w-6" />
+                <div className="text-sm font-medium">Limpar dados</div>
+              </Button>
+            </div>
+
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Terminal className="h-4 w-4" />
+                Últimos Comandos
+              </Label>
+              <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                {commands.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum comando enviado recentemente.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {commands.map((cmd: DeviceCommand) => (
+                      <div key={cmd.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded-lg">
+                        <div className="flex flex-col">
+                          <span className="font-mono font-medium">{cmd.command}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(cmd.created_at), "HH:mm:ss 'em' dd/MM")}
+                          </span>
+                        </div>
+                        <Badge variant={
+                          cmd.status === "executed" ? "default" :
+                          cmd.status === "failed" ? "destructive" : "secondary"
+                        }>
+                          {cmd.status === "pending" ? "Pendente" :
+                           cmd.status === "executed" ? "Executado" : "Falhou"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+              <p className="text-xs text-muted-foreground italic">
+                O dispositivo verifica comandos a cada 30 segundos ou ao carregar a interface.
+              </p>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
