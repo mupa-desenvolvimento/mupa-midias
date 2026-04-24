@@ -32,6 +32,7 @@ interface EditorHeaderProps {
   onBack: () => void;
   onSave: () => void;
   onUpdateDevices: () => void;
+  onProjectNameChange?: (newName: string) => void;
 }
 
 export const EditorHeader = ({
