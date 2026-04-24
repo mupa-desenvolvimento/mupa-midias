@@ -11,6 +11,7 @@ export const useCamera = (videoRef: React.RefObject<HTMLVideoElement>) => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    setStatus("idle");
   }, [videoRef]);
 
   const start = useCallback(
