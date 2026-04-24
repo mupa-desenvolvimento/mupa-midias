@@ -44,6 +44,7 @@ export const EditorHeader = ({
   onBack,
   onSave,
   onUpdateDevices,
+  onProjectNameChange,
 }: EditorHeaderProps) => {
   const navigate = useNavigate();
   const { id: playlistId } = useParams<{ id: string }>();
