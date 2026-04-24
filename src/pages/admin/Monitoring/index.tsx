@@ -30,7 +30,7 @@ const MonitoringPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { ready: modelsReady, error: modelsError } = useFaceApiModels();
-  const { status, devices, deviceId, start, setDeviceId } = useCamera(videoRef);
+  const { status, devices, deviceId, start, stop, setDeviceId } = useCamera(videoRef);
   const { tenantId } = useUserTenant();
 
   const detecting = modelsReady && status === "active";
