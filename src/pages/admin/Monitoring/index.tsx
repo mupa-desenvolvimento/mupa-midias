@@ -17,6 +17,7 @@ import { useFaceApiModels } from "./useFaceApiModels";
 import { useCamera } from "./useCamera";
 import { useAudienceIntelligence } from "@/hooks/useAudienceIntelligence";
 import { AudienceStats } from "./AudienceStats";
+import { AudienceReport } from "./AudienceReport";
 import type { DetectionLogEntry } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserTenant } from "@/hooks/useUserTenant";
@@ -112,7 +113,10 @@ const MonitoringPage = () => {
             Monitoramento inteligente em tempo real com rastreamento leve de sessões e análise de tempo de atenção.
           </p>
         </div>
-        <StatusBadge status={status} modelsReady={modelsReady} />
+        <div className="flex items-center gap-4">
+          <AudienceReport tenantId={tenantId} />
+          <StatusBadge status={status} modelsReady={modelsReady} />
+        </div>
       </header>
 
       {modelsError && (
