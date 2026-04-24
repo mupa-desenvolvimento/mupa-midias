@@ -24,6 +24,7 @@ import {
   EmptyContentScreen,
   VignetteOverlay,
   FaceRecognitionIndicator,
+  DeviceNotFoundScreen,
 } from "@/components/player-core";
 import { useFaceRecognitionStatus } from "@/hooks/useFaceRecognitionStatus";
 import {
@@ -54,6 +55,12 @@ const OfflinePlayer = () => {
   const idDevice = searchParams.get("id_device");
   const [resolvedDeviceCode, setResolvedDeviceCode] = useState<string>(deviceCodeParam || "");
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [firebaseDeviceInfo, setFirebaseDeviceInfo] = useState<{
+    empresa?: string;
+    grupo?: string;
+    nome?: string;
+    android_id?: string;
+  } | null>(null);
 
   // Resolve device_code from android_id when using query params
   useEffect(() => {
@@ -73,7 +80,32 @@ const OfflinePlayer = () => {
           .maybeSingle();
 
         if (error || !data) {
-          console.error("[OfflinePlayer] Erro ao resolver device por android_id:", error);
+          console.error("[OfflinePlayer] Dispositivo não encontrado no Supabase, tentando Firebase...", error);
+          
+          // Try to fetch from Firebase Realtime as fallback to show info
+          try {
+            const { database, ref, get, child } = await import("@/lib/firebase");
+            const dbRef = ref(database);
+            const snapshot = await get(child(dbRef, `devices/${idDevice}`));
+            
+            if (snapshot.exists()) {
+              const fbData = snapshot.val();
+              console.log("[OfflinePlayer] Dados encontrados no Firebase:", fbData);
+              
+              const empresaRaw = fbData.empresa_id || fbData.empresa || "";
+              const empresaName = empresaRaw.includes("_") ? empresaRaw.split("_")[1] : empresaRaw;
+              
+              setFirebaseDeviceInfo({
+                empresa: empresaName,
+                grupo: fbData.grupo_device || fbData.grupo,
+                nome: fbData.device_name || fbData.nome,
+                android_id: idDevice
+              });
+            }
+          } catch (fbError) {
+            console.error("[OfflinePlayer] Erro ao buscar no Firebase:", fbError);
+          }
+
           setResolveError(`Dispositivo com android_id "${idDevice}" não encontrado.`);
           return;
         }
@@ -625,7 +657,12 @@ const OfflinePlayer = () => {
 
   // State screens
   if (resolveError) {
-    return <LoadingScreen subMessage={resolveError} />;
+    return (
+      <DeviceNotFoundScreen 
+        identifier={idDevice || undefined} 
+        deviceInfo={firebaseDeviceInfo || undefined}
+      />
+    );
   }
 
   if (isLoading && !deviceState) {

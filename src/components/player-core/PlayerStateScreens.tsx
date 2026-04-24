@@ -47,17 +47,63 @@ export const ErrorScreen = ({ message, backTo = "/devices" }: ErrorScreenProps) 
 interface NotFoundScreenProps {
   identifier?: string;
   backTo?: string;
+  deviceInfo?: {
+    empresa?: string;
+    grupo?: string;
+    nome?: string;
+    android_id?: string;
+  };
 }
 
-export const DeviceNotFoundScreen = ({ identifier, backTo = "/devices" }: NotFoundScreenProps) => (
-  <div className="min-h-screen bg-black flex items-center justify-center text-white">
-    <div className="text-center">
-      <Monitor className="w-16 h-16 mx-auto mb-4 opacity-50" />
-      <h1 className="text-2xl mb-2">Dispositivo não encontrado</h1>
-      {identifier && <p className="text-white/70 mb-4">Código: {identifier}</p>}
+export const DeviceNotFoundScreen = ({ identifier, backTo = "/devices", deviceInfo }: NotFoundScreenProps) => (
+  <div className="min-h-screen bg-black flex items-center justify-center text-white p-6">
+    <div className="text-center max-w-md w-full">
+      <Monitor className="w-16 h-16 mx-auto mb-6 text-primary/40" />
+      <h1 className="text-3xl font-bold mb-2">Dispositivo não encontrado</h1>
+      <p className="text-white/60 mb-8">Este dispositivo ainda não foi cadastrado ou sincronizado no sistema.</p>
+      
+      {(identifier || deviceInfo) && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 text-left space-y-4">
+          <h2 className="text-sm font-semibold text-primary uppercase tracking-wider">Informações do Dispositivo</h2>
+          
+          <div className="grid gap-3 text-sm">
+            {deviceInfo?.nome && (
+              <div className="flex flex-col">
+                <span className="text-white/40">Nome</span>
+                <span className="text-white font-medium">{deviceInfo.nome}</span>
+              </div>
+            )}
+            {deviceInfo?.empresa && (
+              <div className="flex flex-col">
+                <span className="text-white/40">Empresa</span>
+                <span className="text-white font-medium">{deviceInfo.empresa}</span>
+              </div>
+            )}
+            {deviceInfo?.grupo && (
+              <div className="flex flex-col">
+                <span className="text-white/40">Grupo / Loja</span>
+                <span className="text-white font-medium">{deviceInfo.grupo}</span>
+              </div>
+            )}
+            {(identifier || deviceInfo?.android_id) && (
+              <div className="flex flex-col">
+                <span className="text-white/40">ID (Android)</span>
+                <span className="text-mono text-white/80">{identifier || deviceInfo?.android_id}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <Link to={backTo}>
-        <Button variant="outline">Voltar aos Dispositivos</Button>
+        <Button variant="outline" className="w-full py-6 text-lg">
+          Voltar aos Dispositivos
+        </Button>
       </Link>
+      
+      <p className="text-white/20 text-[10px] mt-8">
+        Se o problema persistir, entre em contato com o administrador.
+      </p>
     </div>
   </div>
 );
