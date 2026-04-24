@@ -202,18 +202,8 @@ const PlaylistForm = ({ formData, setFormData, channels, onSubmit, submitLabel }
           />
         </div>
 
-        <div className="flex items-center justify-between space-x-2 bg-primary/5 p-3 rounded-lg border border-primary/10">
-          <div className="space-y-0.5">
-            <Label className="text-primary font-semibold">Playlist Padrão da Empresa</Label>
-            <p className="text-xs text-muted-foreground">
-              Todos os novos dispositivos cadastrados receberão automaticamente o conteúdo desta playlist.
-            </p>
-          </div>
-          <Switch
-            checked={formData.is_company_default}
-            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_company_default: checked }))}
-          />
-        </div>
+        {/* Playlist Padrão section removed to fix registration error */}
+
       </div>
 
       <DialogFooter>
@@ -486,11 +476,7 @@ const PlaylistsPage = () => {
                         <div className="min-w-0">
                           <p className="font-medium truncate flex items-center gap-2">
                             {playlist.name}
-                            {playlist.is_company_default && (
-                              <Badge variant="secondary" className="text-[10px] h-4 px-1 bg-primary/10 text-primary border-primary/20">
-                                Padrão
-                              </Badge>
-                            )}
+
                           </p>
                           {playlist.description && (
                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">{playlist.description}</p>
