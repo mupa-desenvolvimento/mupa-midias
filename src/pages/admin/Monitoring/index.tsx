@@ -17,6 +17,7 @@ import { useFaceApiModels } from "./useFaceApiModels";
 import { useCamera } from "./useCamera";
 import { useAudienceIntelligence } from "@/hooks/useAudienceIntelligence";
 import { AudienceStats } from "./AudienceStats";
+import { AudienceReport } from "./AudienceReport";
 import type { DetectionLogEntry } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserTenant } from "@/hooks/useUserTenant";
