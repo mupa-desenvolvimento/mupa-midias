@@ -653,7 +653,12 @@ const OfflinePlayer = () => {
 
   // State screens
   if (resolveError) {
-    return <LoadingScreen subMessage={resolveError} />;
+    return (
+      <DeviceNotFoundScreen 
+        identifier={idDevice || undefined} 
+        deviceInfo={firebaseDeviceInfo || undefined}
+      />
+    );
   }
 
   if (isLoading && !deviceState) {
