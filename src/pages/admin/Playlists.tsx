@@ -476,11 +476,7 @@ const PlaylistsPage = () => {
                         <div className="min-w-0">
                           <p className="font-medium truncate flex items-center gap-2">
                             {playlist.name}
-                            {playlist.is_company_default && (
-                              <Badge variant="secondary" className="text-[10px] h-4 px-1 bg-primary/10 text-primary border-primary/20">
-                                Padrão
-                              </Badge>
-                            )}
+
                           </p>
                           {playlist.description && (
                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">{playlist.description}</p>
