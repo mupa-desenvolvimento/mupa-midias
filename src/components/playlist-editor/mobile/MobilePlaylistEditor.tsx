@@ -330,21 +330,38 @@ export const MobilePlaylistEditor = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
-        <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold truncate leading-tight">
-            {formData.name || "Novo Projeto"}
-          </h1>
-          <div className="flex items-center gap-1.5 text-[11px] leading-tight">
-            {hasUnsavedChanges ? (
-              <span className="text-amber-500 font-medium">● Editando</span>
-            ) : (
-              <span className="text-emerald-500 font-medium">✓ Salvo</span>
-            )}
-            <span className="text-muted-foreground">
-              · {flatTimelineItems.length}{" "}
-              {flatTimelineItems.length === 1 ? "mídia" : "mídias"}
-            </span>
-          </div>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          {isEditingName ? (
+            <Input
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              onBlur={handleFinishNameEdit}
+              onKeyDown={(e) => e.key === "Enter" && handleFinishNameEdit()}
+              autoFocus
+              className="h-8 text-sm py-0 bg-background"
+            />
+          ) : (
+            <div 
+              className="flex items-center gap-1.5 min-w-0"
+              onClick={() => setIsEditingName(true)}
+            >
+              <h1 className="text-sm font-semibold truncate leading-tight">
+                {formData.name || "Novo Projeto"}
+              </h1>
+              <Pencil className="w-3 h-3 text-muted-foreground shrink-0" />
+            </div>
+          )}
+        </div>
+        <div className="absolute top-[32px] left-[55px] flex items-center gap-1.5 text-[11px] leading-tight">
+          {hasUnsavedChanges ? (
+            <span className="text-amber-500 font-medium">● Editando</span>
+          ) : (
+            <span className="text-emerald-500 font-medium">✓ Salvo</span>
+          )}
+          <span className="text-muted-foreground">
+            · {flatTimelineItems.length}{" "}
+            {flatTimelineItems.length === 1 ? "mídia" : "mídias"}
+          </span>
         </div>
 
         {connectedDevices.length > 0 && (
