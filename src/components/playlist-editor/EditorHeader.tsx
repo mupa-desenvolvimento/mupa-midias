@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeft, 
   Save, 
@@ -14,7 +15,9 @@ import {
   Check,
   Circle,
   Sparkles,
+  Pencil,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +35,7 @@ interface EditorHeaderProps {
   onBack: () => void;
   onSave: () => void;
   onUpdateDevices: () => void;
+  onProjectNameChange?: (newName: string) => void;
 }
 
 export const EditorHeader = ({
@@ -43,9 +47,41 @@ export const EditorHeader = ({
   onBack,
   onSave,
   onUpdateDevices,
+  onProjectNameChange,
 }: EditorHeaderProps) => {
   const navigate = useNavigate();
   const { id: playlistId } = useParams<{ id: string }>();
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [localName, setLocalName] = useState(projectName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setLocalName(projectName);
+  }, [projectName]);
+
+  const handleStartEdit = () => {
+    setIsEditingName(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleFinishEdit = () => {
+    setIsEditingName(false);
+    if (localName.trim() && localName !== projectName) {
+      onProjectNameChange?.(localName);
+    } else {
+      setLocalName(projectName);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleFinishEdit();
+    } else if (e.key === "Escape") {
+      setIsEditingName(false);
+      setLocalName(projectName);
+    }
+  };
 
   return (
     <header className="h-14 flex items-center justify-between px-4 bg-muted/50 border-b border-border">
@@ -60,10 +96,27 @@ export const EditorHeader = ({
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
-        <div className="flex items-center gap-2">
-          <h1 className="text-sm font-medium truncate max-w-[200px]">
-            {projectName}
-          </h1>
+        <div className="flex items-center gap-2 group">
+          {isEditingName ? (
+            <Input
+              ref={inputRef}
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              onBlur={handleFinishEdit}
+              onKeyDown={handleKeyDown}
+              className="h-7 text-sm py-0 w-[200px]"
+            />
+          ) : (
+            <div 
+              className="flex items-center gap-2 cursor-pointer hover:bg-muted/80 px-2 py-1 rounded transition-colors"
+              onClick={handleStartEdit}
+            >
+              <h1 className="text-sm font-medium truncate max-w-[200px]">
+                {projectName}
+              </h1>
+              <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          )}
           <div className="flex items-center gap-1.5 text-xs">
             {hasUnsavedChanges ? (
               <span className="flex items-center gap-1 text-amber-500">

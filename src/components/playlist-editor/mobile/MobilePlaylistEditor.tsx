@@ -36,7 +36,9 @@ import {
   Play,
   Pause,
   Monitor,
+  Pencil,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface PlaylistFormData {
@@ -89,6 +91,10 @@ export const MobilePlaylistEditor = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingDevices, setIsUpdatingDevices] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [localName, setLocalName] = useState("");
+
+  // Moving effect below formData declaration
 
   const existingPlaylist = playlists.find((p) => p.id === activePlaylistId);
   const connectedDevices = devices.filter(
@@ -139,6 +145,18 @@ export const MobilePlaylistEditor = () => {
     setFormData((prev) => ({ ...prev, ...updates }));
     setHasUnsavedChanges(true);
   }, []);
+  useEffect(() => {
+    if (formData.name) setLocalName(formData.name);
+  }, [formData.name]);
+
+  const handleFinishNameEdit = () => {
+    setIsEditingName(false);
+    if (localName.trim() && localName !== formData.name) {
+      handleFormChange({ name: localName });
+    } else {
+      setLocalName(formData.name);
+    }
+  };
 
   const flatTimelineItems = useMemo(() => {
     const items: Array<{
@@ -312,11 +330,30 @@ export const MobilePlaylistEditor = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
-        <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold truncate leading-tight">
-            {formData.name || "Novo Projeto"}
-          </h1>
-          <div className="flex items-center gap-1.5 text-[11px] leading-tight">
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="flex items-center gap-2">
+            {isEditingName ? (
+              <Input
+                value={localName}
+                onChange={(e) => setLocalName(e.target.value)}
+                onBlur={handleFinishNameEdit}
+                onKeyDown={(e) => e.key === "Enter" && handleFinishNameEdit()}
+                autoFocus
+                className="h-8 text-sm py-0 bg-background"
+              />
+            ) : (
+              <div 
+                className="flex items-center gap-1.5 min-w-0"
+                onClick={() => setIsEditingName(true)}
+              >
+                <h1 className="text-sm font-semibold truncate leading-tight">
+                  {formData.name || "Novo Projeto"}
+                </h1>
+                <Pencil className="w-3 h-3 text-muted-foreground shrink-0" />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] leading-tight mt-0.5">
             {hasUnsavedChanges ? (
               <span className="text-amber-500 font-medium">● Editando</span>
             ) : (

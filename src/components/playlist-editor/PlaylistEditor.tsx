@@ -465,6 +465,7 @@ const DesktopPlaylistEditor = () => {
             onBack={() => navigate("/admin/playlists")}
             onSave={handleSave}
             onUpdateDevices={handleUpdateDevices}
+            onProjectNameChange={(newName) => handleFormChange({ name: newName })}
           />
 
           <div className="flex-1 flex flex-col overflow-hidden">
