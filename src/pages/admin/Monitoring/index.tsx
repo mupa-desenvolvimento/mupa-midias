@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, AlertCircle, Camera, Loader2 } from "lucide-react";
+import { Activity, AlertCircle, Camera, Loader2, VideoOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -30,7 +30,7 @@ const MonitoringPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { ready: modelsReady, error: modelsError } = useFaceApiModels();
-  const { status, devices, deviceId, start, setDeviceId } = useCamera(videoRef);
+  const { status, devices, deviceId, start, stop, setDeviceId } = useCamera(videoRef);
   const { tenantId } = useUserTenant();
 
   const detecting = modelsReady && status === "active";
@@ -168,7 +168,17 @@ const MonitoringPage = () => {
               )}
             </div>
 
-            {status !== "active" && (
+            {status === "active" ? (
+              <Button 
+                onClick={stop} 
+                variant="destructive"
+                size="lg"
+                className="rounded-xl px-8 h-11 shadow-lg shadow-destructive/20 transition-all hover:scale-105 active:scale-95"
+              >
+                <VideoOff className="w-4 h-4 mr-2" />
+                Interromper Monitoramento
+              </Button>
+            ) : (
               <Button 
                 onClick={handleStart} 
                 disabled={!modelsReady}

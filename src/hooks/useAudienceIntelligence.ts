@@ -176,7 +176,7 @@ export const useAudienceIntelligence = ({
       console.warn("[AudienceIntelligence] Detection error:", err);
     } finally {
       isDetectingRef.current = false;
-      timerRef.current = setTimeout(detect, intervalMs);
+      if (enabled) timerRef.current = setTimeout(detect, intervalMs);
     }
   }, [enabled, intervalMs, videoRef]);
 
