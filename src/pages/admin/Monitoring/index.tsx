@@ -113,7 +113,10 @@ const MonitoringPage = () => {
             Monitoramento inteligente em tempo real com rastreamento leve de sessões e análise de tempo de atenção.
           </p>
         </div>
-        <StatusBadge status={status} modelsReady={modelsReady} />
+        <div className="flex items-center gap-4">
+          <AudienceReport tenantId={tenantId} />
+          <StatusBadge status={status} modelsReady={modelsReady} />
+        </div>
       </header>
 
       {modelsError && (
