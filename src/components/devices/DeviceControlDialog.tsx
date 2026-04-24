@@ -36,7 +36,6 @@ import {
   RotateCcw,
   Power,
   Trash2,
-  RefreshCw,
 } from "lucide-react";
 import { DeviceWithRelations } from "@/hooks/useDevices";
 import { useMediaItems } from "@/hooks/useMediaItems";
