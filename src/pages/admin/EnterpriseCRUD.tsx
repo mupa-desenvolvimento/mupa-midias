@@ -419,6 +419,7 @@ const CampaignsSection = () => {
         end_date: values.end_date || null,
         start_time: values.start_time || null,
         end_time: values.end_time || null,
+        is_active: values.status === "active",
         tenant_id: tenantId!,
       };
       if (editingItem) {
