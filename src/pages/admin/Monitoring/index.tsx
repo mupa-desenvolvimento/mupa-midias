@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, AlertCircle, Camera, Loader2 } from "lucide-react";
+import { Activity, AlertCircle, Camera, Loader2, VideoOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
