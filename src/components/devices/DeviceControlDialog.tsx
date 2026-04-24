@@ -36,12 +36,11 @@ import {
   RotateCcw,
   Power,
   Trash2,
-  Sync,
 } from "lucide-react";
 import { DeviceWithRelations } from "@/hooks/useDevices";
 import { useMediaItems } from "@/hooks/useMediaItems";
 import { useDeviceGroups } from "@/hooks/useDeviceGroups";
-import { useDeviceCommands } from "@/hooks/useDeviceCommands";
+import { useDeviceCommands, type DeviceCommand } from "@/hooks/useDeviceCommands";
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/services/firebase";
 import { ref, update } from "firebase/database";
@@ -511,185 +510,135 @@ export function DeviceControlDialog({
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-2" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Ao alterar o grupo, a playlist associada será atribuída automaticamente e o dispositivo receberá a atualização.
-              </p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <div>
-                <h4 className="font-medium">Playlist Atual</h4>
-                <p className="text-sm text-muted-foreground">
-                  {device.current_playlist?.name || "Nenhuma playlist atribuída"}
-                </p>
-              </div>
-              <Button 
-                onClick={handleSendUpdate} 
-                disabled={isSyncing}
-                className="gap-2"
-              >
-                {isSyncing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                Enviar Atualização
-              </Button>
-            </div>
-
-            {currentOverrideMedia && (
-              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Image className="h-4 w-4 text-yellow-500" />
-                    <span className="font-medium text-yellow-700 dark:text-yellow-400">
-                      Mídia Avulsa Ativa
-                    </span>
-                  </div>
-                  <Badge variant="secondary">
-                    {currentOverrideMedia.name}
-                  </Badge>
-                </div>
-                {overrideExpiresAt && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Expira {formatDistanceToNow(new Date(overrideExpiresAt), { addSuffix: true, locale: ptBR })}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <h4 className="font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Conteúdos na Playlist
-              </h4>
-              
+            <ScrollArea className="h-[350px] pr-4">
               {playlistItemsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Carregando itens da playlist...</p>
                 </div>
-              ) : playlistItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Image className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum conteúdo na playlist</p>
-                </div>
-              ) : (
-                <ScrollArea className="h-[250px] rounded-md border">
-                  <div className="p-4 space-y-2">
-                    {playlistItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                          {index + 1}
-                        </div>
-                        {(item.media as any)?.thumbnail_url ? (
+              ) : playlistItems.length > 0 ? (
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Itens da Playlist Atual
+                  </Label>
+                  {playlistItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 p-2 rounded-lg border bg-card"
+                    >
+                      <div className="h-10 w-16 bg-muted rounded overflow-hidden shrink-0">
+                        {item.media?.thumbnail_url ? (
                           <img
-                            src={(item.media as any).thumbnail_url}
-                            alt={item.media?.name}
-                            className="w-12 h-12 object-cover rounded"
+                            src={item.media.thumbnail_url}
+                            alt=""
+                            className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                            <Image className="h-5 w-5 text-muted-foreground" />
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Image className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{item.media?.name || "Mídia"}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.duration_override || item.media?.duration || 10}s • {item.media?.type || "image"}
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="flex-shrink-0">
-                          {item.media?.type === "video" ? "Vídeo" : "Imagem"}
-                        </Badge>
                       </div>
-                    ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.media?.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.media?.type} • {item.duration_override || item.media?.duration}s
+                        </p>
+                      </div>
+                      <Badge variant="secondary">#{item.position}</Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-2 border-2 border-dashed rounded-lg">
+                  <Play className="h-8 w-8 text-muted-foreground" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Nenhuma playlist vinculada</p>
+                    <p className="text-xs text-muted-foreground max-w-[200px]">
+                      Vincule este dispositivo a um grupo ou canal para exibir conteúdo
+                    </p>
                   </div>
-                </ScrollArea>
+                </div>
               )}
-            </div>
+            </ScrollArea>
           </TabsContent>
 
           {/* Aba Mídia Avulsa */}
           <TabsContent value="override" className="space-y-4">
-            <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Envie uma mídia avulsa que será exibida temporariamente, sobrepondo a playlist atual.
-                </p>
+            <div className="p-4 border rounded-lg space-y-4 bg-yellow-50/50 dark:bg-yellow-900/10">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                  <Image className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-yellow-900 dark:text-yellow-400">Exibição Prioritária</h4>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-500/80">
+                    Defina uma mídia para ser exibida continuamente, ignorando a playlist.
+                  </p>
+                </div>
               </div>
 
               {currentOverrideMedia ? (
-                <div className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-yellow-200 dark:border-yellow-900/30">
+                    <div className="h-12 w-20 bg-muted rounded overflow-hidden">
                       {currentOverrideMedia.thumbnail_url ? (
-                        <img
-                          src={currentOverrideMedia.thumbnail_url}
-                          alt={currentOverrideMedia.name}
-                          className="w-20 h-20 object-cover rounded"
-                        />
+                        <img src={currentOverrideMedia.thumbnail_url} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="w-20 h-20 bg-muted rounded flex items-center justify-center">
-                          <Image className="h-8 w-8 text-muted-foreground" />
-                        </div>
+                        <div className="h-full w-full flex items-center justify-center"><Image className="h-5 w-5" /></div>
                       )}
-                      <div>
-                        <h4 className="font-medium">{currentOverrideMedia.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {currentOverrideMedia.type}
-                        </p>
-                        {overrideExpiresAt && (
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                            Expira: {format(new Date(overrideExpiresAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                          </p>
-                        )}
-                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{currentOverrideMedia.name}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Expira em: {overrideExpiresAt ? formatDistanceToNow(new Date(overrideExpiresAt), { locale: ptBR, addSuffix: true }) : '—'}
+                      </p>
                     </div>
                     <Button
                       variant="destructive"
-                      size="sm"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={handleClearOverrideMedia}
                       disabled={isSaving}
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      Remover
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label>Selecione a Mídia</Label>
+                    <Label>Selecionar Mídia</Label>
                     <Select
                       value={overrideMediaId || ""}
-                      onValueChange={(value) => setOverrideMediaId(value || null)}
+                      onValueChange={setOverrideMediaId}
+                      disabled={mediaLoading || isSaving}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Escolha uma mídia..." />
+                        <SelectValue placeholder="Escolha uma mídia da biblioteca..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {mediaItems
-                          .filter(m => m.status === "active")
-                          .map((media) => (
-                            <SelectItem key={media.id} value={media.id}>
-                              {media.name} ({media.type})
-                            </SelectItem>
-                          ))}
+                        {mediaItems.map((media) => (
+                          <SelectItem key={media.id} value={media.id}>
+                            {media.name} ({media.type})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Duração (horas)</Label>
+                    <Label>Duração da Exibição</Label>
                     <Select
                       value={overrideDuration}
                       onValueChange={setOverrideDuration}
+                      disabled={isSaving}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione o tempo..." />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1">1 hora</SelectItem>
@@ -721,7 +670,7 @@ export function DeviceControlDialog({
             </div>
           </TabsContent>
 
-          {/* Aba Controle */}
+          {/* Aba Bloqueio */}
           <TabsContent value="control" className="space-y-4">
             <div className="p-4 border rounded-lg space-y-4">
               <div className="flex items-center justify-between">
