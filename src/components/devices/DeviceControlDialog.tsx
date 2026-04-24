@@ -811,7 +811,7 @@ export function DeviceControlDialog({
                   <p className="text-sm text-muted-foreground text-center py-8">Nenhum comando enviado recentemente.</p>
                 ) : (
                   <div className="space-y-3">
-                    {commands.map((cmd: DeviceCommand) => (
+                    {commands.map((cmd: any) => (
                       <div key={cmd.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded-lg">
                         <div className="flex flex-col">
                           <span className="font-mono font-medium">{cmd.command}</span>
