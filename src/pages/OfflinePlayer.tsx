@@ -91,8 +91,12 @@ const OfflinePlayer = () => {
             if (snapshot.exists()) {
               const fbData = snapshot.val();
               console.log("[OfflinePlayer] Dados encontrados no Firebase:", fbData);
+              
+              const empresaRaw = fbData.empresa_id || fbData.empresa || "";
+              const empresaName = empresaRaw.includes("_") ? empresaRaw.split("_")[1] : empresaRaw;
+              
               setFirebaseDeviceInfo({
-                empresa: fbData.empresa_id || fbData.empresa,
+                empresa: empresaName,
                 grupo: fbData.grupo_device || fbData.grupo,
                 nome: fbData.device_name || fbData.nome,
                 android_id: idDevice
