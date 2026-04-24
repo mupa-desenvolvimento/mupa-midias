@@ -24,6 +24,7 @@ import CameraFullscreen from "./pages/CameraFullscreen";
 import DeviceDemo from "./pages/DeviceDemo";
 import MonitoringPage from "./pages/admin/Monitoring";
 import MobileDemo from "./pages/MobileDemo";
+import DeviceCommandHandler from "./pages/DeviceCommandHandler";
 import Auth from "./pages/Auth";
 import CanvaCallback from "./pages/admin/CanvaCallback";
 import Stores from "./pages/admin/Stores";
@@ -150,6 +151,7 @@ function AppContent() {
           {/* Rota específica para Android/Kodular usando query param ?device_id=XYZ */}
           <Route path="/android-player" element={<WebViewPlayer />} />
           <Route path="/camera-fullscreen" element={<CameraFullscreen />} />
+          <Route path="/device-command" element={<DeviceCommandHandler />} />
           <Route path="/demo" element={<DeviceDemo />} />
            <Route path="/apresentacao" element={<Presentation />} />
           <Route path="/apresentacao-assai" element={<AssaiPresentation />} />
