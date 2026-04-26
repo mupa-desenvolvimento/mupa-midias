@@ -793,7 +793,8 @@ export const useOfflinePlayer = (deviceCode: string) => {
         device.is_blocked !== deviceState.is_blocked ||
         device.blocked_message !== deviceState.blocked_message ||
         device.override_media_id !== (deviceState.override_media?.id || null) ||
-        device.camera_enabled !== deviceState.camera_enabled;
+        device.camera_enabled !== deviceState.camera_enabled ||
+        device.current_playlist_id !== deviceState.current_playlist_id;
 
       const lastSyncRequested = device.last_sync_requested_at;
       const needsForcedSync = lastSyncRequested && 
