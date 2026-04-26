@@ -76,6 +76,7 @@ export interface DeviceState {
   company_id: string | null;
   company_slug: string | null;
   playlists: CachedPlaylist[];
+  current_playlist_id: string | null;
   last_sync: number;
   is_online: boolean;
   is_blocked: boolean;
