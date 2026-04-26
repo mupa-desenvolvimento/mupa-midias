@@ -93,7 +93,7 @@ import { Capacitor } from '@capacitor/core';
 
 const STORAGE_KEY = "device_player_state";
 const SYNC_INTERVAL = 5 * 60 * 1000;
-const CONTROL_CHECK_INTERVAL = 30 * 1000;
+const CONTROL_CHECK_INTERVAL = 10 * 1000; // Reduzido de 30s para 10s para resposta mais rápida
 
 export const useOfflinePlayer = (deviceCode: string) => {
   const [deviceState, setDeviceState] = useState<DeviceState | null>(null);
