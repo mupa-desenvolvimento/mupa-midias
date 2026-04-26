@@ -177,6 +177,13 @@ export function DeviceControlDialog({
         "grupo_device": groupName || "Sem grupo"
       });
 
+      // 5. Broadcast via Supabase Realtime
+      await supabase.channel(`device-updates-${device.device_code}`).send({
+        type: 'broadcast',
+        event: 'force_sync',
+        payload: { timestamp: new Date().toISOString() }
+      });
+
       toast({
         title: "Grupo alterado",
         description: playlistId 
