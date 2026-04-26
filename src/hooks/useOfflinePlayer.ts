@@ -848,7 +848,18 @@ export const useOfflinePlayer = (deviceCode: string) => {
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'devices', filter: `device_code=eq.${deviceCode}` },
-          () => { syncWithServerRef.current(); }
+          () => { 
+            console.log("[useOfflinePlayer] Realtime update detected on devices table");
+            syncWithServerRef.current(); 
+          }
+        )
+        .on(
+          'broadcast',
+          { event: 'force_sync' },
+          () => {
+            console.log("[useOfflinePlayer] Force sync broadcast received");
+            syncWithServerRef.current();
+          }
         )
         .on(
           'postgres_changes',
