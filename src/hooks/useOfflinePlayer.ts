@@ -680,6 +680,7 @@ export const useOfflinePlayer = (deviceCode: string) => {
         company_id: device.company_id,
         company_slug: device.company_slug || null,
         playlists: cachedPlaylists,
+        current_playlist_id: device.current_playlist_id || null,
         last_sync: Date.now(),
         is_online: true,
         is_blocked: device.is_blocked || false,
