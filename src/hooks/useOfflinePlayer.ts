@@ -76,6 +76,7 @@ export interface DeviceState {
   company_id: string | null;
   company_slug: string | null;
   playlists: CachedPlaylist[];
+  current_playlist_id: string | null;
   last_sync: number;
   is_online: boolean;
   is_blocked: boolean;
@@ -92,7 +93,7 @@ import { Capacitor } from '@capacitor/core';
 
 const STORAGE_KEY = "device_player_state";
 const SYNC_INTERVAL = 5 * 60 * 1000;
-const CONTROL_CHECK_INTERVAL = 30 * 1000;
+const CONTROL_CHECK_INTERVAL = 10 * 1000; // Reduzido de 30s para 10s para resposta mais rápida
 
 export const useOfflinePlayer = (deviceCode: string) => {
   const [deviceState, setDeviceState] = useState<DeviceState | null>(null);
@@ -679,6 +680,7 @@ export const useOfflinePlayer = (deviceCode: string) => {
         company_id: device.company_id,
         company_slug: device.company_slug || null,
         playlists: cachedPlaylists,
+        current_playlist_id: device.current_playlist_id || null,
         last_sync: Date.now(),
         is_online: true,
         is_blocked: device.is_blocked || false,
@@ -791,7 +793,8 @@ export const useOfflinePlayer = (deviceCode: string) => {
         device.is_blocked !== deviceState.is_blocked ||
         device.blocked_message !== deviceState.blocked_message ||
         device.override_media_id !== (deviceState.override_media?.id || null) ||
-        device.camera_enabled !== deviceState.camera_enabled;
+        device.camera_enabled !== deviceState.camera_enabled ||
+        device.current_playlist_id !== deviceState.current_playlist_id;
 
       const lastSyncRequested = device.last_sync_requested_at;
       const needsForcedSync = lastSyncRequested && 
@@ -845,7 +848,18 @@ export const useOfflinePlayer = (deviceCode: string) => {
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'devices', filter: `device_code=eq.${deviceCode}` },
-          () => { syncWithServerRef.current(); }
+          () => { 
+            console.log("[useOfflinePlayer] Realtime update detected on devices table");
+            syncWithServerRef.current(); 
+          }
+        )
+        .on(
+          'broadcast',
+          { event: 'force_sync' },
+          () => {
+            console.log("[useOfflinePlayer] Force sync broadcast received");
+            syncWithServerRef.current();
+          }
         )
         .on(
           'postgres_changes',

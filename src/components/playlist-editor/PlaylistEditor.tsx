@@ -320,11 +320,24 @@ const DesktopPlaylistEditor = () => {
     }
     setIsUpdatingDevices(true);
     try {
+      // 1. Atualiza timestamp da playlist
       await supabase
         .from("playlists")
         .update({ updated_at: new Date().toISOString() })
         .eq("id", activePlaylistId);
-      toast({ title: "Sincronização enviada!" });
+
+      // 2. Envia sinal de sincronização imediata para todos os dispositivos conectados
+      const promises = connectedDevices.map(device => 
+        supabase.channel(`device-updates-${device.device_code}`).send({
+          type: 'broadcast',
+          event: 'force_sync',
+          payload: { timestamp: new Date().toISOString() }
+        })
+      );
+      
+      await Promise.all(promises);
+
+      toast({ title: "Sincronização enviada para " + connectedDevices.length + " dispositivos!" });
     } catch (error) {
       toast({ title: "Erro ao sincronizar", variant: "destructive" });
     } finally {
