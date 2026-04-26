@@ -300,6 +300,16 @@ export const useDevices = () => {
     },
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["devices"] });
+      
+      // Envia sinal de sincronização imediata para o dispositivo via Realtime Broadcast
+      if (updated?.device_code) {
+        supabase.channel(`device-updates-${updated.device_code}`).send({
+          type: 'broadcast',
+          event: 'force_sync',
+          payload: { timestamp: new Date().toISOString() }
+        });
+      }
+      
       toast({ title: "Dispositivo atualizado com sucesso" });
     },
     onError: (error, _vars, ctx) => {
