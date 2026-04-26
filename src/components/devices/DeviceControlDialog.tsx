@@ -291,6 +291,13 @@ export function DeviceControlDialog({
         "grupo_device": deviceInfo
       });
 
+      // 3. Broadcast via Supabase Realtime (mais rápido que polling)
+      await supabase.channel(`device-updates-${device.device_code}`).send({
+        type: 'broadcast',
+        event: 'force_sync',
+        payload: { timestamp: new Date().toISOString() }
+      });
+
       toast({
         title: "Atualização enviada",
         description: "O dispositivo receberá a atualização em instantes.",
