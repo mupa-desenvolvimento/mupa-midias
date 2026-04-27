@@ -29,15 +29,33 @@ export function useAuth() {
     let cancelled = false;
 
     const isInvalidRefreshToken = (error: any) => {
-      const message = String(error?.message ?? '');
+      const message = String(error?.message ?? '').toLowerCase();
       const name = String(error?.name ?? '');
       const status = Number(error?.status ?? 0);
       return (
-        status === 400 &&
-        (message.toLowerCase().includes('invalid refresh token') ||
-          message.toLowerCase().includes('refresh token') ||
-          name === 'AuthApiError')
+        status === 400 ||
+        message.includes('invalid refresh token') ||
+        message.includes('refresh token') ||
+        message.includes('failed to fetch') ||
+        message.includes('networkerror') ||
+        name === 'AuthApiError' ||
+        name === 'TypeError'
       );
+    };
+
+    const clearStaleSupabaseStorage = () => {
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase.auth'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch (e) {
+        console.warn('Could not clear stale auth storage', e);
+      }
     };
 
     const resetAuthState = () => {
@@ -69,33 +87,54 @@ export function useAuth() {
       }
     );
 
-    (async () => {
-      const { data: { session }, error } = await auth.getSession();
-
+    // Safety timeout: never get stuck on a loading spinner if Supabase
+    // can't be reached (e.g. wrong URL, CORS, project changed).
+    const loadingFallback = window.setTimeout(() => {
       if (cancelled) return;
+      setAuthState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev);
+    }, 5000);
 
-      if (error && isInvalidRefreshToken(error)) {
-        await auth.signOut();
+    (async () => {
+      try {
+        const { data: { session }, error } = await auth.getSession();
+
         if (cancelled) return;
-        resetAuthState();
-        return;
-      }
 
-      setAuthState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-      }));
+        if (error) {
+          console.warn('Auth getSession error, clearing stale storage:', error);
+          if (isInvalidRefreshToken(error)) {
+            clearStaleSupabaseStorage();
+            try { await auth.signOut(); } catch {}
+          }
+          if (!cancelled) resetAuthState();
+          return;
+        }
 
-      if (session?.user) {
-        fetchUserRoles(session.user.id);
-      } else {
-        setAuthState(prev => ({ ...prev, isLoading: false }));
+        setAuthState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+        }));
+
+        if (session?.user) {
+          fetchUserRoles(session.user.id);
+        } else {
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch (err) {
+        console.error('Auth init failed, clearing stale storage:', err);
+        if (cancelled) return;
+        clearStaleSupabaseStorage();
+        try { await auth.signOut(); } catch {}
+        if (!cancelled) resetAuthState();
+      } finally {
+        window.clearTimeout(loadingFallback);
       }
     })();
 
     return () => {
       cancelled = true;
+      window.clearTimeout(loadingFallback);
       subscription.unsubscribe();
     };
   }, []);
