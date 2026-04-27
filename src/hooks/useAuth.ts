@@ -134,6 +134,7 @@ export function useAuth() {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(loadingFallback);
       subscription.unsubscribe();
     };
   }, []);
