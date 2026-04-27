@@ -57,7 +57,7 @@
 **Supabase Project:**
 - URL: Usa `import.meta.env.VITE_SUPABASE_URL`
 - Anon Key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnY252eW9zZWV4Zm1yeW5xYmZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NTg0MjksImV4cCI6MjA4MTEzNDQyOX0.u8Y37eaVlNA74Th8pZE7Td6qVnZaqW5tbDkD45867Lc`
-- Project ID: `iurqddkuihjsmxubibao`
+- Project ID: `bgcnvyoseexfmrynqbfb`
 
 ---
 
@@ -68,7 +68,7 @@
 O app nativo deve consumir **um único endpoint REST** que retorna toda a programação consolidada:
 
 ```
-GET https://iurqddkuihjsmxubibao.supabase.co/functions/v1/device-api/content?device_code={DEVICE_CODE}&token={DEVICE_TOKEN}
+GET https://bgcnvyoseexfmrynqbfb.supabase.co/functions/v1/device-api/content?device_code={DEVICE_CODE}&token={DEVICE_TOKEN}
 ```
 
 **Parâmetros:**
@@ -159,7 +159,7 @@ GET https://iurqddkuihjsmxubibao.supabase.co/functions/v1/device-api/content?dev
 ### Kotlin — Como consumir:
 ```kotlin
 // Usando Ktor ou OkHttp:
-val BASE_URL = "https://iurqddkuihjsmxubibao.supabase.co/functions/v1/device-api"
+val BASE_URL = "https://bgcnvyoseexfmrynqbfb.supabase.co/functions/v1/device-api"
 
 suspend fun fetchContent(deviceCode: String, token: String?): ContentResponse {
     val url = "$BASE_URL/content?device_code=$deviceCode" +
@@ -647,7 +647,7 @@ const config = {
 ```kotlin
 // Para supabase-kt:
 val supabase = createSupabaseClient(
-    supabaseUrl = "https://iurqddkuihjsmxubibao.supabase.co",
+    supabaseUrl = "https://bgcnvyoseexfmrynqbfb.supabase.co",
     supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnY252eW9zZWV4Zm1yeW5xYmZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NTg0MjksImV4cCI6MjA4MTEzNDQyOX0.u8Y37eaVlNA74Th8pZE7Td6qVnZaqW5tbDkD45867Lc"
 ) {
     install(Postgrest)
