@@ -4,7 +4,7 @@ import * as faceapi from "face-api.js";
 import { Loader2, Camera, WifiOff, CheckCircle, AlertCircle } from "lucide-react";
 import { initTensorFlow } from "@/lib/faceApiBackend";
 
-const SUPABASE_URL = "https://bgcnvyoseexfmrynqbfb.supabase.co";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 interface Detection {
   face_descriptor: number[];
