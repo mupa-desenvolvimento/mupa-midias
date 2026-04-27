@@ -29,15 +29,33 @@ export function useAuth() {
     let cancelled = false;
 
     const isInvalidRefreshToken = (error: any) => {
-      const message = String(error?.message ?? '');
+      const message = String(error?.message ?? '').toLowerCase();
       const name = String(error?.name ?? '');
       const status = Number(error?.status ?? 0);
       return (
-        status === 400 &&
-        (message.toLowerCase().includes('invalid refresh token') ||
-          message.toLowerCase().includes('refresh token') ||
-          name === 'AuthApiError')
+        status === 400 ||
+        message.includes('invalid refresh token') ||
+        message.includes('refresh token') ||
+        message.includes('failed to fetch') ||
+        message.includes('networkerror') ||
+        name === 'AuthApiError' ||
+        name === 'TypeError'
       );
+    };
+
+    const clearStaleSupabaseStorage = () => {
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase.auth'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch (e) {
+        console.warn('Could not clear stale auth storage', e);
+      }
     };
 
     const resetAuthState = () => {
