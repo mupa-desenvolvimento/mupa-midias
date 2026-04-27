@@ -87,28 +87,48 @@ export function useAuth() {
       }
     );
 
-    (async () => {
-      const { data: { session }, error } = await auth.getSession();
-
+    // Safety timeout: never get stuck on a loading spinner if Supabase
+    // can't be reached (e.g. wrong URL, CORS, project changed).
+    const loadingFallback = window.setTimeout(() => {
       if (cancelled) return;
+      setAuthState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev);
+    }, 5000);
 
-      if (error && isInvalidRefreshToken(error)) {
-        await auth.signOut();
+    (async () => {
+      try {
+        const { data: { session }, error } = await auth.getSession();
+
         if (cancelled) return;
-        resetAuthState();
-        return;
-      }
 
-      setAuthState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-      }));
+        if (error) {
+          console.warn('Auth getSession error, clearing stale storage:', error);
+          if (isInvalidRefreshToken(error)) {
+            clearStaleSupabaseStorage();
+            try { await auth.signOut(); } catch {}
+          }
+          if (!cancelled) resetAuthState();
+          return;
+        }
 
-      if (session?.user) {
-        fetchUserRoles(session.user.id);
-      } else {
-        setAuthState(prev => ({ ...prev, isLoading: false }));
+        setAuthState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+        }));
+
+        if (session?.user) {
+          fetchUserRoles(session.user.id);
+        } else {
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch (err) {
+        console.error('Auth init failed, clearing stale storage:', err);
+        if (cancelled) return;
+        clearStaleSupabaseStorage();
+        try { await auth.signOut(); } catch {}
+        if (!cancelled) resetAuthState();
+      } finally {
+        window.clearTimeout(loadingFallback);
       }
     })();
 
