@@ -18,8 +18,11 @@ import { useNavigate } from "react-router-dom";
 
 const ProposalGenerator = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("form");
+  const [savedProposalId, setSavedProposalId] = useState<string | null>(null);
 
   const { register, watch, setValue, handleSubmit, formState: { errors } } = useForm<ProposalData>({
     defaultValues: {
