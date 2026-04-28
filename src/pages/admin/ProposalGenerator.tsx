@@ -78,6 +78,54 @@ const ProposalGenerator = () => {
     }
   };
 
+  const onSave = async () => {
+    try {
+      setIsSaving(true);
+      const { data: userData } = await supabase.auth.getUser();
+      
+      const proposalToSave = {
+        client_name: formData.clientName,
+        company_name: formData.companyName,
+        seller_name: formData.sellerName,
+        license_count: formData.licenseCount,
+        unit_value: formData.unitValue,
+        plan_type: formData.planType,
+        valid_until: formData.validUntil,
+        discount_value: formData.discountValue,
+        discount_type: formData.discountType,
+        implementation_fee: formData.implementationFee,
+        recurrence: formData.recurrence,
+        total_value: formData.totalValue,
+        user_id: userData.user?.id
+      };
+
+      const { data, error } = await (supabase
+        .from("proposals" as any)
+        .insert(proposalToSave)
+        .select()
+        .single() as any);
+
+      if (error) throw error;
+
+      setSavedProposalId(data.id);
+      toast({
+        title: "Salvo com sucesso!",
+        description: "A proposta foi salva e o link público está pronto.",
+      });
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar a proposta no banco de dados.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const shareLink = savedProposalId ? `${window.location.origin}/proposta/${savedProposalId}` : null;
+
   return (
     <div className="flex flex-col h-full space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
