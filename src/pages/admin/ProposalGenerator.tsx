@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileDown, Eye, Save, Calculator, CheckCircle2, Star } from "lucide-react";
+import { FileDown, Eye, Save, Calculator, CheckCircle2, Star, Share2 } from "lucide-react";
 import { ProposalData, PlanType, RecurrenceType, DiscountType } from "@/types/proposal";
 import { generateProposalPDF } from "@/services/proposalService";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { ProposalPreview } from "@/components/proposals/ProposalPreview";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const ProposalGenerator = () => {
   const { toast } = useToast();
