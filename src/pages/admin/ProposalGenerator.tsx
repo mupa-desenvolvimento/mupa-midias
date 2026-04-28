@@ -133,10 +133,21 @@ const ProposalGenerator = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Gerador de Propostas Comerciais</h1>
           <p className="text-muted-foreground">Crie apresentações profissionais e orçamentos em segundos.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <Button variant="outline" onClick={() => setActiveTab(activeTab === "form" ? "preview" : "form")}>
             {activeTab === "form" ? <><Eye className="mr-2 h-4 w-4" /> Visualizar</> : <><Calculator className="mr-2 h-4 w-4" /> Editar</>}
           </Button>
+          <Button variant="secondary" onClick={onSave} disabled={isSaving}>
+            <Save className="mr-2 h-4 w-4" /> {isSaving ? "Salvando..." : "Salvar Proposta"}
+          </Button>
+          {shareLink && (
+            <Button variant="outline" onClick={() => {
+              navigator.clipboard.writeText(shareLink);
+              toast({ title: "Link copiado!" });
+            }}>
+              <Share2 className="mr-2 h-4 w-4" /> Link Público
+            </Button>
+          )}
           <Button onClick={onExportPDF} disabled={isGenerating}>
             <FileDown className="mr-2 h-4 w-4" /> {isGenerating ? "Gerando..." : "Exportar PDF"}
           </Button>
