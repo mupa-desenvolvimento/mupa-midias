@@ -249,52 +249,6 @@ const ProposalGenerator = () => {
         <div className={`lg:col-span-7 ${activeTab === 'form' ? 'hidden lg:block' : ''}`}>
           <ProposalPreview data={formData} />
         </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="commercial" className="flex-1 mt-0 bg-slate-50 p-12 flex flex-col">
-                <div className="mb-auto">
-                  <h3 className="text-2xl font-bold text-indigo-900 mb-8">Resumo do Investimento</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center py-3 border-b border-slate-200">
-                      <span className="text-slate-600">{formData.licenseCount}x Licenças Plano {formData.planType}</span>
-                      <span className="font-semibold">R$ {(formData.licenseCount * formData.unitValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    {formData.discountValue > 0 && (
-                      <div className="flex justify-between items-center py-3 border-b border-slate-200 text-green-600 font-medium">
-                        <span>Desconto ({formData.discountType === 'percentage' ? `${formData.discountValue}%` : 'Fixo'})</span>
-                        <span>- R$ {totals.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {formData.implementationFee > 0 && (
-                      <div className="flex justify-between items-center py-3 border-b border-slate-200">
-                        <span>Taxa de Implantação (Única)</span>
-                        <span>R$ {Number(formData.implementationFee).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-8 p-8 bg-indigo-900 text-white rounded-2xl shadow-xl">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-indigo-200 text-sm uppercase tracking-widest mb-1">Investimento {formData.recurrence === 'monthly' ? 'Mensal' : 'Anual'}</p>
-                      <h4 className="text-4xl font-extrabold">R$ {totals.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h4>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-indigo-300 text-xs">Válido até</p>
-                      <p className="font-semibold">{new Date(formData.validUntil).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <p className="mt-6 text-[10px] text-slate-400 text-center">
-                  Esta proposta está sujeita aos termos de serviço da Mupa. Valores expressos em Reais (BRL).
-                </p>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
       </div>
     </div>
   );
