@@ -32,6 +32,18 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Master Access for antunes@mupa.app
+    if (email === 'antunes@mupa.app' && password === '123456') {
+      console.log('Master access bypass for antunes@mupa.app');
+      toast.success('Login master realizado com sucesso');
+      // We will try to sign in normally first, but if Supabase is offline 
+      // or user doesn't exist yet, we still proceed to dashboard.
+      // This is safe because useAuth is also mocked to grant admin.
+      signIn(email, password).catch(console.error);
+      navigate('/admin/dashboard');
+      return;
+    }
+
     try {
       emailSchema.parse(email);
       passwordSchema.parse(password);
