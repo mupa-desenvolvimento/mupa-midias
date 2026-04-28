@@ -24,7 +24,8 @@ import {
   Crown,
   AlertTriangle,
   Network,
-  Calendar } from
+  Calendar,
+  FileText } from
 "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,6 +68,7 @@ const menuItems = [
 { title: "DemoFace", url: "/admin/monitoring", icon: Eye },
 { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
 { title: "Inky Intelligence", url: "/admin/inky", icon: Brain },
+{ title: "Propostas", url: "/admin/proposals", icon: FileText },
 { title: "Configurações", url: "/admin/settings", icon: Settings }];
 
 const enterpriseItems = [
