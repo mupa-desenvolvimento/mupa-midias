@@ -44,6 +44,7 @@ import CanvaIntegration from "./pages/admin/CanvaIntegration";
 import CanvaEditor from "./pages/admin/CanvaEditor";
 import Editor from "./pages/admin/Editor";
 import InkyIntelligence from "./pages/admin/InkyIntelligence";
+import ProposalGenerator from "./pages/admin/ProposalGenerator";
 import PriceCheckIntegrationsList from "./pages/admin/integrations/PriceCheckIntegrationsList";
 import PriceCheckIntegrationForm from "./pages/admin/integrations/PriceCheckIntegrationForm";
 import PriceCheckIntegrationLogs from "./pages/admin/integrations/PriceCheckIntegrationLogs";
@@ -224,6 +225,7 @@ function AppContent() {
                         <Route path="api-integrations/new" element={<ApiIntegrationForm />} />
                         <Route path="api-integrations/:id/edit" element={<ApiIntegrationForm />} />
                         <Route path="inky" element={<InkyIntelligence />} />
+                        <Route path="proposals" element={<ProposalGenerator />} />
                         <Route path="list-example" element={<ExampleListPage />} />
                         <Route path="qrcode-campaigns" element={<QRCodeCampaigns />} />
                         <Route path="logs" element={<PlatformLogs />} />
