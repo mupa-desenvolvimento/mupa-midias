@@ -141,12 +141,30 @@ export function useAuth() {
 
   const fetchUserRoles = async (userId: string) => {
     try {
+      // Mock admin for specific user
+      if (authState.user?.email === 'antunes@mupa.app') {
+        console.log('Mocking admin for antunes@mupa.app');
+        setAuthState(prev => ({
+          ...prev,
+          roles: ['admin_global'],
+          isAdmin: true,
+          isAdminGlobal: true,
+          isLoading: false,
+        }));
+        return;
+      }
+
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        // Fallback for when tables are not ready
+        console.warn('Roles table error, using fallback:', error);
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
 
       const roles = (data?.map(r => r.role) || []) as AppRole[];
       const isAdminGlobal = roles.includes('admin_global');
