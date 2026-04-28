@@ -19,11 +19,11 @@ const PublicProposal = () => {
       try {
         if (!id) return;
         
-        const { data, error } = await supabase
-          .from("proposals")
+        const { data, error } = await (supabase
+          .from("proposals" as any)
           .select("*")
           .eq("id", id)
-          .single();
+          .single() as any);
 
         if (error) throw error;
 
