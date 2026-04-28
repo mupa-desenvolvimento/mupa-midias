@@ -68,7 +68,8 @@ import CampaignsManager from "./pages/admin/CampaignsManager";
 import ScheduleTimeline from "./pages/admin/ScheduleTimeline";
 import AudienceLive from "./pages/admin/AudienceLive";
 import Install from "./pages/Install";
- import Presentation from "./pages/Presentation";
+import Presentation from "./pages/Presentation";
+import PublicProposal from "./pages/PublicProposal";
 import AssaiPresentation from "./pages/AssaiPresentation";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { PWAUpdatePrompt, InstallPrompt } from "./components/PWAPrompts";
@@ -158,6 +159,7 @@ function AppContent() {
           <Route path="/apresentacao-assai" element={<AssaiPresentation />} />
           <Route path="/mobile-demo" element={<MobileDemo />} />
           <Route path="/motivational-tv" element={<MotivationalTV />} />
+          <Route path="/proposta/:id" element={<PublicProposal />} />
           {/* Canva OAuth callback - must be outside ProtectedRoute to handle redirect properly */}
           <Route path="/admin/canva/callback" element={<CanvaCallback />} />
           
